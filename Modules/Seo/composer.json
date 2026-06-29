@@ -1,0 +1,16 @@
+{
+    "name": "maatify/seo",
+    "description": "Standalone SEO Library for the Maatify Ecosystem",
+    "type": "library",
+    "require": {
+        "php": ">=8.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "Maatify\\Seo\\": "src/"
+        }
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2.2"
+    }
+}
