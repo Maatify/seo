@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-This roadmap outlines the design for the `Maatify\Seo` module, a standalone, extractable, and host-agnostic PHP SEO library for the Maatify ecosystem. It strictly adheres to `MODULE_BUILDING_STANDARD.md` and fulfills the requirements set forth in the EP4N SEO Backend Technical Specification (v2 - Multilingual). The library provides robust, schema-driven, and multilingual-ready tools to manage dynamic SEO metadata, canonical URLs, hreflang tags, schema generation (JSON-LD), redirects, slug histories, and sitemap indexing. Crucially, the library treats host system details as abstractions via interfaces, ensuring reusability across any future Maatify project without direct table joins or tight coupling to a specific framework.
+This roadmap outlines the design for the `Maatify\Seo` module, a standalone, extractable, and host-agnostic PHP SEO library for the Maatify ecosystem. It strictly adheres to `MODULE_BUILDING_STANDARD.md` and is designed to be fully reusable for any Maatify project. The library provides robust, schema-driven, and multilingual-ready tools to manage dynamic SEO metadata, canonical URLs, hreflang tags, schema generation (JSON-LD), redirects, slug histories, and sitemap indexing. Crucially, the library treats host system details as abstractions via interfaces, ensuring reusability across any future project without direct table joins or tight coupling to a specific framework.
 
 ## 2. What Belongs Inside the SEO Library
 
@@ -65,8 +65,7 @@ Modules/Seo/
     │   ├── Infrastructure/
     │   │   └── Persistence/
     │   │       ├── PdoSlugHistoryRepository.php
-    │   │       ├── PdoRedirectRepository.php
-    │   │       └── PdoOverrideRepository.php
+    │   │       └── PdoRedirectRepository.php
     │   └── Service/
     │       ├── MetaGeneratorService.php
     │       ├── SchemaGeneratorService.php
@@ -76,7 +75,10 @@ Modules/Seo/
     ├── Admin/
     │   └── SeoOverride/
     │       ├── Command/
+    │       ├── Contract/
     │       ├── DTO/
+    │       ├── Infrastructure/
+    │       │   └── Repository/
     │       └── Service/
     └── Customer/
         └── SeoRender/
@@ -106,8 +108,7 @@ Modules/Seo/
 
   ```php
   interface HostUrlGeneratorInterface {
-      public function generateProductUrl(string $entityId, int $languageId, string $slug): string;
-      public function generateCategoryUrl(string $categoryId, int $languageId, string $slug): string;
+      public function generateEntityUrl(string $entityType, string $entityId, int $languageId, ?string $slug): string;
       public function generateHomeUrl(int $languageId): string;
   }
   ```
@@ -117,8 +118,8 @@ Modules/Seo/
   ```php
   interface HostEntityProviderInterface {
       /** Return true if entity was discontinued without replacement (410) */
-      public function isPermanentlyDiscontinued(string $entityId): bool;
-      public function getDiscontinuedReplacementId(string $entityId): ?string;
+      public function isPermanentlyDiscontinued(string $entityType, string $entityId): bool;
+      public function getDiscontinuedReplacementId(string $entityType, string $entityId): ?string;
   }
   ```
 
@@ -138,8 +139,9 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   Needed. When an entity changes its slug, we must keep a record to avoid reusing old slugs and to trigger redirects.
   Columns: `id`, `entity_type`, `entity_id` (Host ID), `language_id`, `old_slug`, `created_at`.
 - **Redirects**: `maa_seo_redirects`
-  Needed. Fast lookup table for the routing layer to find if a requested slug should 301 to a new one, or 410 (Gone).
-  Columns: `id`, `requested_slug`, `language_id`, `target_entity_id`, `http_status` (301 or 410), `created_at`.
+  Needed. Fast lookup table for the routing layer to find if a requested URL/slug should 301 to a new one, or 410 (Gone).
+  Redirects should be scoped by `entity_type`, `language_id`, and `requested_slug` or `requested_path`.
+  Columns: `id`, `entity_type`, `language_id`, `requested_slug`, `target_entity_type`, `target_entity_id`, `http_status` (301 or 410), `created_at`. (Avoid storing full host URLs unless explicitly justified).
 - **SEO Overrides**: `maa_seo_overrides`
   Needed. Allows marketers/admins to manually override generated Meta Title/Description per entity without polluting the host's primary product table.
   Columns: `id`, `entity_type`, `entity_id`, `language_id`, `meta_title`, `meta_description`, `created_at`, `updated_at`.
