@@ -7,15 +7,7 @@ The module is divided into Admin, Shared, Customer (pending), and Bootstrap comp
 
 ```text
 Modules/Seo/
-├── Bootstrap/
-│   └── SeoBindings.php
-├── Exception/
-│   ├── SeoCodeAlreadyExistsException.php
-│   ├── SeoConflictException.php
-│   ├── SeoErrorCode.php
-│   ├── SeoExceptionInterface.php
-│   ├── SeoInvalidArgumentException.php
-│   └── SeoNotFoundException.php
+├── docs/
 ├── schema/
 │   ├── maa_seo_overrides.sql
 │   ├── maa_seo_redirects.sql
@@ -28,6 +20,15 @@ Modules/Seo/
     │       ├── DTO/
     │       ├── Infrastructure/Repository/
     │       └── Service/
+    ├── Bootstrap/
+    │   └── SeoBindings.php
+    ├── Exception/
+    │   ├── SeoCodeAlreadyExistsException.php
+    │   ├── SeoConflictException.php
+    │   ├── SeoErrorCode.php
+    │   ├── SeoExceptionInterface.php
+    │   ├── SeoInvalidArgumentException.php
+    │   └── SeoNotFoundException.php
     └── Shared/
         ├── Command/
         ├── Contract/
@@ -45,7 +46,7 @@ Records old slugs when an entity's slug changes, to prevent reuse and facilitate
 
 ### `maa_seo_redirects`
 Fast lookup table for the routing layer to find if a requested URL/slug should 301 to a new one, or 410 (Gone).
-- **Key Columns:** `entity_type`, `language_id`, `requested_slug`, `target_entity_id`, `http_status`
+- **Key Columns:** `entity_type`, `language_id`, `requested_slug`, `target_entity_type`, `target_entity_id`, `http_status`
 - **Soft Delete:** `deleted_at DATETIME NULL`
 
 ### `maa_seo_overrides`
@@ -64,13 +65,13 @@ Repositories handle pure database operations (CRUD) without business logic forma
 Services manage the core business orchestration and throw standard `SeoNotFoundException` when entities are missing. They never perform SQL queries directly and strictly use constructor injection.
 
 ### Shared Layer
-- **`RedirectCommandService`**: Orchestrates creation, update, and soft deletion of redirects.
+- **`RedirectCommandService`**: Orchestrates `create`, `update`, `softDelete`, and `hardDelete` operations for redirects.
 - **`RedirectQueryService`**: Retrieves redirect records, throwing module exceptions on failure.
-- **`SlugHistoryCommandService`**: Orchestrates creation and soft deletion of slug history entries.
+- **`SlugHistoryCommandService`**: Orchestrates `create`, `softDelete`, and `hardDelete` operations for slug history entries.
 - **`SlugHistoryQueryService`**: Retrieves slug history records.
 
 ### Admin Layer
-- **`SeoOverrideCommandService`**: Orchestrates creation, update, and soft deletion of SEO overrides.
+- **`SeoOverrideCommandService`**: Orchestrates `create`, `update`, `softDelete`, and `hardDelete` operations for SEO overrides.
 - **`SeoOverrideQueryService`**: Retrieves SEO override records.
 
 ## Contracts (Host Interfaces)
