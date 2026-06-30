@@ -40,6 +40,10 @@ $metaTags = new MetaTagsDTO(
     openGraphUrl: 'https://example.com/og?x=1&y=2',
     twitterTitle: 'Twitter <Title>',
     twitterDescription: 'Twitter desc & details',
+    openGraphType: 'article',
+    openGraphImage: 'https://example.com/image.jpg?name=<hero>&size=large',
+    twitterCard: 'summary_large_image',
+    twitterImage: 'https://example.com/twitter.jpg?name=<hero>&size=large',
 );
 
 assertSameValue(
@@ -52,17 +56,27 @@ assertSameValue(
 );
 
 assertSameValue(
+    'MetaTagsDTO JSON includes Phase 7A OpenGraph and Twitter optional fields',
+    '{"title":"A <Title> & \"Quote\"","description":"Desc <b>bold<\/b> & \"quoted\"","canonical_url":"https:\/\/example.com\/page?a=1&b=<x>","robots":"noindex,nofollow","open_graph_title":"OG <Title>","open_graph_description":"OG desc & details","open_graph_url":"https:\/\/example.com\/og?x=1&y=2","twitter_title":"Twitter <Title>","twitter_description":"Twitter desc & details","open_graph_type":"article","open_graph_image":"https:\/\/example.com\/image.jpg?name=<hero>&size=large","twitter_card":"summary_large_image","twitter_image":"https:\/\/example.com\/twitter.jpg?name=<hero>&size=large"}',
+    json_encode($metaTags, JSON_THROW_ON_ERROR),
+);
+
+assertSameValue(
     'OpenGraph renders deterministic supported fields',
     '<meta property="og:title" content="OG &lt;Title&gt;">' . "\n"
     . '<meta property="og:description" content="OG desc &amp; details">' . "\n"
-    . '<meta property="og:url" content="https://example.com/og?x=1&amp;y=2">',
+    . '<meta property="og:type" content="article">' . "\n"
+    . '<meta property="og:url" content="https://example.com/og?x=1&amp;y=2">' . "\n"
+    . '<meta property="og:image" content="https://example.com/image.jpg?name=&lt;hero&gt;&amp;size=large">',
     (new OpenGraphHtmlRenderer())->render($metaTags),
 );
 
 assertSameValue(
     'Twitter renders deterministic supported fields',
-    '<meta name="twitter:title" content="Twitter &lt;Title&gt;">' . "\n"
-    . '<meta name="twitter:description" content="Twitter desc &amp; details">',
+    '<meta name="twitter:card" content="summary_large_image">' . "\n"
+    . '<meta name="twitter:title" content="Twitter &lt;Title&gt;">' . "\n"
+    . '<meta name="twitter:description" content="Twitter desc &amp; details">' . "\n"
+    . '<meta name="twitter:image" content="https://example.com/twitter.jpg?name=&lt;hero&gt;&amp;size=large">',
     (new TwitterCardHtmlRenderer())->render($metaTags),
 );
 
@@ -94,9 +108,13 @@ assertSameValue(
     . '<meta name="robots" content="noindex,nofollow">' . "\n"
     . '<meta property="og:title" content="OG &lt;Title&gt;">' . "\n"
     . '<meta property="og:description" content="OG desc &amp; details">' . "\n"
+    . '<meta property="og:type" content="article">' . "\n"
     . '<meta property="og:url" content="https://example.com/og?x=1&amp;y=2">' . "\n"
+    . '<meta property="og:image" content="https://example.com/image.jpg?name=&lt;hero&gt;&amp;size=large">' . "\n"
+    . '<meta name="twitter:card" content="summary_large_image">' . "\n"
     . '<meta name="twitter:title" content="Twitter &lt;Title&gt;">' . "\n"
     . '<meta name="twitter:description" content="Twitter desc &amp; details">' . "\n"
+    . '<meta name="twitter:image" content="https://example.com/twitter.jpg?name=&lt;hero&gt;&amp;size=large">' . "\n"
     . '<script type="application/ld+json">{"@type":"WebPage"}</script>',
     (new SeoHeadHtmlRenderer())->render($metaTags, [new JsonLdSchemaDTO(['@type' => 'WebPage'])]),
 );
@@ -111,6 +129,10 @@ $minimalMetaTags = new MetaTagsDTO(
     openGraphUrl: null,
     twitterTitle: null,
     twitterDescription: '',
+    openGraphType: null,
+    openGraphImage: '',
+    twitterCard: null,
+    twitterImage: '',
 );
 
 assertSameValue(

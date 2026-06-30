@@ -13,7 +13,9 @@ final readonly class OpenGraphHtmlRenderer
         $tags = [];
         $this->appendProperty($tags, 'og:title', $metaTags->openGraphTitle);
         $this->appendProperty($tags, 'og:description', $metaTags->openGraphDescription);
+        $this->appendProperty($tags, 'og:type', $metaTags->openGraphType);
         $this->appendProperty($tags, 'og:url', $metaTags->openGraphUrl);
+        $this->appendProperty($tags, 'og:image', $metaTags->openGraphImage);
 
         return implode("\n", $tags);
     }

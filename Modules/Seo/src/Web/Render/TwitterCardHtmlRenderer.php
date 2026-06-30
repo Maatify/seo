@@ -11,8 +11,10 @@ final readonly class TwitterCardHtmlRenderer
     public function render(MetaTagsDTO $metaTags): string
     {
         $tags = [];
+        $this->appendName($tags, 'twitter:card', $metaTags->twitterCard);
         $this->appendName($tags, 'twitter:title', $metaTags->twitterTitle);
         $this->appendName($tags, 'twitter:description', $metaTags->twitterDescription);
+        $this->appendName($tags, 'twitter:image', $metaTags->twitterImage);
 
         return implode("\n", $tags);
     }
