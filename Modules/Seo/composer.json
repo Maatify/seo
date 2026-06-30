@@ -3,7 +3,8 @@
     "description": "Standalone SEO Library for the Maatify Ecosystem",
     "type": "library",
     "require": {
-        "php": ">=8.2"
+        "php": ">=8.2",
+        "ext-xmlwriter": "*"
     },
     "autoload": {
         "psr-4": {
