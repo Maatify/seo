@@ -180,6 +180,14 @@ The Web layer provides website/frontend consumption services and DTOs. Following
 - **`Web/SeoRender/DTO/SeoPagePayloadDTO`**: A final readonly DTO (implementing `\JsonSerializable`) that wraps the computed meta tags, schemas, redirect decisions, and optional sitemap XML. It enforces that all inputs are valid.
 - **`Web/SeoRender/Service/SeoPageRenderService`**: Orchestrates the generation of the SEO page payload using Shared services (`MetaGeneratorService`, `SchemaGeneratorService`, etc.). It supports computing redirect decisions via `RedirectManagerService` and generating sitemap strings via `SitemapGeneratorService` if injected.
 
+### HTML Rendering Helpers
+The Web layer includes optional HTML Rendering Helpers under `src/Web/Render/`. These renderers are framework-neutral, return pure PHP strings (HTML), and do not emit HTTP responses. They can be manually consumed by any host application or template engine to safely render SEO data.
+- **`Web/Render/MetaTagsHtmlRenderer.php`**: Renders `<title>`, `<meta name="description">`, canonical URLs, and robots tags with safely escaped text and attributes.
+- **`Web/Render/OpenGraphHtmlRenderer.php`**: Renders `og:` metadata tags (`og:title`, `og:description`, `og:type`, `og:url`, `og:image`) with safely escaped properties and content.
+- **`Web/Render/TwitterCardHtmlRenderer.php`**: Renders `twitter:` metadata tags (`twitter:card`, `twitter:title`, `twitter:description`, `twitter:image`) with safely escaped names and content.
+- **`Web/Render/JsonLdScriptRenderer.php`**: Safely encodes array or DTO structures into valid JSON and wraps them in `<script type="application/ld+json">` tags, mitigating XSS risks.
+- **`Web/Render/SeoHeadHtmlRenderer.php`**: A facade that orchestrates the above renderers to combine and return the complete SEO HTML head payload dynamically.
+
 ## Final Compliance and Audit
 The SEO module has successfully completed its final compliance audit, verifying the implementation of the Shared, Admin, Web, and Bootstrap layers.
 - The module remains strictly standalone, framework-neutral, and host-agnostic.

@@ -35,7 +35,11 @@ final readonly class JsonLdScriptRenderer
 
         if ($schemas instanceof \JsonSerializable) {
             $serialized = $schemas->jsonSerialize();
-            return is_array($serialized) ? [$serialized] : [];
+            if (is_array($serialized)) {
+                /** @var array<string, mixed> $serialized */
+                return [$serialized];
+            }
+            return [];
         }
 
         if (!is_array($schemas) || $schemas === []) {
