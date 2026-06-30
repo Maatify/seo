@@ -179,6 +179,13 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   - **Phase 6C: Bootstrap/DI Full Wiring (Complete):** Complete dependency injection wiring for all layers.
   - **Phase 6D: Final Module Compliance Audit (Complete):** Ensure full compliance with all Maatify module standards. The full SEO module is complete and release-ready.
 
+- **Phase 7: Usability and Rendering**
+  - **Phase 7A: HTML Rendering Helpers (Complete):** Extract final HTML generation out of commands to pure PHP string renderers.
+  - **Phase 7B: Flattened Usability DTO (Upcoming):** Create `SeoHeadHtmlDTO` mapping all metadata cleanly for simple array access.
+  - **Phase 7C: Fluent Output Builder (Upcoming):** Provide a fluent interface (`$builder->title()->description()->render()`).
+  - **Phase 7D: Spatie Schema Integration (Upcoming):** Provide a dedicated, optional bridge wrapping the `spatie/schema-org` package.
+  - **Phase 7E: Sitemap String Output (Upcoming):** Helper to optionally generate plain string output directly from sitemap commands.
+
 ## 11. Risks / Decisions that Need Approval Before Coding
 
 - **Entity Identifier Type**: Host projects might use `int`, `string` (UUID), or mixed types for `entity_id`. Should `entity_id` in `maa_seo_*` tables be `VARCHAR(36)` to safely support UUIDs, even if the host uses integers? (Recommendation: Yes, `VARCHAR(36)`).
