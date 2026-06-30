@@ -16,6 +16,10 @@ final readonly class MetaTagsDTO implements \JsonSerializable
         public ?string $openGraphUrl = null,
         public ?string $twitterTitle = null,
         public ?string $twitterDescription = null,
+        public ?string $openGraphType = null,
+        public ?string $openGraphImage = null,
+        public ?string $twitterCard = null,
+        public ?string $twitterImage = null,
     ) {
     }
 
@@ -34,6 +38,10 @@ final readonly class MetaTagsDTO implements \JsonSerializable
             'open_graph_url' => $this->openGraphUrl,
             'twitter_title' => $this->twitterTitle,
             'twitter_description' => $this->twitterDescription,
+            'open_graph_type' => $this->openGraphType,
+            'open_graph_image' => $this->openGraphImage,
+            'twitter_card' => $this->twitterCard,
+            'twitter_image' => $this->twitterImage,
         ];
     }
 }

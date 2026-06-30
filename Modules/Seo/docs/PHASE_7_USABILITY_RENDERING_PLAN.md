@@ -100,7 +100,9 @@ $xml = $sitemapBuilder->render();
 ## 12. Implementation phases
 
 ### Phase 7A: HTML Rendering Helpers
-Implement `MetaTagsHtmlRenderer`, `OpenGraphHtmlRenderer`, `TwitterCardHtmlRenderer`, `JsonLdScriptRenderer`, and `SeoHeadHtmlRenderer`.
+**Status: Implemented.**
+
+Implemented `MetaTagsHtmlRenderer`, `OpenGraphHtmlRenderer`, `TwitterCardHtmlRenderer`, `JsonLdScriptRenderer`, and `SeoHeadHtmlRenderer` as framework-neutral string renderers. They render existing `MetaTagsDTO`, `JsonLdSchemaDTO`, and `SeoPagePayloadDTO` payloads without controllers, routes, response objects, framework adapters, template engines, static global state, or new package dependencies.
 
 ### Phase 7B: Render Output DTOs
 Implement the `SeoHeadHtmlDTO` to act as the transport mechanism for the rendered outputs.
