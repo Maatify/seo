@@ -16,11 +16,13 @@ spl_autoload_register(static function (string $class): void {
 
 use Maatify\Seo\Shared\DTO\MetaTagsDTO;
 use Maatify\Seo\Shared\DTO\Schema\JsonLdSchemaDTO;
+use Maatify\Seo\Web\DTO\SeoHeadHtmlDTO;
 use Maatify\Seo\Web\Render\JsonLdScriptRenderer;
 use Maatify\Seo\Web\Render\MetaTagsHtmlRenderer;
 use Maatify\Seo\Web\Render\OpenGraphHtmlRenderer;
 use Maatify\Seo\Web\Render\SeoHeadHtmlRenderer;
 use Maatify\Seo\Web\Render\TwitterCardHtmlRenderer;
+use Maatify\Seo\Web\SeoRender\DTO\SeoPagePayloadDTO;
 
 function assertSameValue(string $label, string $expected, string $actual): void
 {
@@ -29,6 +31,37 @@ function assertSameValue(string $label, string $expected, string $actual): void
         exit(1);
     }
 }
+
+
+$seoHeadDto = new SeoHeadHtmlDTO(
+    metaHtml: '<title>DTO title</title>',
+    openGraphHtml: '<meta property="og:title" content="DTO title">',
+    twitterCardHtml: '<meta name="twitter:title" content="DTO title">',
+    jsonLdHtml: '<script type="application/ld+json">{"@type":"WebPage"}</script>',
+    fullHtml: '<title>DTO title</title>' . "\n"
+    . '<meta property="og:title" content="DTO title">' . "\n"
+    . '<meta name="twitter:title" content="DTO title">' . "\n"
+    . '<script type="application/ld+json">{"@type":"WebPage"}</script>',
+);
+
+assertSameValue(
+    'SeoHeadHtmlDTO allows construction and exposes sections',
+    '<title>DTO title</title>',
+    $seoHeadDto->metaHtml,
+);
+
+assertSameValue(
+    'SeoHeadHtmlDTO JSON serializes with clear section keys',
+    '{"meta_html":"<title>DTO title<\/title>","open_graph_html":"<meta property=\\"og:title\\" content=\\"DTO title\\">","twitter_card_html":"<meta name=\\"twitter:title\\" content=\\"DTO title\\">","json_ld_html":"<script type=\\"application\/ld+json\\">{\"@type\":\"WebPage\"}<\/script>","full_html":"<title>DTO title<\/title>\n<meta property=\\"og:title\\" content=\\"DTO title\\">\n<meta name=\\"twitter:title\\" content=\\"DTO title\\">\n<script type=\\"application\/ld+json\\">{\"@type\":\"WebPage\"}<\/script>"}',
+    json_encode($seoHeadDto, JSON_THROW_ON_ERROR),
+);
+
+$emptySeoHeadDto = new SeoHeadHtmlDTO('', '', '', '', '');
+assertSameValue(
+    'SeoHeadHtmlDTO allows empty section strings',
+    '{"meta_html":"","open_graph_html":"","twitter_card_html":"","json_ld_html":"","full_html":""}',
+    json_encode($emptySeoHeadDto, JSON_THROW_ON_ERROR),
+);
 
 $metaTags = new MetaTagsDTO(
     title: 'A <Title> & "Quote"',
@@ -139,6 +172,39 @@ assertSameValue(
     'null and empty optional fields are omitted',
     '<title>Only title</title>' . "\n" . '<meta name="robots" content="index,follow">',
     (new SeoHeadHtmlRenderer())->render($minimalMetaTags),
+);
+
+
+$renderer = new SeoHeadHtmlRenderer();
+$renderedDto = $renderer->renderDto($metaTags, [new JsonLdSchemaDTO(['@type' => 'WebPage'])]);
+$expectedFullHtml = $renderer->render($metaTags, [new JsonLdSchemaDTO(['@type' => 'WebPage'])]);
+
+assertSameValue(
+    'SeoHeadHtmlRenderer::renderDto fullHtml matches existing render output',
+    $expectedFullHtml,
+    $renderedDto->fullHtml,
+);
+
+assertSameValue(
+    'SeoHeadHtmlRenderer::renderDto fullHtml equals joined sections',
+    implode("\n", [
+        $renderedDto->metaHtml,
+        $renderedDto->openGraphHtml,
+        $renderedDto->twitterCardHtml,
+        $renderedDto->jsonLdHtml,
+    ]),
+    $renderedDto->fullHtml,
+);
+
+$payload = new SeoPagePayloadDTO(
+    metaTags: $metaTags,
+    schemas: [new JsonLdSchemaDTO(['@type' => 'WebPage'])],
+);
+
+assertSameValue(
+    'SeoHeadHtmlRenderer::renderPayloadDto fullHtml matches renderPayload output',
+    $renderer->renderPayload($payload),
+    $renderer->renderPayloadDto($payload)->fullHtml,
 );
 
 echo "Phase 7A renderer tests passed.\n";
