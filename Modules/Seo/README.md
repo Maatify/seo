@@ -10,8 +10,9 @@ composer require maatify/seo
 ```
 
 ## Implemented Layers
-Currently, the module has the following foundational layers implemented (Phases 1-2C):
+Currently, the module has the following foundational layers implemented (Phases 1-3A):
 - **Phase 1 (Foundation):** Base DTOs, Exceptions, Host Contracts.
 - **Phase 2A (Schema):** Standalone SQL tables for slug history, redirects, and manual SEO overrides.
 - **Phase 2B (Repositories):** PDO implementations for persistence layers without ORMs.
 - **Phase 2C (Services):** Core domain logic orchestration, utilizing constructor injection and strict module exceptions.
+- **Phase 3A (Meta Generator):** Logic to assemble and orchestrate standard HTML Meta tags, merging host-provided defaults with manual database overrides in a framework-agnostic way.

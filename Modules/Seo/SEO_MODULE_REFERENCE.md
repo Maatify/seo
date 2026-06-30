@@ -61,6 +61,35 @@ Repositories handle pure database operations (CRUD) without business logic forma
 - **`SlugHistoryRepositoryInterface`**: Implemented by `PdoSlugHistoryRepository`. Manages slug history records (create, find by ID, find active by slug, find active for entity, soft delete, hard delete).
 - **`SeoOverrideRepositoryInterface`**: Implemented by `PdoSeoOverrideRepository`. Manages SEO override records (create, update, find by ID, find active for entity, soft delete, hard delete).
 
+## Core Services
+
+### Meta Generator Service
+The `MetaGeneratorService` orchestrates the assembly of `<title>`, `<meta>` description, canonical, robots, OpenGraph, and Twitter tags per the current language and provided entity data.
+- **Responsibility**: It builds host-agnostic meta tags from host-provided defaults by accepting a `GenerateMetaTagsCommand` and returning a `MetaTagsDTO`.
+- **Override Fallback Behavior**: The service checks if a manual SEO override exists in `maa_seo_overrides` via the `SeoOverrideQueryService`. If an override exists for the specific entity and language, it replaces the default title and/or description. If the query service throws a `SeoNotFoundException`, it treats this as "no override" and falls back to the host-provided defaults.
+- **Canonical URL Resolution**: It determines the canonical URL first by checking the `canonicalUrl` property in the `GenerateMetaTagsCommand`. If that is not provided, it falls back to generating the URL via the `HostUrlGeneratorInterface` using the entity details.
+
+### DTOs and Commands
+- **`GenerateMetaTagsCommand`**: Encapsulates all data required to generate meta tags:
+  - `entityType` (string)
+  - `entityId` (string)
+  - `languageId` (int)
+  - `defaultTitle` (string)
+  - `defaultDescription` (?string)
+  - `slug` (?string)
+  - `canonicalUrl` (?string)
+  - `robots` (string, defaults to 'index,follow')
+- **`MetaTagsDTO`**: Aggregates final computed strings for SEO headers:
+  - `title` (string)
+  - `description` (?string)
+  - `canonicalUrl` (?string)
+  - `robots` (string)
+  - `openGraphTitle` (?string)
+  - `openGraphDescription` (?string)
+  - `openGraphUrl` (?string)
+  - `twitterTitle` (?string)
+  - `twitterDescription` (?string)
+
 ## Service Layer
 Services manage the core business orchestration and throw standard `SeoNotFoundException` when entities are missing. They never perform SQL queries directly and strictly use constructor injection.
 
@@ -80,7 +109,8 @@ Services manage the core business orchestration and throw standard `SeoNotFoundE
 - `HostSearchContextInterface`
 
 ## Intentionally Not Implemented (Pending Phases)
-- **Redirect resolver logic**: Routing decisions (evaluating a request against redirects) belong to the consuming framework.
-- **Sitemap generation logic**: Streaming XML dynamically will be implemented in a dedicated phase due to memory constraints.
-- **Controllers/framework integration**: Kept decoupled to remain framework-agnostic.
+- **JSON-LD Schema Generation**: Generating JSON-LD structures for Products, Breadcrumbs, etc., is not implemented yet.
+- **Redirect resolver logic**: Routing decisions (evaluating a request against redirects) belong to the consuming framework and are not implemented yet.
+- **Sitemap generation logic**: Streaming XML dynamically will be implemented in a dedicated phase due to memory constraints and is not implemented yet.
+- **Controllers/framework integration**: Kept decoupled to remain framework-agnostic and are not implemented yet.
 - **Host-specific product/category logic**: Domain-specific logic remains in the host module via interfaces.

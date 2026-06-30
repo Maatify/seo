@@ -162,8 +162,10 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   Create directory structure, PHPStan config, module exception classes, Base DTOs (Schema generation, Meta tag generation), and define Host Interfaces.
 - **Phase 2: Persistence Layer & Services (Complete up to 2C)**
   Write SQL schemas (`maa_seo_slug_history`, `maa_seo_redirects`, `maa_seo_overrides`). Implement PDO repositories and Commands for saving/fetching overrides and redirect history. *(Note: Phase 2A Schema, 2B Repositories, 2C Services completed).*
-- **Phase 3: Core Services (Pending)**
-  Implement `MetaGeneratorService`, `SchemaGeneratorService`, `RedirectManagerService`, and `SlugHistoryService`.
+- **Phase 3: Core Services (In Progress)**
+  - **Phase 3A: Meta Generator (Complete):** Implement `MetaGeneratorService` with DTOs and database fallback logic.
+  - **Phase 3B: JSON-LD Schema Generator (Pending):** Implement `SchemaGeneratorService` for structured data.
+  - **Phase 3C: Redirect & Slug Services (Pending):** Implement `RedirectManagerService` and `SlugHistoryService`.
 - **Phase 4: Sitemap Generation (Pending)**
   Implement `SitemapGeneratorService` using `XMLWriter` to support dynamic sitemap index and language-specific XMLs.
 - **Phase 5: Documentation & Polish (In Progress)**
