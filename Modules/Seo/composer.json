@@ -2,6 +2,7 @@
     "name": "maatify/seo",
     "description": "Standalone SEO Library for the Maatify Ecosystem",
     "type": "library",
+    "license": "proprietary",
     "require": {
         "php": ">=8.2",
         "ext-xmlwriter": "*"

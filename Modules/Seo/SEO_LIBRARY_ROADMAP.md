@@ -168,8 +168,8 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   - **Phase 3C: Redirect & Slug Services (Complete):** Implement `RedirectManagerService` and `SlugHistoryService`.
 - **Phase 4: Sitemap Generation (Complete)**
   Implement `SitemapGeneratorService` using `XMLWriter` to support dynamic sitemap index and language-specific XMLs.
-- **Phase 5: Documentation & Polish (In Progress)**
-  Finalize `README.md`, `SEO_MODULE_REFERENCE.md`, ensure PHPStan level max passes natively.
+- **Phase 5: Documentation & Polish (Complete)**
+  Finalized `README.md`, `SEO_MODULE_REFERENCE.md`, and verified PHPStan level max passes natively.
 
 ## 11. Risks / Decisions that Need Approval Before Coding
 
