@@ -64,10 +64,12 @@ Repositories handle pure database operations (CRUD) without business logic forma
 ## Core Services
 
 ### Schema Generator Service
-The `SchemaGeneratorService` handles the generation of structured data for SEO by converting Data Transfer Objects (DTOs) into JSON-LD scripts.
-- **Responsibility**: It transforms host-provided `JsonSerializable` DTOs into structured JSON-LD output. The service contains **no SQL, no repository access, no host data fetching, and no framework rendering**.
-- **`generate()` Behavior**: Accepts a single `JsonLdSchemaDTO` (e.g., `ProductSchemaDTO`, `BreadcrumbSchemaDTO`) and generates a script tag `<script type="application/ld+json">` containing the encoded JSON schema.
-- **`generateGraph()` Behavior**: Accepts an array of `JsonLdSchemaDTO` instances. It wraps multiple schemas under a `@context` of `https://schema.org` and a `@graph` node, outputting a single script tag with the aggregated schema graph.
+The `SchemaGeneratorService` handles the generation of structured data for SEO by converting Data Transfer Objects (DTOs) into JSON-LD arrays.
+- **Responsibility**: It transforms host-provided `JsonSerializable` DTOs into structured JSON-LD output wrapped in `JsonLdSchemaDTO` objects. The service contains **no SQL, no repository access, no host data fetching, and no framework rendering**. It does not generate HTML or `<script>` tags.
+- **`generate()` Behavior**: Accepts any `\JsonSerializable` schema DTO and returns a `JsonLdSchemaDTO`.
+- **`generateGraph()` Behavior**: Accepts a list of `\JsonSerializable` schema DTOs and returns a `JsonLdSchemaDTO` containing:
+  - `@context: https://schema.org`
+  - `@graph: [...]` (the serialized schema array)
 
 ### Meta Generator Service
 The `MetaGeneratorService` orchestrates the assembly of `<title>`, `<meta>` description, canonical, robots, OpenGraph, and Twitter tags per the current language and provided entity data.
@@ -98,15 +100,15 @@ The `MetaGeneratorService` orchestrates the assembly of `<title>`, `<meta>` desc
 
 ### Schema DTOs
 All schema generation is powered by strict, host-agnostic Data Transfer Objects that implement `\JsonSerializable` or specific interfaces.
-- **`JsonLdSchemaDTO`**: Base interface for all root-level schemas. Ensures that the DTO can be JSON serialized.
+- **`JsonLdSchemaDTO`**: A final readonly DTO class implementing `\JsonSerializable` that wraps an `array<string, mixed>` JSON-LD schema and serializes it unchanged.
 - **`GenericSchemaDTO`**: A flexible schema implementation that allows passing a raw array mapping for custom or less common schemas while still enforcing standard encoding constraints.
 - **`BreadcrumbItemDTO`**: Represents a single node in a breadcrumb trail (name, target URL, position).
 - **`BreadcrumbListDTO`**: Collection DTO holding multiple `BreadcrumbItemDTO` elements.
 - **`BreadcrumbSchemaDTO`**: The root schema DTO encapsulating a `BreadcrumbListDTO` for standard JSON-LD output.
 - **`WebPageSchemaDTO`**: Represents `WebPage` schema properties (name, description, url).
 - **`WebsiteSchemaDTO`**: Represents `WebSite` schema (name, url, potential search actions).
-- **`OrganizationSchemaDTO`**: Represents `Organization` schema (name, url, logo, contact points).
-- **`ProductSchemaDTO`**: A robust representation of a `Product` schema, detailing name, description, SKU, brand, offers (price, currency, availability), and reviews.
+- **`OrganizationSchemaDTO`**: Represents `Organization` schema documenting constructor-provided values: `name`, `url`, `logoUrl`, and `sameAsUrls`.
+- **`ProductSchemaDTO`**: A robust representation of a `Product` schema documenting constructor-provided values: `name`, `description`, `sku`, `brandName`, and `additionalProperties` (which can be used by the host to supply offers, reviews, or other custom fields).
 
 ## Service Layer
 Services manage the core business orchestration and throw standard `SeoNotFoundException` when entities are missing. They never perform SQL queries directly and strictly use constructor injection.
