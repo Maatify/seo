@@ -98,6 +98,13 @@ The `MetaGeneratorService` orchestrates the assembly of `<title>`, `<meta>` desc
   - `twitterTitle` (?string)
   - `twitterDescription` (?string)
 
+### Redirect and Slug Management
+- **`RedirectManagerService`**: Orchestrates redirect decisions without directly accessing the database (uses `RedirectQueryService` and `RedirectCommandService`). It accepts a `ResolveRedirectCommand` and returns a `RedirectDecisionDTO`. It does not emit HTTP responses, does not perform framework routing, and generates target URLs exclusively via `HostUrlGeneratorInterface`. Contains no SQL.
+- **`SlugHistoryService`**: Manages entity slug history and automatic redirect creation without directly accessing the database. It handles `RecordSlugChangeCommand` to log old slugs. Contains no SQL.
+- **`RedirectDecisionDTO`**: A final readonly DTO containing the redirect decision (none, 301, 410) and target URL. It ensures the routing layer receives a standardized outcome.
+- **`ResolveRedirectCommand`**: Command object containing parameters needed to resolve a redirect (`entityType`, `languageId`, `requestedSlug`, `requestedPath`).
+- **`RecordSlugChangeCommand`**: Command object representing an entity slug change, specifying the `oldSlug` and whether to automatically create a redirect.
+
 ### Schema DTOs
 All schema generation is powered by strict, host-agnostic Data Transfer Objects that implement `\JsonSerializable` or specific interfaces.
 - **`JsonLdSchemaDTO`**: A final readonly DTO class implementing `\JsonSerializable` that wraps an `array<string, mixed>` JSON-LD schema and serializes it unchanged.

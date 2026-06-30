@@ -17,3 +17,4 @@ Currently, the module has the following foundational layers implemented (Phases 
 - **Phase 2C (Services):** Core domain logic orchestration, utilizing constructor injection and strict module exceptions.
 - **Phase 3A (Meta Generator):** Logic to assemble and orchestrate standard HTML Meta tags, merging host-provided defaults with manual database overrides in a framework-agnostic way.
 - **Phase 3B (JSON-LD Schema Generator):** Standalone service providing host-agnostic and framework-agnostic structured data generation for SEO (e.g., Breadcrumbs, Products) via strictly typed DTOs.
+- **Phase 3C (Redirect & Slug Services):** Core logic for resolving SEO redirects and managing slug histories, maintaining framework independence by returning DTOs rather than HTTP responses.
