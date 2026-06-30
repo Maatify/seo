@@ -16,7 +16,19 @@ Modules/Seo/
 │   └── maa_seo_slug_history.sql
 └── src/
     ├── Admin/
-    │   └── SeoOverride/
+    │   ├── Redirect/
+    │   │   ├── Command/
+    │   │   ├── Contract/
+    │   │   ├── DTO/
+    │   │   ├── Infrastructure/Repository/
+    │   │   └── Service/
+    │   ├── SeoOverride/
+    │   │   ├── Command/
+    │   │   ├── Contract/
+    │   │   ├── DTO/
+    │   │   ├── Infrastructure/Repository/
+    │   │   └── Service/
+    │   └── SlugHistory/
     │       ├── Command/
     │       ├── Contract/
     │       ├── DTO/

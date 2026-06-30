@@ -174,7 +174,7 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   Finalized `README.md`, `SEO_MODULE_REFERENCE.md`, and verified PHPStan level max passes natively.
 
 - **Phase 6: Full Module Completion (Upcoming)**
-  - **Phase 6A: Admin Layer:** Implement admin-specific command, query, and service classes for managing SEO overrides.
+  - **Phase 6A: Admin Layer:** Implement admin-specific command, query, and service classes for managing SEO overrides, redirects, and slug history.
   - **Phase 6B: Web Layer:** Implement host website consumption services/DTOs. (Replaces standard Customer layer; no controllers or routes).
   - **Phase 6C: Bootstrap/DI Full Wiring:** Complete dependency injection wiring for all layers.
   - **Phase 6D: Final Module Compliance Audit:** Ensure full compliance with all Maatify module standards before final release.
