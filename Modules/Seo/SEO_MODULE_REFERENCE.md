@@ -90,14 +90,6 @@ The `MetaGeneratorService` orchestrates the assembly of `<title>`, `<meta>` desc
   - `twitterTitle` (?string)
   - `twitterDescription` (?string)
 
-
-### JSON-LD Schema Generator Service
-The `SchemaGeneratorService` transforms host-provided JSON-serializable schema DTOs into JSON-LD arrays. It performs no repository access, routing decisions, host data fetching, framework response rendering, sitemap generation, or redirect resolution.
-- **Generic Schema**: `GenericSchemaDTO` accepts a Schema.org type plus validated host-provided properties.
-- **BreadcrumbList**: `BreadcrumbItemDTO`, `BreadcrumbListDTO`, and `BreadcrumbSchemaDTO` generate Schema.org `BreadcrumbList` JSON-LD from host-provided names, URLs, and positions.
-- **Host-Agnostic Entities**: `WebPageSchemaDTO`, `OrganizationSchemaDTO`, `WebsiteSchemaDTO`, and `ProductSchemaDTO` only serialize constructor-provided values.
-- **Graph Output**: `SchemaGeneratorService::generateGraph()` wraps multiple schema DTOs in a single `@graph` document.
-
 ## Service Layer
 Services manage the core business orchestration and throw standard `SeoNotFoundException` when entities are missing. They never perform SQL queries directly and strictly use constructor injection.
 
@@ -117,6 +109,7 @@ Services manage the core business orchestration and throw standard `SeoNotFoundE
 - `HostSearchContextInterface`
 
 ## Intentionally Not Implemented (Pending Phases)
+- **JSON-LD Schema Generation**: Generating JSON-LD structures for Products, Breadcrumbs, etc., is not implemented yet.
 - **Redirect resolver logic**: Routing decisions (evaluating a request against redirects) belong to the consuming framework and are not implemented yet.
 - **Sitemap generation logic**: Streaming XML dynamically will be implemented in a dedicated phase due to memory constraints and is not implemented yet.
 - **Controllers/framework integration**: Kept decoupled to remain framework-agnostic and are not implemented yet.
