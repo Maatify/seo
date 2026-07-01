@@ -298,7 +298,41 @@ exit;
 
 ---
 
-## 9. Dependency Injection Guidance
+## 9. SEO Validation Helpers Integration
+
+The `SeoMetaValidator` can be utilized by the host application to run audits on pages without emitting output.
+
+### Background Job or Test Integration
+You can build a script to scrape your own site's metadata (or catch it during generation) and run the array through the validator:
+
+```php
+use Maatify\Seo\Web\Validation\SeoMetaValidator;
+
+// Assume the host app generated the $meta array for a product page
+$meta = [
+    'title' => 'Awesome Product',
+    'description' => 'A great product.',
+    // Missing required fields for OG and Canonical, perhaps?
+];
+
+$result = SeoMetaValidator::validate($meta, [
+    'requireCanonical' => true,
+    'descriptionMinLength' => 50,
+]);
+
+if ($result->hasWarnings) {
+    // Log warnings to host monitoring tools
+    // e.g. "Page /products/123 generated a description that is too short."
+    HostLogger::warning('SEO warnings detected', ['issues' => $result->warnings]);
+}
+```
+
+### Pre-Render Check Integration
+Host frameworks (like Laravel or Slim middleware) can hook the payload to validate before rendering to a template. If warnings occur, you might flash a message to an admin interface or skip outputting broken SEO tags.
+
+---
+
+## 10. Dependency Injection Guidance
 
 While the SEO library provides a `SeoBindings.php` file mapping interfaces to factories, it **does not require** a specific DI container like PHP-DI or Laravel's container.
 
@@ -308,7 +342,7 @@ While the SEO library provides a `SeoBindings.php` file mapping interfaces to fa
 
 ---
 
-## 10. Persistence Integration Guidance
+## 11. Persistence Integration Guidance
 
 For features requiring database storage (like manual SEO overrides or slug histories), the module expects a plain `PDO` instance.
 
@@ -318,7 +352,7 @@ For features requiring database storage (like manual SEO overrides or slug histo
 
 ---
 
-## 11. Error Handling
+## 12. Error Handling
 
 - **Module Exceptions:** The SEO library throws specific module exceptions (e.g., `SeoNotFoundException`, `SeoConflictException`) when operations fail.
 - **Host Responsibility:** The host application is responsible for catching these exceptions, logging them, and converting them into appropriate HTTP status codes (like 404 Not Found or 400 Bad Request).
@@ -326,7 +360,7 @@ For features requiring database storage (like manual SEO overrides or slug histo
 
 ---
 
-## 12. Common Integration Mistakes
+## 13. Common Integration Mistakes
 
 To maintain module integrity, ensure you **do not**:
 

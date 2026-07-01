@@ -209,6 +209,12 @@ The Web layer includes framework-neutral helpers for generating `robots.txt` str
 - **`Web/Robots/DTO/RobotsTxtDTO.php`**: A DTO representing the complete file, containing global comments, a list of sitemaps, and user-agent rule blocks.
 - **`Web/Robots/DTO/RobotsRuleDTO.php`**: A DTO representing a single user-agent block, with fields for `userAgent`, `allow`, `disallow`, `crawlDelay`, and comments.
 
+### Validation Helpers
+The Web layer includes framework-neutral helpers for auditing and validating generated SEO metadata arrays or objects.
+- **`Web/Validation/SeoMetaValidator.php`**: Validates SEO metadata arrays or objects against configurable options. It checks for missing fields, incorrect lengths, robots tag conflicts, schema problems, and missing OpenGraph/Twitter context fields, safely returning an aggregated DTO rather than throwing exceptions.
+- **`Web/Validation/DTO/SeoValidationIssueDTO.php`**: A DTO representing a single validation problem (`code`, `severity`, `message`, `field`).
+- **`Web/Validation/DTO/SeoValidationResultDTO.php`**: An aggregate DTO that categorizes issues into errors, warnings, and info, and computes boolean flags like `isValid` and `hasWarnings`.
+
 ### Web Output DTOs
 - **`Web/DTO/SeoHeadHtmlDTO.php`**: A framework-neutral, final read-only DTO that implements `\JsonSerializable`. It separates rendered HTML into individual string sections (`metaHtml`, `openGraphHtml`, `twitterCardHtml`, `jsonLdHtml`) and provides a pre-combined `fullHtml` output, allowing host applications flexibility in rendering without requiring template engine coupling.
 

@@ -372,7 +372,91 @@ echo $renderer->render($txt);
 
 ---
 
-## 10. Existing SitemapGeneratorService Example
+## 10. SEO Metadata Validation Example
+
+The `SeoMetaValidator` allows you to audit generated SEO metadata (arrays or objects) to verify that essential tags and formats are correctly configured. It does not output HTML or throw exceptions for bad SEO data; instead, it returns an aggregated `SeoValidationResultDTO`. This is extremely useful for pre-flight checks, automated tests, or admin dashboard warnings.
+
+The validator natively covers:
+* **Title:** Presence, minimum length, maximum length.
+* **Description:** Presence, minimum length, maximum length.
+* **Canonical:** Presence (optional), and absolute URL format.
+* **Robots Conflicts:** Checks if both `index` and `noindex` (or `follow` and `nofollow`) are concurrently set.
+* **OpenGraph Missing Fields:** Validates `og:title`, `og:description`, and `og:image` are provided when an OpenGraph context is requested.
+* **Twitter Missing Fields:** Validates `card`, `title`, and `description` are provided when a Twitter context is requested.
+* **JSON-LD Warnings:** Ensures schema structures are correctly formatted as non-empty arrays.
+
+> **Note:** The validator expects data in an array or object format, typically generated before final HTML string rendering. Invalid `$options` configuration (such as passing a string where an integer is expected) will throw a `SeoInvalidArgumentException`. Normal SEO warnings and errors *do not* throw exceptions.
+
+### Basic Validation
+
+```php
+use Maatify\Seo\Web\Validation\SeoMetaValidator;
+
+$metaData = [
+    'title' => 'My Page',
+    'description' => 'A short description.',
+    'canonical' => 'not-a-valid-url',
+    'robots' => 'index, noindex', // Conflict!
+    'openGraph' => [
+        'title' => 'OG Title',
+        // Missing og:description and og:image
+    ]
+];
+
+$result = SeoMetaValidator::validate($metaData);
+
+// Check overall status
+if (!$result->isValid) {
+    echo "There are SEO errors.\n";
+}
+if ($result->hasWarnings) {
+    echo "There are SEO warnings.\n";
+}
+
+// Inspect specific issues
+foreach ($result->errors as $error) {
+    // e.g., invalid_canonical: "Canonical URL must be a valid absolute URL."
+    echo "[{$error->severity}] {$error->code}: {$error->message} (Field: {$error->field})\n";
+}
+
+foreach ($result->warnings as $warning) {
+    // e.g., robots_index_conflict, missing_og_description, missing_og_image, title_too_short
+    echo "[{$warning->severity}] {$warning->code}: {$warning->message}\n";
+}
+
+// Access all issues together
+$allIssues = $result->issues;
+```
+
+### Validation with Options
+
+You can customize the validator rules by passing an `$options` array as the second argument. Invalid configurations (e.g. non-integers for lengths) will throw a `SeoInvalidArgumentException`.
+
+```php
+use Maatify\Seo\Web\Validation\SeoMetaValidator;
+
+$metaData = [
+    'title' => 'Perfect Title Length Here',
+    'description' => 'This description is long enough to pass the custom validation threshold we set.',
+];
+
+$options = [
+    'requireCanonical' => true,      // Defaults to false
+    'titleMinLength' => 15,          // Defaults to 10
+    'titleMaxLength' => 60,          // Defaults to 60
+    'descriptionMinLength' => 50,    // Defaults to 50
+    'descriptionMaxLength' => 160,   // Defaults to 160
+];
+
+$result = SeoMetaValidator::validate($metaData, $options);
+
+// Because 'canonical' is missing and requireCanonical is true,
+// a 'missing_canonical' warning will be generated.
+```
+
+---
+
+## 11. Existing SitemapGeneratorService Example
 
 The core `SitemapGeneratorService` remains available. It is responsible for orchestrating sitemap generation logic and returning structured DTOs (`SitemapGenerationResultDTO`), which represents a structural abstraction over the XML data.
 
@@ -399,7 +483,7 @@ $xmlContent = $result->xml;
 
 ---
 
-## 11. Recommended Host Application Usage
+## 12. Recommended Host Application Usage
 
 The Maatify SEO module is designed to integrate cleanly into any PHP framework without introducing hard dependencies on the framework itself.
 
@@ -468,7 +552,7 @@ Always pass the pre-rendered HTML string (or the `SeoHeadHtmlDTO`) to your templ
 
 ---
 
-## 12. Common Mistakes
+## 13. Common Mistakes
 
 When implementing the Maatify SEO module, ensure you adhere strictly to the following guidelines:
 

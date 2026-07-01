@@ -195,6 +195,9 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   - **Phase 10C: Image Sitemap Support (Complete):** Enhance Web string helper to support `image:image` tags and Google's image sitemap schema.
   - **Phase 10D: Video Sitemap Support (Complete):** Enhance Web string helper to support `video:video` tags and Google's video sitemap schema.
 
+- **Phase 11: Utilities and Diagnostics**
+  - **Phase 11A: SEO Validation Helpers (Complete):** Provide a tool to inspect generated output array/DTO structures and warn about common issues (missing title, description too long, etc.).
+
 ## 11. Risks / Decisions that Need Approval Before Coding
 
 - **Entity Identifier Type**: Host projects might use `int`, `string` (UUID), or mixed types for `entity_id`. Should `entity_id` in `maa_seo_*` tables be `VARCHAR(36)` to safely support UUIDs, even if the host uses integers? (Recommendation: Yes, `VARCHAR(36)`).

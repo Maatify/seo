@@ -45,6 +45,7 @@ The module is complete and release-ready. It has the following foundational laye
 - **Phase 10B (Hreflang / Alternate URL Support):** Web string helpers for sitemap multi-language indexing (`xhtml:link`).
 - **Phase 10C (Image Sitemap Support):** Web string helpers for image sitemap standard integration (`image:image`).
 - **Phase 10D (Video Sitemap Support):** Web string helpers for video sitemap standard integration (`video:video`).
+- **Phase 11A (SEO Validation Helpers):** Framework-neutral helpers for auditing and validating generated SEO metadata arrays or objects to warn about missing fields or tag conflicts.
 
 ## Rendering Robots.txt
 
