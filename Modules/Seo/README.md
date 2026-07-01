@@ -41,6 +41,7 @@ The module is complete and release-ready. It has the following foundational laye
 - **Phase 7D (Optional Spatie Schema Integration):** Provides an optional adapter for converting Spatie schema objects to native JSON-LD DTOs.
 - **Phase 7E (Sitemap String Output):** Helper to optionally generate plain string output directly from sitemap commands. The Phase 7 usability and rendering layer is now completely implemented.
 - **Phase 9A (Robots.txt Output Helpers):** Framework-neutral helpers for generating `robots.txt` plain strings.
+- **Phase 10A (Sitemap Index String Renderer):** Helper to optionally generate plain string output directly for sitemap indexes.
 
 ## Rendering Robots.txt
 

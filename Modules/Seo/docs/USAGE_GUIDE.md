@@ -229,7 +229,34 @@ $xmlOutput = $renderer->renderUrlSet([$urlDto, $arrayEntry]);
 
 ---
 
-## 8. Robots.txt String Output Example
+## 8. Sitemap Index XML String Example
+
+To render a sitemap index directly to an XML string, use the `SitemapIndexXmlStringRenderer`.
+
+```php
+use Maatify\Seo\Web\Sitemap\DTO\SitemapIndexEntryDTO;
+use Maatify\Seo\Web\Sitemap\SitemapIndexXmlStringRenderer;
+
+$renderer = new SitemapIndexXmlStringRenderer();
+
+// Example with SitemapIndexEntryDTO
+$dto = new SitemapIndexEntryDTO('https://example.com/sitemap-products.xml', '2023-10-01');
+echo $renderer->renderEntry($dto);
+
+// Example with associative array
+$arrayEntry = [
+    'loc' => 'https://example.com/sitemap-articles.xml',
+    'lastmod' => '2023-10-02',
+];
+echo $renderer->renderEntry($arrayEntry);
+
+// Render the full index
+echo $renderer->renderIndex([$dto, $arrayEntry]);
+```
+
+---
+
+## 9. Robots.txt String Output Example
 
 To quickly render a `robots.txt` string dynamically, you can use the `RobotsTxtRenderer`.
 
@@ -272,7 +299,7 @@ echo $renderer->render($txt);
 
 ---
 
-## 9. Existing SitemapGeneratorService Example
+## 10. Existing SitemapGeneratorService Example
 
 The core `SitemapGeneratorService` remains available. It is responsible for orchestrating sitemap generation logic and returning structured DTOs (`SitemapGenerationResultDTO`), which represents a structural abstraction over the XML data.
 
@@ -299,7 +326,7 @@ $xmlContent = $result->xml;
 
 ---
 
-## 10. Recommended Host Application Usage
+## 11. Recommended Host Application Usage
 
 The Maatify SEO module is designed to integrate cleanly into any PHP framework without introducing hard dependencies on the framework itself.
 
@@ -368,7 +395,7 @@ Always pass the pre-rendered HTML string (or the `SeoHeadHtmlDTO`) to your templ
 
 ---
 
-## 11. Common Mistakes
+## 12. Common Mistakes
 
 When implementing the Maatify SEO module, ensure you adhere strictly to the following guidelines:
 

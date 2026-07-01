@@ -229,6 +229,25 @@ echo $xmlString;
 exit;
 ```
 
+If you need to output a `sitemapindex`:
+
+```php
+use Maatify\Seo\Web\Sitemap\SitemapIndexXmlStringRenderer;
+use Maatify\Seo\Web\Sitemap\DTO\SitemapIndexEntryDTO;
+
+$indexEntries = [
+    new SitemapIndexEntryDTO('https://example.com/sitemap-products.xml', '2023-10-01'),
+    new SitemapIndexEntryDTO('https://example.com/sitemap-articles.xml', '2023-10-02')
+];
+
+$renderer = new SitemapIndexXmlStringRenderer();
+$xmlString = $renderer->renderIndex($indexEntries);
+
+header('Content-Type: application/xml; charset=utf-8');
+echo $xmlString;
+exit;
+```
+
 ---
 
 ## 8. Robots.txt Integration
