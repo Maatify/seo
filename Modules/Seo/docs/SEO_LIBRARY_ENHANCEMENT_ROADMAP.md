@@ -164,9 +164,7 @@ Support:
 * image geo location
 * image license
 
-## 10D: Video Sitemap Support
-
-Optional later.
+## 10D: Video Sitemap Support (Complete)
 
 Support:
 

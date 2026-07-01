@@ -200,17 +200,18 @@ echo $builder->render();
 
 ## 7. Sitemap XML String Example
 
-To easily render sitemap entries to XML strings without modifying core services, the library provides the `SitemapXmlStringRenderer`. It supports rendering basic URLs, alternate hreflang tags for multi-language indexing, and Google image sitemap definitions.
+To easily render sitemap entries to XML strings without modifying core services, the library provides the `SitemapXmlStringRenderer`. It supports rendering basic URLs, alternate hreflang tags for multi-language indexing, Google image sitemap definitions, and Google video sitemap definitions.
 
 ```php
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapAlternateUrlDTO;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapImageDTO;
+use Maatify\Seo\Shared\DTO\Sitemap\SitemapVideoDTO;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapUrlDTO;
 use Maatify\Seo\Web\Sitemap\SitemapXmlStringRenderer;
 
 $renderer = new SitemapXmlStringRenderer();
 
-// Example with SitemapUrlDTO, Alternate URLs (Hreflang), and Images
+// Example with SitemapUrlDTO, Alternate URLs (Hreflang), Images, and Videos
 $urlDto = new SitemapUrlDTO(
     loc: 'https://example.com/en/page-1',
     lastmod: '2023-10-01',
@@ -228,11 +229,22 @@ $urlDto = new SitemapUrlDTO(
             geoLocation: 'Limerick, Ireland',
             license: 'https://example.com/license'
         )
+    ],
+    videos: [
+        new SitemapVideoDTO(
+            thumbnailLoc: 'https://example.com/thumbnail.jpg',
+            title: 'Sample Video',
+            description: 'A sample video description',
+            contentLoc: 'https://example.com/video.mp4',
+            playerLoc: 'https://example.com/player',
+            duration: 600,
+            publicationDate: '2023-10-01T12:00:00+00:00'
+        )
     ]
 );
 echo $renderer->renderUrlEntry($urlDto);
-// Output includes local xmlns:xhtml and xmlns:image:
-// <url xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+// Output includes local xmlns:xhtml, xmlns:image, and xmlns:video:
+// <url xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
 //   <loc>https://example.com/en/page-1</loc>
 //   <lastmod>2023-10-01</lastmod>
 //   <changefreq>monthly</changefreq>
@@ -246,6 +258,15 @@ echo $renderer->renderUrlEntry($urlDto);
 //     <image:geo_location>Limerick, Ireland</image:geo_location>
 //     <image:license>https://example.com/license</image:license>
 //   </image:image>
+//   <video:video>
+//     <video:thumbnail_loc>https://example.com/thumbnail.jpg</video:thumbnail_loc>
+//     <video:title>Sample Video</video:title>
+//     <video:description>A sample video description</video:description>
+//     <video:content_loc>https://example.com/video.mp4</video:content_loc>
+//     <video:player_loc>https://example.com/player</video:player_loc>
+//     <video:duration>600</video:duration>
+//     <video:publication_date>2023-10-01T12:00:00+00:00</video:publication_date>
+//   </video:video>
 // </url>
 
 // Example with associative array
@@ -260,16 +281,24 @@ $arrayEntry = [
     ],
     'images' => [
         ['loc' => 'https://example.com/image2.jpg', 'title' => 'Image 2']
+    ],
+    'videos' => [
+        [
+            'thumbnailLoc' => 'https://example.com/thumbnail2.jpg',
+            'title' => 'Video 2',
+            'description' => 'Description 2',
+            'contentLoc' => 'https://example.com/video2.mp4'
+        ]
     ]
 ];
 echo $renderer->renderUrlEntry($arrayEntry);
 
 // Rendering an entire URL Set (passing multiple URLs)
 $xmlOutput = $renderer->renderUrlSet([$urlDto, $arrayEntry]);
-// <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">...urls...</urlset>
+// <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">...urls...</urlset>
 ```
 
-> **Note:** The `xmlns:xhtml="http://www.w3.org/1999/xhtml"` namespace is dynamically added to the root `<urlset>` (or `<url>` if rendering a single entry) only when `alternates` are present. Similarly, `xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"` is added only when `images` exist. Both are included when alternate URLs and images exist together. If neither are supplied, the sitemap output remains clean and unchanged.
+> **Note:** The `xmlns:xhtml="http://www.w3.org/1999/xhtml"` namespace is dynamically added to the root `<urlset>` (or `<url>` if rendering a single entry) only when `alternates` are present. Similarly, `xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"` is added only when `images` exist, and `xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"` is added only when `videos` exist. They are included together when alternate URLs, images, and videos exist together. If none are supplied, the sitemap output remains clean and unchanged. Existing URL-set, hreflang, and image sitemap output without videos remains exactly as it was.
 
 ---
 

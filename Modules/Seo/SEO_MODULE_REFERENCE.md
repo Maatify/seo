@@ -124,8 +124,10 @@ The `SitemapGeneratorService` generates valid XML strings for sitemap indexes an
 
 ### Sitemap DTOs
 All inputs to the sitemap generator are strictly validated `final readonly` DTOs.
-- **`SitemapUrlDTO`**: Represents a single `<url>` entry. Contains `loc`, optional `lastmod`, `changefreq`, `priority`, and a list of `SitemapAlternateUrlDTO` instances for hreflang links.
+- **`SitemapUrlDTO`**: Represents a single `<url>` entry. Contains `loc`, optional `lastmod`, `changefreq`, `priority`, a list of `SitemapAlternateUrlDTO` instances for hreflang links, a list of `SitemapImageDTO` instances for images, and a list of `SitemapVideoDTO` instances for videos.
 - **`SitemapAlternateUrlDTO`**: Represents a single `<xhtml:link>` hreflang alternate. Contains `hreflang` and `url`.
+- **`SitemapImageDTO`**: Represents a single `<image:image>` entry. Contains `loc`, optional `title`, `caption`, `geoLocation`, and `license`.
+- **`SitemapVideoDTO`**: Represents a single `<video:video>` entry. Contains `thumbnailLoc`, `title`, `description`, optional `contentLoc`, `playerLoc`, `duration`, and `publicationDate`.
 - **`SitemapIndexEntryDTO`**: Represents a single `<sitemap>` entry in a sitemap index. Contains `loc` and optional `lastmod`.
 - **`SitemapGenerationResultDTO`**: Represents the result of a generation operation. Contains the full `xml` string, the `entryCount` (exposed as `entry_count` in JSON serialization), and the `type` (either `urlset` or `sitemapindex`).
 
@@ -198,7 +200,7 @@ The Web layer provides a dedicated adapter for optionally converting Spatie sche
 
 ### Sitemap String Output
 The Web layer includes optional helpers for rendering XML sitemap strings directly.
-- **`Web/Sitemap/SitemapXmlStringRenderer.php`**: A framework-neutral helper that returns XML strings only and does not emit HTTP responses. It supports `SitemapUrlDTO` objects and raw array URL entries, correctly handling and validating `loc`, `lastmod`, `changefreq`, `priority`, hreflang `alternates` fields, and `images`. When `alternates` are present, it dynamically adds the `xmlns:xhtml` namespace and renders `<xhtml:link>` elements. When `images` are present, it dynamically adds the `xmlns:image` namespace and renders `<image:image>` elements. It safely escapes XML values natively. The existing `SitemapGeneratorService` remains fully available and unchanged.
+- **`Web/Sitemap/SitemapXmlStringRenderer.php`**: A framework-neutral helper that returns XML strings only and does not emit HTTP responses. It supports `SitemapUrlDTO` objects and raw array URL entries, correctly handling and validating `loc`, `lastmod`, `changefreq`, `priority`, hreflang `alternates`, `images`, and `videos` fields. When `alternates` are present, it dynamically adds the `xmlns:xhtml` namespace and renders `<xhtml:link>` elements. When `images` are present, it dynamically adds the `xmlns:image` namespace and renders `<image:image>` elements. When `videos` are present, it dynamically adds the `xmlns:video` namespace and renders `<video:video>` elements. It safely escapes XML values natively. The existing `SitemapGeneratorService` remains fully available and unchanged.
 - **`Web/Sitemap/SitemapIndexXmlStringRenderer.php`**: A framework-neutral helper that returns XML strings only for Sitemap Indexes. It supports `SitemapIndexEntryDTO` objects and raw array URL entries, safely escaping values.
 
 ### Robots.txt String Output
