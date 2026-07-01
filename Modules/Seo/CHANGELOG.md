@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.0.0] - Unreleased
+- **Added:** Implementation of Phase 7E Sitemap String Output Helpers (`SitemapXmlStringRenderer`) to directly render XML sitemap strings (see `docs/verification/PHASE_7E_SITEMAP_STRING_OUTPUT_VERIFICATION_REPORT.md`).
 - **Added:** Implementation of Phase 7D Optional Spatie Schema Integration to provide a framework-neutral adapter for `spatie/schema-org`.
 - **Added:** Implementation of Phase 7C Fluent SEO Builder to provide a framework-neutral fluent interface for dynamic output construction.
 - **Added:** Phase 7B (Usability & Rendering) Render Output DTOs (`SeoHeadHtmlDTO`) implemented and verified (see `docs/verification/PHASE_7B_RENDER_OUTPUT_DTOS_VERIFICATION_REPORT.md`).

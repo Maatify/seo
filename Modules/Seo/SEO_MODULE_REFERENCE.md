@@ -196,6 +196,10 @@ The Web layer includes a framework-neutral fluent output builder under `src/Web/
 The Web layer provides a dedicated adapter for optionally converting Spatie schema objects to native JSON-LD DTOs.
 - **`Web/Schema/SpatieSchemaAdapter.php`**: A framework-neutral bridge that provides `supports(object $schema): bool` and `toJsonLdSchemaDTO(object $schema): JsonLdSchemaDTO` functionality. The integration is completely optional; `spatie/schema-org` is only a suggested dependency. The adapter uses runtime checks (e.g. `method_exists`) so no hard dependencies on Spatie classes are imported or required by production code. Existing Phase 7A/7B/7C APIs remain fully available and unaltered.
 
+### Sitemap String Output
+The Web layer includes an optional helper for rendering XML sitemap strings directly.
+- **`Web/Sitemap/SitemapXmlStringRenderer.php`**: A framework-neutral helper that returns XML strings only and does not emit HTTP responses. It supports `SitemapUrlDTO` objects and raw array URL entries, correctly handling and validating `loc`, `lastmod`, `changefreq`, and `priority` fields. It safely escapes XML values natively. The existing `SitemapGeneratorService` remains fully available and unchanged.
+
 ### Web Output DTOs
 - **`Web/DTO/SeoHeadHtmlDTO.php`**: A framework-neutral, final read-only DTO that implements `\JsonSerializable`. It separates rendered HTML into individual string sections (`metaHtml`, `openGraphHtml`, `twitterCardHtml`, `jsonLdHtml`) and provides a pre-combined `fullHtml` output, allowing host applications flexibility in rendering without requiring template engine coupling.
 
