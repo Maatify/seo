@@ -14,9 +14,13 @@ final readonly class SitemapUrlDTO implements \JsonSerializable
     /** @var list<SitemapImageDTO> */
     public array $images;
 
+    /** @var list<SitemapVideoDTO> */
+    public array $videos;
+
     /**
      * @param array<mixed> $alternates
      * @param array<mixed> $images
+     * @param array<mixed> $videos
      */
     public function __construct(
         public string $loc,
@@ -25,6 +29,7 @@ final readonly class SitemapUrlDTO implements \JsonSerializable
         public ?float $priority = null,
         array $alternates = [],
         array $images = [],
+        array $videos = [],
     ) {
         if (trim($this->loc) === '') {
             throw SeoInvalidArgumentException::emptyField('loc');
@@ -63,6 +68,17 @@ final readonly class SitemapUrlDTO implements \JsonSerializable
         }
 
         $this->images = $validImages;
+
+        $validVideos = [];
+        foreach ($videos as $video) {
+            if (!$video instanceof SitemapVideoDTO) {
+                throw SeoInvalidArgumentException::emptyField('videos');
+            }
+
+            $validVideos[] = $video;
+        }
+
+        $this->videos = $validVideos;
     }
 
     public static function isValidLastmod(string $lastmod): bool
@@ -90,7 +106,7 @@ final readonly class SitemapUrlDTO implements \JsonSerializable
     }
 
     /**
-     * @return array{loc: string, lastmod: ?string, changefreq: ?string, priority: ?float, alternates: list<array{hreflang: string, url: string}>, images: list<array{loc: string, title: ?string, caption: ?string, geoLocation: ?string, license: ?string}>}
+     * @return array{loc: string, lastmod: ?string, changefreq: ?string, priority: ?float, alternates: list<array{hreflang: string, url: string}>, images: list<array{loc: string, title: ?string, caption: ?string, geoLocation: ?string, license: ?string}>, videos: list<array{thumbnailLoc: string, title: string, description: string, contentLoc: ?string, playerLoc: ?string, duration: ?int, publicationDate: ?string}>}
      */
     public function jsonSerialize(): array
     {
@@ -102,6 +118,10 @@ final readonly class SitemapUrlDTO implements \JsonSerializable
         foreach ($this->images as $image) {
             $images[] = $image->jsonSerialize();
         }
+        $videos = [];
+        foreach ($this->videos as $video) {
+            $videos[] = $video->jsonSerialize();
+        }
 
         return [
             'loc' => trim($this->loc),
@@ -110,6 +130,7 @@ final readonly class SitemapUrlDTO implements \JsonSerializable
             'priority' => $this->priority,
             'alternates' => $alternates,
             'images' => $images,
+            'videos' => $videos,
         ];
     }
 }

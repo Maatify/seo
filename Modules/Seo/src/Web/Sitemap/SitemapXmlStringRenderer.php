@@ -8,6 +8,7 @@ use Maatify\Seo\Exception\SeoInvalidArgumentException;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapAlternateUrlDTO;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapImageDTO;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapUrlDTO;
+use Maatify\Seo\Shared\DTO\Sitemap\SitemapVideoDTO;
 use XMLWriter;
 
 final readonly class SitemapXmlStringRenderer
@@ -21,6 +22,7 @@ final readonly class SitemapXmlStringRenderer
         $normalizedUrls = [];
         $hasAlternates = false;
         $hasImages = false;
+        $hasVideos = false;
         foreach ($urls as $url) {
             $normalizedUrl = $this->normalizeUrlEntry($url);
             if ($normalizedUrl['alternates'] !== []) {
@@ -28,6 +30,9 @@ final readonly class SitemapXmlStringRenderer
             }
             if ($normalizedUrl['images'] !== []) {
                 $hasImages = true;
+            }
+            if ($normalizedUrl['videos'] !== []) {
+                $hasVideos = true;
             }
             $normalizedUrls[] = $normalizedUrl;
         }
@@ -39,6 +44,9 @@ final readonly class SitemapXmlStringRenderer
         }
         if ($hasImages) {
             $writer->writeAttribute('xmlns:image', 'http://www.google.com/schemas/sitemap-image/1.1');
+        }
+        if ($hasVideos) {
+            $writer->writeAttribute('xmlns:video', 'http://www.google.com/schemas/sitemap-video/1.1');
         }
 
         foreach ($normalizedUrls as $url) {
@@ -61,7 +69,7 @@ final readonly class SitemapXmlStringRenderer
     }
 
     /**
-     * @return array{loc: string, lastmod: ?string, changefreq: ?string, priority: ?float, alternates: list<array{hreflang: string, url: string}>, images: list<array{loc: string, title: ?string, caption: ?string, geoLocation: ?string, license: ?string}>}
+     * @return array{loc: string, lastmod: ?string, changefreq: ?string, priority: ?float, alternates: list<array{hreflang: string, url: string}>, images: list<array{loc: string, title: ?string, caption: ?string, geoLocation: ?string, license: ?string}>, videos: list<array{thumbnailLoc: string, title: string, description: string, contentLoc: ?string, playerLoc: ?string, duration: ?int, publicationDate: ?string}>}
      */
     private function normalizeUrlEntry(mixed $url): array
     {
@@ -73,6 +81,7 @@ final readonly class SitemapXmlStringRenderer
                 'priority' => $url->priority,
                 'alternates' => $this->normalizeDtoAlternates($url->alternates),
                 'images' => $this->normalizeDtoImages($url->images),
+                'videos' => $this->normalizeDtoVideos($url->videos),
             ];
         }
 
@@ -92,6 +101,7 @@ final readonly class SitemapXmlStringRenderer
             'priority' => $this->nullableArrayFloat($url, 'priority'),
             'alternates' => $this->normalizeArrayAlternates($url),
             'images' => $this->normalizeArrayImages($url),
+            'videos' => $this->normalizeArrayVideos($url),
         ];
     }
 
@@ -123,6 +133,28 @@ final readonly class SitemapXmlStringRenderer
                 $image->caption,
                 $image->geoLocation,
                 $image->license,
+            );
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param list<SitemapVideoDTO> $videos
+     * @return list<array{thumbnailLoc: string, title: string, description: string, contentLoc: ?string, playerLoc: ?string, duration: ?int, publicationDate: ?string}>
+     */
+    private function normalizeDtoVideos(array $videos): array
+    {
+        $normalized = [];
+        foreach ($videos as $video) {
+            $normalized[] = $this->normalizeVideoValues(
+                $video->thumbnailLoc,
+                $video->title,
+                $video->description,
+                $video->contentLoc,
+                $video->playerLoc,
+                $video->duration,
+                $video->publicationDate,
             );
         }
 
@@ -202,6 +234,53 @@ final readonly class SitemapXmlStringRenderer
     }
 
     /**
+     * @param array<mixed> $url
+     * @return list<array{thumbnailLoc: string, title: string, description: string, contentLoc: ?string, playerLoc: ?string, duration: ?int, publicationDate: ?string}>
+     */
+    private function normalizeArrayVideos(array $url): array
+    {
+        if (!array_key_exists('videos', $url) || $url['videos'] === null) {
+            return [];
+        }
+
+        if (!is_array($url['videos']) || !$this->isListArray($url['videos'])) {
+            throw SeoInvalidArgumentException::emptyField('videos');
+        }
+
+        $normalized = [];
+        foreach ($url['videos'] as $video) {
+            if (!is_array($video) || $this->isListArray($video)) {
+                throw SeoInvalidArgumentException::emptyField('videos');
+            }
+
+            $thumbnailLoc = $video['thumbnailLoc'] ?? null;
+            $title = $video['title'] ?? null;
+            $description = $video['description'] ?? null;
+            if (!is_scalar($thumbnailLoc) || trim((string) $thumbnailLoc) === '') {
+                throw SeoInvalidArgumentException::emptyField('thumbnailLoc');
+            }
+            if (!is_scalar($title) || trim((string) $title) === '') {
+                throw SeoInvalidArgumentException::emptyField('title');
+            }
+            if (!is_scalar($description) || trim((string) $description) === '') {
+                throw SeoInvalidArgumentException::emptyField('description');
+            }
+
+            $normalized[] = $this->normalizeVideoValues(
+                (string) $thumbnailLoc,
+                (string) $title,
+                (string) $description,
+                $this->nullableArrayString($video, 'contentLoc'),
+                $this->nullableArrayString($video, 'playerLoc'),
+                $this->nullableArrayInt($video, 'duration'),
+                $this->nullableArrayString($video, 'publicationDate'),
+            );
+        }
+
+        return $normalized;
+    }
+
+    /**
      * @return array{hreflang: string, url: string}
      */
     private function normalizeAlternateValues(string $hreflang, string $url): array
@@ -259,6 +338,70 @@ final readonly class SitemapXmlStringRenderer
         ];
     }
 
+    /**
+     * @return array{thumbnailLoc: string, title: string, description: string, contentLoc: ?string, playerLoc: ?string, duration: ?int, publicationDate: ?string}
+     */
+    private function normalizeVideoValues(
+        string $thumbnailLoc,
+        string $title,
+        string $description,
+        ?string $contentLoc,
+        ?string $playerLoc,
+        ?int $duration,
+        ?string $publicationDate,
+    ): array {
+        $thumbnailLoc = trim($thumbnailLoc);
+        if ($thumbnailLoc === '') {
+            throw SeoInvalidArgumentException::emptyField('thumbnailLoc');
+        }
+        if (filter_var($thumbnailLoc, FILTER_VALIDATE_URL) === false) {
+            throw SeoInvalidArgumentException::invalidUrl($thumbnailLoc);
+        }
+
+        $title = trim($title);
+        if ($title === '') {
+            throw SeoInvalidArgumentException::emptyField('title');
+        }
+
+        $description = trim($description);
+        if ($description === '') {
+            throw SeoInvalidArgumentException::emptyField('description');
+        }
+
+        $contentLoc = $this->nullableNonEmptyString($contentLoc);
+        if ($contentLoc !== null && filter_var($contentLoc, FILTER_VALIDATE_URL) === false) {
+            throw SeoInvalidArgumentException::invalidUrl($contentLoc);
+        }
+
+        $playerLoc = $this->nullableNonEmptyString($playerLoc);
+        if ($playerLoc !== null && filter_var($playerLoc, FILTER_VALIDATE_URL) === false) {
+            throw SeoInvalidArgumentException::invalidUrl($playerLoc);
+        }
+
+        if ($contentLoc === null && $playerLoc === null) {
+            throw SeoInvalidArgumentException::emptyField('contentLoc');
+        }
+
+        if ($duration !== null && $duration <= 0) {
+            throw SeoInvalidArgumentException::invalidValue('duration', 'must be greater than 0.');
+        }
+
+        $publicationDate = $this->nullableNonEmptyString($publicationDate);
+        if ($publicationDate !== null && !SitemapUrlDTO::isValidLastmod($publicationDate)) {
+            throw SeoInvalidArgumentException::emptyField('publicationDate');
+        }
+
+        return [
+            'thumbnailLoc' => $thumbnailLoc,
+            'title' => $title,
+            'description' => $description,
+            'contentLoc' => $contentLoc,
+            'playerLoc' => $playerLoc,
+            'duration' => $duration,
+            'publicationDate' => $publicationDate,
+        ];
+    }
+
     private function isValidHreflang(string $hreflang): bool
     {
         $value = strtolower(trim($hreflang));
@@ -310,6 +453,26 @@ final readonly class SitemapXmlStringRenderer
         return (float) $url[$field];
     }
 
+    /**
+     * @param array<mixed> $url
+     */
+    private function nullableArrayInt(array $url, string $field): ?int
+    {
+        if (!array_key_exists($field, $url) || $url[$field] === null || $url[$field] === '') {
+            return null;
+        }
+
+        if (!is_int($url[$field]) && !is_string($url[$field])) {
+            throw SeoInvalidArgumentException::emptyField($field);
+        }
+
+        if (filter_var($url[$field], FILTER_VALIDATE_INT) === false) {
+            throw SeoInvalidArgumentException::emptyField($field);
+        }
+
+        return (int) $url[$field];
+    }
+
     private function nullableNonEmptyString(?string $value): ?string
     {
         if ($value === null || trim($value) === '') {
@@ -320,7 +483,7 @@ final readonly class SitemapXmlStringRenderer
     }
 
     /**
-     * @param array{loc: string, lastmod: ?string, changefreq: ?string, priority: ?float, alternates: list<array{hreflang: string, url: string}>, images: list<array{loc: string, title: ?string, caption: ?string, geoLocation: ?string, license: ?string}>} $url
+     * @param array{loc: string, lastmod: ?string, changefreq: ?string, priority: ?float, alternates: list<array{hreflang: string, url: string}>, images: list<array{loc: string, title: ?string, caption: ?string, geoLocation: ?string, license: ?string}>, videos: list<array{thumbnailLoc: string, title: string, description: string, contentLoc: ?string, playerLoc: ?string, duration: ?int, publicationDate: ?string}>} $url
      */
     private function writeUrlEntry(XMLWriter $writer, array $url, bool $declareAlternateNamespace): void
     {
@@ -330,6 +493,9 @@ final readonly class SitemapXmlStringRenderer
         }
         if ($declareAlternateNamespace && $url['images'] !== []) {
             $writer->writeAttribute('xmlns:image', 'http://www.google.com/schemas/sitemap-image/1.1');
+        }
+        if ($declareAlternateNamespace && $url['videos'] !== []) {
+            $writer->writeAttribute('xmlns:video', 'http://www.google.com/schemas/sitemap-video/1.1');
         }
         $writer->writeElement('loc', $url['loc']);
 
@@ -363,6 +529,25 @@ final readonly class SitemapXmlStringRenderer
             }
             if ($image['license'] !== null) {
                 $writer->writeElement('image:license', $image['license']);
+            }
+            $writer->endElement();
+        }
+        foreach ($url['videos'] as $video) {
+            $writer->startElement('video:video');
+            $writer->writeElement('video:thumbnail_loc', $video['thumbnailLoc']);
+            $writer->writeElement('video:title', $video['title']);
+            $writer->writeElement('video:description', $video['description']);
+            if ($video['contentLoc'] !== null) {
+                $writer->writeElement('video:content_loc', $video['contentLoc']);
+            }
+            if ($video['playerLoc'] !== null) {
+                $writer->writeElement('video:player_loc', $video['playerLoc']);
+            }
+            if ($video['duration'] !== null) {
+                $writer->writeElement('video:duration', (string) $video['duration']);
+            }
+            if ($video['publicationDate'] !== null) {
+                $writer->writeElement('video:publication_date', $video['publicationDate']);
             }
             $writer->endElement();
         }
