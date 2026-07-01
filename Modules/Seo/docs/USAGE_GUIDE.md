@@ -483,6 +483,7 @@ You can customize the validator rules by passing an `$options` array as the seco
 
 ```php
 use Maatify\Seo\Web\Validation\SeoMetaValidator;
+use Maatify\Seo\Web\Validation\SeoValidationScoreCalculator;
 
 $metaData = [
     'title' => 'Perfect Title Length Here',

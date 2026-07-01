@@ -240,9 +240,10 @@ Provide a way to calculate a simple score and report directly from validation re
 Return:
 
 * score from 0 to 100
-* passed checks count
-* warning count
+* grade
 * error count
+* warning count
+* info count
 * point deductions
 * isHealthy flag
 
