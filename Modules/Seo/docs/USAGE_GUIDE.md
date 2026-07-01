@@ -398,7 +398,7 @@ $metaData = [
     'canonical' => 'not-a-valid-url',
     'robots' => 'index, noindex', // Conflict!
     'openGraph' => [
-        'title' => 'OG Title'
+        'title' => 'OG Title',
         // Missing og:description and og:image
     ]
 ];
