@@ -6,6 +6,7 @@ namespace Maatify\Seo\Web\Sitemap;
 
 use Maatify\Seo\Exception\SeoInvalidArgumentException;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapAlternateUrlDTO;
+use Maatify\Seo\Shared\DTO\Sitemap\SitemapImageDTO;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapUrlDTO;
 use XMLWriter;
 
@@ -19,10 +20,14 @@ final readonly class SitemapXmlStringRenderer
         $writer = $this->createWriter();
         $normalizedUrls = [];
         $hasAlternates = false;
+        $hasImages = false;
         foreach ($urls as $url) {
             $normalizedUrl = $this->normalizeUrlEntry($url);
             if ($normalizedUrl['alternates'] !== []) {
                 $hasAlternates = true;
+            }
+            if ($normalizedUrl['images'] !== []) {
+                $hasImages = true;
             }
             $normalizedUrls[] = $normalizedUrl;
         }
@@ -31,6 +36,9 @@ final readonly class SitemapXmlStringRenderer
         $writer->writeAttribute('xmlns', 'http://www.sitemaps.org/schemas/sitemap/0.9');
         if ($hasAlternates) {
             $writer->writeAttribute('xmlns:xhtml', 'http://www.w3.org/1999/xhtml');
+        }
+        if ($hasImages) {
+            $writer->writeAttribute('xmlns:image', 'http://www.google.com/schemas/sitemap-image/1.1');
         }
 
         foreach ($normalizedUrls as $url) {
@@ -53,7 +61,7 @@ final readonly class SitemapXmlStringRenderer
     }
 
     /**
-     * @return array{loc: string, lastmod: ?string, changefreq: ?string, priority: ?float, alternates: list<array{hreflang: string, url: string}>}
+     * @return array{loc: string, lastmod: ?string, changefreq: ?string, priority: ?float, alternates: list<array{hreflang: string, url: string}>, images: list<array{loc: string, title: ?string, caption: ?string, geoLocation: ?string, license: ?string}>}
      */
     private function normalizeUrlEntry(mixed $url): array
     {
@@ -64,6 +72,7 @@ final readonly class SitemapXmlStringRenderer
                 'changefreq' => $this->nullableNonEmptyString($url->changefreq),
                 'priority' => $url->priority,
                 'alternates' => $this->normalizeDtoAlternates($url->alternates),
+                'images' => $this->normalizeDtoImages($url->images),
             ];
         }
 
@@ -82,6 +91,7 @@ final readonly class SitemapXmlStringRenderer
             'changefreq' => $this->nullableArrayString($url, 'changefreq'),
             'priority' => $this->nullableArrayFloat($url, 'priority'),
             'alternates' => $this->normalizeArrayAlternates($url),
+            'images' => $this->normalizeArrayImages($url),
         ];
     }
 
@@ -94,6 +104,26 @@ final readonly class SitemapXmlStringRenderer
         $normalized = [];
         foreach ($alternates as $alternate) {
             $normalized[] = $this->normalizeAlternateValues($alternate->hreflang, $alternate->url);
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param list<SitemapImageDTO> $images
+     * @return list<array{loc: string, title: ?string, caption: ?string, geoLocation: ?string, license: ?string}>
+     */
+    private function normalizeDtoImages(array $images): array
+    {
+        $normalized = [];
+        foreach ($images as $image) {
+            $normalized[] = $this->normalizeImageValues(
+                $image->loc,
+                $image->title,
+                $image->caption,
+                $image->geoLocation,
+                $image->license,
+            );
         }
 
         return $normalized;
@@ -135,6 +165,43 @@ final readonly class SitemapXmlStringRenderer
     }
 
     /**
+     * @param array<mixed> $url
+     * @return list<array{loc: string, title: ?string, caption: ?string, geoLocation: ?string, license: ?string}>
+     */
+    private function normalizeArrayImages(array $url): array
+    {
+        if (!array_key_exists('images', $url) || $url['images'] === null) {
+            return [];
+        }
+
+        if (!is_array($url['images']) || !$this->isListArray($url['images'])) {
+            throw SeoInvalidArgumentException::emptyField('images');
+        }
+
+        $normalized = [];
+        foreach ($url['images'] as $image) {
+            if (!is_array($image) || $this->isListArray($image)) {
+                throw SeoInvalidArgumentException::emptyField('images');
+            }
+
+            $loc = $image['loc'] ?? null;
+            if (!is_scalar($loc) || trim((string) $loc) === '') {
+                throw SeoInvalidArgumentException::emptyField('loc');
+            }
+
+            $normalized[] = $this->normalizeImageValues(
+                (string) $loc,
+                $this->nullableArrayString($image, 'title'),
+                $this->nullableArrayString($image, 'caption'),
+                $this->nullableArrayString($image, 'geoLocation'),
+                $this->nullableArrayString($image, 'license'),
+            );
+        }
+
+        return $normalized;
+    }
+
+    /**
      * @return array{hreflang: string, url: string}
      */
     private function normalizeAlternateValues(string $hreflang, string $url): array
@@ -157,6 +224,38 @@ final readonly class SitemapXmlStringRenderer
         return [
             'hreflang' => strtolower($hreflang),
             'url' => $url,
+        ];
+    }
+
+    /**
+     * @return array{loc: string, title: ?string, caption: ?string, geoLocation: ?string, license: ?string}
+     */
+    private function normalizeImageValues(
+        string $loc,
+        ?string $title,
+        ?string $caption,
+        ?string $geoLocation,
+        ?string $license,
+    ): array {
+        $loc = trim($loc);
+        if ($loc === '') {
+            throw SeoInvalidArgumentException::emptyField('loc');
+        }
+        if (filter_var($loc, FILTER_VALIDATE_URL) === false) {
+            throw SeoInvalidArgumentException::invalidUrl($loc);
+        }
+
+        $license = $this->nullableNonEmptyString($license);
+        if ($license !== null && filter_var($license, FILTER_VALIDATE_URL) === false) {
+            throw SeoInvalidArgumentException::invalidUrl($license);
+        }
+
+        return [
+            'loc' => $loc,
+            'title' => $this->nullableNonEmptyString($title),
+            'caption' => $this->nullableNonEmptyString($caption),
+            'geoLocation' => $this->nullableNonEmptyString($geoLocation),
+            'license' => $license,
         ];
     }
 
@@ -221,13 +320,16 @@ final readonly class SitemapXmlStringRenderer
     }
 
     /**
-     * @param array{loc: string, lastmod: ?string, changefreq: ?string, priority: ?float, alternates: list<array{hreflang: string, url: string}>} $url
+     * @param array{loc: string, lastmod: ?string, changefreq: ?string, priority: ?float, alternates: list<array{hreflang: string, url: string}>, images: list<array{loc: string, title: ?string, caption: ?string, geoLocation: ?string, license: ?string}>} $url
      */
     private function writeUrlEntry(XMLWriter $writer, array $url, bool $declareAlternateNamespace): void
     {
         $writer->startElement('url');
         if ($declareAlternateNamespace && $url['alternates'] !== []) {
             $writer->writeAttribute('xmlns:xhtml', 'http://www.w3.org/1999/xhtml');
+        }
+        if ($declareAlternateNamespace && $url['images'] !== []) {
+            $writer->writeAttribute('xmlns:image', 'http://www.google.com/schemas/sitemap-image/1.1');
         }
         $writer->writeElement('loc', $url['loc']);
 
@@ -245,6 +347,23 @@ final readonly class SitemapXmlStringRenderer
             $writer->writeAttribute('rel', 'alternate');
             $writer->writeAttribute('hreflang', $alternate['hreflang']);
             $writer->writeAttribute('href', $alternate['url']);
+            $writer->endElement();
+        }
+        foreach ($url['images'] as $image) {
+            $writer->startElement('image:image');
+            $writer->writeElement('image:loc', $image['loc']);
+            if ($image['title'] !== null) {
+                $writer->writeElement('image:title', $image['title']);
+            }
+            if ($image['caption'] !== null) {
+                $writer->writeElement('image:caption', $image['caption']);
+            }
+            if ($image['geoLocation'] !== null) {
+                $writer->writeElement('image:geo_location', $image['geoLocation']);
+            }
+            if ($image['license'] !== null) {
+                $writer->writeElement('image:license', $image['license']);
+            }
             $writer->endElement();
         }
 

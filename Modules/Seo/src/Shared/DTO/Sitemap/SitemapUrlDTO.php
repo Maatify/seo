@@ -11,8 +11,12 @@ final readonly class SitemapUrlDTO implements \JsonSerializable
     /** @var list<SitemapAlternateUrlDTO> */
     public array $alternates;
 
+    /** @var list<SitemapImageDTO> */
+    public array $images;
+
     /**
      * @param array<mixed> $alternates
+     * @param array<mixed> $images
      */
     public function __construct(
         public string $loc,
@@ -20,6 +24,7 @@ final readonly class SitemapUrlDTO implements \JsonSerializable
         public ?string $changefreq = null,
         public ?float $priority = null,
         array $alternates = [],
+        array $images = [],
     ) {
         if (trim($this->loc) === '') {
             throw SeoInvalidArgumentException::emptyField('loc');
@@ -47,6 +52,17 @@ final readonly class SitemapUrlDTO implements \JsonSerializable
         }
 
         $this->alternates = $validAlternates;
+
+        $validImages = [];
+        foreach ($images as $image) {
+            if (!$image instanceof SitemapImageDTO) {
+                throw SeoInvalidArgumentException::emptyField('images');
+            }
+
+            $validImages[] = $image;
+        }
+
+        $this->images = $validImages;
     }
 
     public static function isValidLastmod(string $lastmod): bool
@@ -74,13 +90,17 @@ final readonly class SitemapUrlDTO implements \JsonSerializable
     }
 
     /**
-     * @return array{loc: string, lastmod: ?string, changefreq: ?string, priority: ?float, alternates: list<array{hreflang: string, url: string}>}
+     * @return array{loc: string, lastmod: ?string, changefreq: ?string, priority: ?float, alternates: list<array{hreflang: string, url: string}>, images: list<array{loc: string, title: ?string, caption: ?string, geoLocation: ?string, license: ?string}>}
      */
     public function jsonSerialize(): array
     {
         $alternates = [];
         foreach ($this->alternates as $alternate) {
             $alternates[] = $alternate->jsonSerialize();
+        }
+        $images = [];
+        foreach ($this->images as $image) {
+            $images[] = $image->jsonSerialize();
         }
 
         return [
@@ -89,6 +109,7 @@ final readonly class SitemapUrlDTO implements \JsonSerializable
             'changefreq' => $this->changefreq,
             'priority' => $this->priority,
             'alternates' => $alternates,
+            'images' => $images,
         ];
     }
 }
