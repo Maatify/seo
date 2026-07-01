@@ -90,7 +90,10 @@ final class SeoMetaValidator
         return $options[$key];
     }
 
-    /** @param array<string, mixed>|object $source @param list<string> $names */
+    /**
+     * @param array<string, mixed>|object $source
+     * @param list<array-key> $names
+     */
     private static function value(array|object $source, array $names): mixed
     {
         foreach ($names as $name) {
@@ -151,7 +154,10 @@ final class SeoMetaValidator
         }
     }
 
-    /** @param list<SeoValidationIssueDTO> $issues @param array<string, mixed>|object $meta */
+    /**
+     * @param list<SeoValidationIssueDTO> $issues
+     * @param array<string, mixed>|object $meta
+     */
     private static function validateOpenGraph(array &$issues, array|object $meta): void
     {
         $og = self::value($meta, ['openGraph', 'og']);
@@ -160,9 +166,11 @@ final class SeoMetaValidator
             return;
         }
         if (is_array($og) || is_object($og)) {
-            self::requireOpenGraphField($issues, $og, 'og:title', ['og:title', 'title', 'openGraphTitle', 'open_graph_title']);
-            self::requireOpenGraphField($issues, $og, 'og:description', ['og:description', 'description', 'openGraphDescription', 'open_graph_description']);
-            self::requireOpenGraphField($issues, $og, 'og:image', ['og:image', 'image', 'openGraphImage', 'open_graph_image']);
+            /** @var array<string, mixed>|object $ogSource */
+            $ogSource = $og;
+            self::requireOpenGraphField($issues, $ogSource, 'og:title', ['og:title', 'title', 'openGraphTitle', 'open_graph_title']);
+            self::requireOpenGraphField($issues, $ogSource, 'og:description', ['og:description', 'description', 'openGraphDescription', 'open_graph_description']);
+            self::requireOpenGraphField($issues, $ogSource, 'og:image', ['og:image', 'image', 'openGraphImage', 'open_graph_image']);
             return;
         }
 
@@ -171,7 +179,10 @@ final class SeoMetaValidator
         self::requireOpenGraphField($issues, $meta, 'og:image', ['openGraphImage', 'open_graph_image']);
     }
 
-    /** @param list<SeoValidationIssueDTO> $issues @param array<string, mixed>|object $meta */
+    /**
+     * @param list<SeoValidationIssueDTO> $issues
+     * @param array<string, mixed>|object $meta
+     */
     private static function validateTwitter(array &$issues, array|object $meta): void
     {
         $twitter = self::value($meta, ['twitter']);
@@ -180,9 +191,11 @@ final class SeoMetaValidator
             return;
         }
         if (is_array($twitter) || is_object($twitter)) {
-            self::requireTwitterField($issues, $twitter, 'card', ['card', 'twitterCard', 'twitter_card']);
-            self::requireTwitterField($issues, $twitter, 'title', ['title', 'twitterTitle', 'twitter_title']);
-            self::requireTwitterField($issues, $twitter, 'description', ['description', 'twitterDescription', 'twitter_description']);
+            /** @var array<string, mixed>|object $twitterSource */
+            $twitterSource = $twitter;
+            self::requireTwitterField($issues, $twitterSource, 'card', ['card', 'twitterCard', 'twitter_card']);
+            self::requireTwitterField($issues, $twitterSource, 'title', ['title', 'twitterTitle', 'twitter_title']);
+            self::requireTwitterField($issues, $twitterSource, 'description', ['description', 'twitterDescription', 'twitter_description']);
             return;
         }
 
@@ -192,7 +205,11 @@ final class SeoMetaValidator
     }
 
 
-    /** @param list<SeoValidationIssueDTO> $issues @param array<string, mixed>|object $source @param list<string> $fieldNames */
+    /**
+     * @param list<SeoValidationIssueDTO> $issues
+     * @param array<string, mixed>|object $source
+     * @param list<string> $fieldNames
+     */
     private static function requireOpenGraphField(array &$issues, array|object $source, string $field, array $fieldNames): void
     {
         $value = self::stringValue(self::value($source, $fieldNames));
@@ -201,7 +218,11 @@ final class SeoMetaValidator
         }
     }
 
-    /** @param list<SeoValidationIssueDTO> $issues @param array<string, mixed>|object $source @param list<string> $fieldNames */
+    /**
+     * @param list<SeoValidationIssueDTO> $issues
+     * @param array<string, mixed>|object $source
+     * @param list<string> $fieldNames
+     */
     private static function requireTwitterField(array &$issues, array|object $source, string $field, array $fieldNames): void
     {
         $value = self::stringValue(self::value($source, $fieldNames));
