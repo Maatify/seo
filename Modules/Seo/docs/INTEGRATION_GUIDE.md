@@ -1,0 +1,279 @@
+# SEO Library Integration Guide
+
+This guide explains how host applications should integrate the Maatify SEO library. The library is strictly framework-neutral and decoupled from any specific routing, presentation, or DI container.
+
+---
+
+## 1. Overview
+
+The core philosophy of the SEO library is simple: **it computes data and returns it**.
+
+- The library returns pure DTOs, PHP strings, and standard service results.
+- **The host application owns** the HTTP responses, controllers, route definitions, template engines, DI containers, and database wiring.
+- The SEO library has zero dependency on frameworks like Slim, Laravel, Symfony, Twig, or Blade.
+
+---
+
+## 2. Recommended Integration Architecture
+
+To keep your application decoupled and testable, follow this data flow:
+
+1.  **Request Handling:** The framework's route or controller receives the HTTP request.
+2.  **Data Preparation:** The controller calls your host's internal services to fetch the necessary page/product data.
+3.  **SEO Generation:** The controller passes this data into the SEO library (e.g., using `FluentSeoBuilder` or `SeoHeadHtmlRenderer`) to build the DTOs or rendered HTML output.
+4.  **Template Rendering:** The controller passes the final SEO output (as a string or a DTO) to the template engine.
+5.  **Response:** The controller sends the template output in an HTTP response.
+
+*Best Practice:* Keep the construction of SEO objects in the controller/service layer, not inside the template files.
+
+---
+
+## 3. Plain PHP Integration
+
+Integrating without a framework is straightforward using Composer autoloading.
+
+```php
+<?php
+// my-page.php
+require 'vendor/autoload.php';
+
+use Maatify\Seo\Web\Builder\FluentSeoBuilder;
+
+// 1. Build SEO output using the Fluent Builder
+$seoBuilder = (new FluentSeoBuilder())
+    ->title('My Awesome Page')
+    ->description('Learn more about our plain PHP integration.')
+    ->canonical('https://example.com/my-page')
+    ->schema([
+        '@context' => 'https://schema.org',
+        '@type'    => 'WebPage',
+        'name'     => 'My Awesome Page',
+    ]);
+
+// 2. Render to a plain string
+$seoHtml = $seoBuilder->render();
+
+// Note on Escaping: The SEO library renderers natively and safely escape
+// generated tags (e.g., htmlspecialchars on title and description).
+// However, the host application is still responsible for how it echoes the final string.
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- 3. Output inside the plain PHP template -->
+    <?= $seoHtml ?>
+</head>
+<body>
+    <h1>Welcome to Plain PHP</h1>
+</body>
+</html>
+```
+
+---
+
+## 4. Slim Integration
+
+Slim Framework integration relies on building the SEO content inside the route callback and passing the resulting payload to your view layer.
+
+```php
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Maatify\Seo\Web\Builder\FluentSeoBuilder;
+
+$app->get('/products/{id}', function (Request $request, Response $response, array $args) {
+
+    // 1. Fetch product from your host application
+    $product = $this->get('ProductService')->find($args['id']);
+
+    // 2. Build SEO output
+    $seoBuilder = (new FluentSeoBuilder())
+        ->title($product->name . ' - Store')
+        ->description($product->shortDescription);
+
+    // You can pass the raw string ($seoHtml) or a structured DTO ($seoDto)
+    $seoHtml = $seoBuilder->render();
+    // $seoDto = $seoBuilder->renderDto();
+
+    // 3. Render the template
+    // IMPORTANT: The SEO library does not return PSR-7 responses. You must write it to the response.
+    return $this->get('view')->render($response, 'product.twig', [
+        'product' => $product,
+        'seoHtml' => $seoHtml
+    ]);
+});
+```
+
+---
+
+## 5. Laravel Integration
+
+In Laravel, manage SEO inside Controllers, View Composers, or dedicated host-level services. **Do not add Laravel-specific packages or dependencies to the SEO module itself.**
+
+```php
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Maatify\Seo\Web\Builder\FluentSeoBuilder;
+use App\Models\Product;
+
+class ProductController extends Controller
+{
+    public function show(Request $request, $id)
+    {
+        // 1. Fetch the product
+        $product = Product::findOrFail($id);
+
+        // 2. Build SEO output
+        $builder = (new FluentSeoBuilder())
+            ->title($product->name)
+            ->description($product->description)
+            ->canonical(route('products.show', $product->id));
+
+        $seoHtml = $builder->render();
+        // Alternatively, use ->renderDto() if you want Blade to place sections individually
+
+        // 3. Pass to Blade template
+        return view('products.show', [
+            'product' => $product,
+            'seoHtml' => $seoHtml,
+        ]);
+    }
+}
+```
+
+---
+
+## 6. Template Integration
+
+### Twig Example (Pre-rendered string)
+
+If you passed `$seoHtml` to Twig, use the `raw` filter to output the unescaped HTML block (since the SEO library already handled attribute escaping safely).
+
+```twig
+{# product.twig #}
+<!DOCTYPE html>
+<html>
+<head>
+    {{ seoHtml|raw }}
+</head>
+<body>
+    <h1>{{ product.name }}</h1>
+</body>
+</html>
+```
+
+### Blade Example (Pre-rendered string)
+
+In Blade, use the `{!! !!}` syntax.
+
+```blade
+{{-- product.blade.php --}}
+<!DOCTYPE html>
+<html>
+<head>
+    {!! $seoHtml !!}
+</head>
+<body>
+    <h1>{{ $product->name }}</h1>
+</body>
+</html>
+```
+
+### DTO Section Rendering Example
+
+If you used `$seoDto = $builder->renderDto();` and passed it to the template (e.g., as `$seo`), you can distribute the tags to different blocks or sections.
+
+```blade
+{{-- layout.blade.php --}}
+<head>
+    {{-- Core Meta (Title, Description, Canonical) --}}
+    {!! $seo->metaHtml !!}
+
+    {{-- Social Tags --}}
+    {!! $seo->openGraphHtml !!}
+    {!! $seo->twitterCardHtml !!}
+
+    {{-- Structured Data --}}
+    {!! $seo->jsonLdHtml !!}
+
+    {{-- Or just use the pre-combined full string --}}
+    {{-- {!! $seo->fullHtml !!} --}}
+</head>
+```
+
+---
+
+## 7. Sitemap Integration
+
+Sitemaps require the host application to configure the route, set the correct HTTP headers, and echo the XML string. The library does not emit HTTP headers itself.
+
+```php
+// Example in a basic framework or plain PHP
+use Maatify\Seo\Web\Sitemap\SitemapXmlStringRenderer;
+use Maatify\Seo\Shared\DTO\Sitemap\SitemapUrlDTO;
+
+// 1. Host app routing handles `/sitemap.xml`
+$sitemapUrls = [
+    new SitemapUrlDTO('https://example.com/', '2023-10-01', 'daily', 1.0),
+    new SitemapUrlDTO('https://example.com/about', '2023-09-15', 'monthly', 0.8)
+];
+
+// 2. SEO library generates the XML string
+$renderer = new SitemapXmlStringRenderer();
+$xmlString = $renderer->renderUrlSet($sitemapUrls);
+
+// 3. Host app sets Content-Type and emits the response
+header('Content-Type: application/xml; charset=utf-8');
+echo $xmlString;
+exit;
+```
+
+---
+
+## 8. Robots.txt Future Integration Note
+
+*Note:* Helper classes for generating `robots.txt` output as plain strings are planned as a future enhancement to this library.
+
+Once implemented, the integration will follow the same pattern: the library will return a formatted text string, and **the host application will still own the `/robots.txt` route and response headers** (`Content-Type: text/plain`).
+
+---
+
+## 9. Dependency Injection Guidance
+
+While the SEO library provides a `SeoBindings.php` file mapping interfaces to factories, it **does not require** a specific DI container like PHP-DI or Laravel's container.
+
+- **Host App Registration:** Your host application can take the definitions in `SeoBindings.php` and register them into its own DI container.
+- **Plain PHP Constructors:** Every class in the library can be instantiated via plain PHP `new` using standard constructor injection.
+- Do not introduce framework-specific container interfaces (like `Illuminate\Contracts\Container\Container`) into the SEO library code.
+
+---
+
+## 10. Persistence Integration Guidance
+
+For features requiring database storage (like manual SEO overrides or slug histories), the module expects a plain `PDO` instance.
+
+- **Host Provides PDO:** The host app is responsible for establishing the database connection and providing the `PDO` object to the SEO repositories (either manually or via the host's DI container).
+- **No `.env` reading:** The SEO library must not read `.env` files, config files, or environment variables directly.
+- **No Framework Config:** Do not pass Laravel `Config::get()` or Symfony parameter bags into the library's domain layer.
+
+---
+
+## 11. Error Handling
+
+- **Module Exceptions:** The SEO library throws specific module exceptions (e.g., `SeoNotFoundException`, `SeoConflictException`) when operations fail.
+- **Host Responsibility:** The host application is responsible for catching these exceptions, logging them, and converting them into appropriate HTTP status codes (like 404 Not Found or 400 Bad Request).
+- The library should never call `http_response_code()` or throw HTTP-specific framework exceptions (like `Symfony\Component\HttpKernel\Exception\NotFoundHttpException`).
+
+---
+
+## 12. Common Integration Mistakes
+
+To maintain module integrity, ensure you **do not**:
+
+*   **Add controllers or routes to the library.** Routing belongs to the host application.
+*   **Return PSR-7, Laravel, or Symfony responses from library classes.** Return strings or DTOs only.
+*   **Call framework helpers inside library code.** (e.g., `request()`, `route()`, `env()`).
+*   **Output headers from renderers.** Do not use `header('Content-Type: ...')` inside the SEO module.
+*   **Commit `composer.lock`.** This is a reusable library; dependency resolution happens at the host application level.
+*   **Add framework packages as dependencies.** (e.g., `illuminate/support`, `symfony/http-foundation`). Keep dependencies generic.
