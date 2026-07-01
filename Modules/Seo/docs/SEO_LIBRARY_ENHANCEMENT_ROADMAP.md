@@ -182,7 +182,7 @@ Support:
 
 ## Goal
 
-Add validation/audit helpers that inspect SEO data and return warnings/errors.
+Add validation/audit helpers that inspect SEO data and return warnings/errors, and score helpers to easily compute actionable scores from validation results.
 
 This is one of the most useful real-world enhancements.
 
@@ -230,39 +230,23 @@ SeoValidationResultDTO {
 }
 ```
 
----
+## Phase 11B: SEO Validation Score Helpers (Complete)
 
-# Phase 12: SEO Score / Audit Report
+Provide a way to calculate a simple score and report directly from validation results without introducing heavy frameworks.
 
-## Goal
-
-Build on Phase 11 and provide a simple score/report.
-
-## Suggested Classes
-
-* `Shared/Audit/SeoAuditService.php`
-* `Shared/DTO/Audit/SeoAuditReportDTO.php`
-
-## Features
+* `Web/Validation/SeoValidationScoreCalculator.php`
+* `Web/Validation/DTO/SeoValidationScoreDTO.php`
 
 Return:
 
 * score from 0 to 100
-* passed checks
-* warnings
-* errors
-* recommended fixes
-* page type
-* severity levels
+* passed checks count
+* warning count
+* error count
+* point deductions
+* isHealthy flag
 
-## Use Cases
-
-Useful for:
-
-* admin dashboard
-* product SEO checks
-* content publishing workflows
-* automated QA before publishing pages
+Useful for admin dashboard checks, automated QA, and continuous integration workflows before publishing pages.
 
 ---
 
@@ -531,9 +515,8 @@ Add:
 
 1. Phase 8: Developer Experience & Docs
 2. Phase 11: SEO Validation Helpers
-3. Phase 12: SEO Audit Report
-4. Phase 9: Robots.txt Output Helpers
-5. Phase 10A: Sitemap Index Renderer
+3. Phase 9: Robots.txt Output Helpers
+4. Phase 10A: Sitemap Index Renderer
 6. Phase 15: Canonical / URL / Hreflang Helpers
 7. Phase 13: JSON-LD Schema Builders
 8. Phase 14: SEO Factories / Page Presets

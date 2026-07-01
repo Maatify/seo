@@ -428,7 +428,56 @@ foreach ($result->warnings as $warning) {
 $allIssues = $result->issues;
 ```
 
-### Validation with Options
+### Calculating a Validation Score
+
+Once you have a `SeoValidationResultDTO` from `SeoMetaValidator::validate()`, you can calculate a score from 0 to 100 using the `SeoValidationScoreCalculator`. The score helper does not mutate the original validation result, and does not change the `SeoMetaValidator` behavior.
+
+The default scoring works as follows:
+- Starts at 100.
+- `error` issues deduct 25 points each.
+- `warning` issues deduct 5 points each.
+- `info` issues deduct 0 points each.
+- The score is clamped to always remain between 0 and 100.
+
+The calculator assigns a letter grade based on the score:
+- **A**: 90–100
+- **B**: 80–89
+- **C**: 70–79
+- **D**: 60–69
+- **F**: below 60
+
+It also computes an `isHealthy` boolean (defaulting to true if the score is $\ge$ 80), and maps the deductions directly into an array of arrays (`code`, `severity`, `field`, `points`).
+
+```php
+use Maatify\Seo\Web\Validation\SeoMetaValidator;
+use Maatify\Seo\Web\Validation\SeoValidationScoreCalculator;
+
+$metaData = [
+    'title' => 'Missing Description',
+];
+
+// 1. Get the validation result
+$result = SeoMetaValidator::validate($metaData);
+
+// 2. Compute the score
+$scoreDto = SeoValidationScoreCalculator::score($result);
+
+// 3. Read the score attributes
+echo "Score: {$scoreDto->score}\n";           // e.g. 95 (100 - 5 points for missing description warning)
+echo "Grade: {$scoreDto->grade}\n";           // e.g. A
+echo "Healthy: {$scoreDto->isHealthy}\n";     // true
+
+echo "Errors: {$scoreDto->errorCount}\n";
+echo "Warnings: {$scoreDto->warningCount}\n";
+echo "Info: {$scoreDto->infoCount}\n";
+
+// Inspect point deductions
+foreach ($scoreDto->deductions as $deduction) {
+    echo "- Lost {$deduction['points']} points for {$deduction['code']} ({$deduction['severity']}) on field: {$deduction['field']}\n";
+}
+```
+
+### Validation and Score Options
 
 You can customize the validator rules by passing an `$options` array as the second argument. Invalid configurations (e.g. non-integers for lengths) will throw a `SeoInvalidArgumentException`.
 
@@ -452,7 +501,19 @@ $result = SeoMetaValidator::validate($metaData, $options);
 
 // Because 'canonical' is missing and requireCanonical is true,
 // a 'missing_canonical' warning will be generated.
+
+// Calculate score with customized penalties:
+$scoreOptions = [
+    'errorPenalty' => 50,         // Custom: Errors cost 50 points
+    'warningPenalty' => 10,       // Custom: Warnings cost 10 points
+    'infoPenalty' => 0,           // Custom: Info costs 0 points
+    'healthyMinimumScore' => 90,  // Custom: Must score at least 90 to be isHealthy
+];
+
+$customScoreDto = SeoValidationScoreCalculator::score($result, $scoreOptions);
 ```
+
+> **Note:** Providing invalid options (like a string instead of an integer penalty, or a penalty below 0) to `SeoValidationScoreCalculator::score()` will throw a `SeoInvalidArgumentException`. The score helper is strictly framework-neutral and emits no headers, responses, routes, or controllers.
 
 ---
 

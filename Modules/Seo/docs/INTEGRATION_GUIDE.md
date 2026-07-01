@@ -325,6 +325,12 @@ if ($result->hasWarnings) {
     // e.g. "Page /products/123 generated a description that is too short."
     HostLogger::warning('SEO warnings detected', ['issues' => $result->warnings]);
 }
+
+// Calculate an actionable score for the payload
+$scoreDto = \Maatify\Seo\Web\Validation\SeoValidationScoreCalculator::score($result);
+if (!$scoreDto->isHealthy) {
+    HostLogger::error("Unhealthy SEO Score ({$scoreDto->score}/100) generated for product.", ['deductions' => $scoreDto->deductions]);
+}
 ```
 
 ### Pre-Render Check Integration

@@ -46,6 +46,32 @@ The module is complete and release-ready. It has the following foundational laye
 - **Phase 10C (Image Sitemap Support):** Web string helpers for image sitemap standard integration (`image:image`).
 - **Phase 10D (Video Sitemap Support):** Web string helpers for video sitemap standard integration (`video:video`).
 - **Phase 11A (SEO Validation Helpers):** Framework-neutral helpers for auditing and validating generated SEO metadata arrays or objects to warn about missing fields or tag conflicts.
+- **Phase 11B (SEO Validation Score Helpers):** Framework-neutral calculator that computes actionable SEO scores, grades, and deductions from a validation result.
+
+## Validation Scoring Example
+
+The `SeoValidationScoreCalculator` can assign a score from 0 to 100 based on validation results.
+
+```php
+use Maatify\Seo\Web\Validation\SeoMetaValidator;
+use Maatify\Seo\Web\Validation\SeoValidationScoreCalculator;
+
+$metaData = [
+    'title' => 'Missing Description Example',
+];
+
+$result = SeoMetaValidator::validate($metaData);
+
+// Generates a SeoValidationScoreDTO
+$scoreDto = SeoValidationScoreCalculator::score($result, [
+    'errorPenalty' => 25,
+    'warningPenalty' => 5,
+]);
+
+echo "Score: {$scoreDto->score}/100\n";
+echo "Grade: {$scoreDto->grade}\n";
+echo "Healthy: " . ($scoreDto->isHealthy ? 'Yes' : 'No') . "\n";
+```
 
 ## Rendering Robots.txt
 

@@ -212,8 +212,10 @@ The Web layer includes framework-neutral helpers for generating `robots.txt` str
 ### Validation Helpers
 The Web layer includes framework-neutral helpers for auditing and validating generated SEO metadata arrays or objects.
 - **`Web/Validation/SeoMetaValidator.php`**: Validates SEO metadata arrays or objects against configurable options. It checks for missing fields, incorrect lengths, robots tag conflicts, schema problems, and missing OpenGraph/Twitter context fields, safely returning an aggregated DTO rather than throwing exceptions.
+- **`Web/Validation/SeoValidationScoreCalculator.php`**: A framework-neutral calculator that accepts a `SeoValidationResultDTO` and computes a score from 0 to 100 based on standard SEO issue deductions. It optionally takes configuration to adjust the default deductions. It does not modify the original result or change validator logic.
 - **`Web/Validation/DTO/SeoValidationIssueDTO.php`**: A DTO representing a single validation problem (`code`, `severity`, `message`, `field`).
 - **`Web/Validation/DTO/SeoValidationResultDTO.php`**: An aggregate DTO that categorizes issues into errors, warnings, and info, and computes boolean flags like `isValid` and `hasWarnings`.
+- **`Web/Validation/DTO/SeoValidationScoreDTO.php`**: An aggregate DTO holding the final score, letter grade (A-F), error counts, warning counts, the list of point deductions shapes (`code`, `severity`, `field`, `points`), and an `isHealthy` boolean indicator.
 
 ### Web Output DTOs
 - **`Web/DTO/SeoHeadHtmlDTO.php`**: A framework-neutral, final read-only DTO that implements `\JsonSerializable`. It separates rendered HTML into individual string sections (`metaHtml`, `openGraphHtml`, `twitterCardHtml`, `jsonLdHtml`) and provides a pre-combined `fullHtml` output, allowing host applications flexibility in rendering without requiring template engine coupling.

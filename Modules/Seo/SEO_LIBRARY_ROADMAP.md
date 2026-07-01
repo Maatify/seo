@@ -197,6 +197,7 @@ A PDO-based schema is required for specific sub-systems where persistence provid
 
 - **Phase 11: Utilities and Diagnostics**
   - **Phase 11A: SEO Validation Helpers (Complete):** Provide a tool to inspect generated output array/DTO structures and warn about common issues (missing title, description too long, etc.).
+  - **Phase 11B: SEO Validation Score Helpers (Complete):** Provide a tool to compute SEO scores, grades, and deductions directly from validation results.
 
 ## 11. Risks / Decisions that Need Approval Before Coding
 
