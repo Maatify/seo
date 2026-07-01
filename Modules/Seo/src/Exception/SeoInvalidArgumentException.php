@@ -25,4 +25,14 @@ final class SeoInvalidArgumentException extends \RuntimeException implements Seo
     {
         return new self("Field [{$field}] must be a non-empty associative JSON-LD schema array or JsonLdSchemaDTO.", SeoErrorCode::INVALID_EMPTY_FIELD);
     }
+
+    public static function invalidUrl(string $url): self
+    {
+        return new self("URL [{$url}] is invalid.", SeoErrorCode::INVALID_URL);
+    }
+
+    public static function invalidValue(string $field, string $reason): self
+    {
+        return new self("Field [{$field}] is invalid: {$reason}", SeoErrorCode::INVALID_VALUE);
+    }
 }

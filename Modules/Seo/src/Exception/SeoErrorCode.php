@@ -9,6 +9,8 @@ final class SeoErrorCode
     public const INVALID_EMPTY_FIELD = 1001;
     public const INVALID_ID = 1002;
     public const INVALID_HTTP_STATUS = 1003;
+    public const INVALID_URL = 1004;
+    public const INVALID_VALUE = 1005;
     public const NOT_FOUND_BY_ID = 2001;
     public const NOT_FOUND_BY_CODE = 2002;
     public const CODE_ALREADY_EXISTS = 3001;
