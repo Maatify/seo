@@ -72,7 +72,27 @@ cd Modules/Seo
 find src tests examples -name "*.php" -print0 | xargs -0 -n1 php -l
 vendor/bin/phpstan analyse
 php tests/Phase11FSeoValidationBatchReportHelpersTest.php
-# (and all other tests, sitemaps output etc.)
+php tests/Phase11ESeoValidationReportExporterTest.php
+php tests/Phase11DSeoValidationPresetsTest.php
+php tests/Phase11CSeoValidationReportHelpersTest.php
+php tests/Phase11BSeoValidationScoreHelpersTest.php
+php tests/Phase11ASeoValidationHelpersTest.php
+php tests/Phase10ENewsSitemapXmlStringRendererTest.php
+php tests/Phase10DVideoSitemapXmlStringRendererTest.php
+php tests/Phase10CImageSitemapXmlStringRendererTest.php
+php tests/Phase10BSitemapHreflangXmlStringRendererTest.php
+php tests/Phase10ASitemapIndexXmlStringRendererTest.php
+php tests/Phase7ESitemapXmlStringRendererTest.php
+php tests/Phase9ARobotsTxtRendererTest.php
+php tests/Phase7ARenderersTest.php
+php tests/Phase7CFluentSeoBuilderTest.php
+php tests/Phase7DSpatieSchemaAdapterTest.php
+php examples/sitemap-output.php
+php examples/phase7-output-showcase.php
+php examples/basic-head-render.php
+php examples/category-page-seo.php
+php examples/product-page-seo.php
+php examples/schema-output.php
 ```
 All tests pass.
 

@@ -296,8 +296,6 @@ Provides pre-configured validation option arrays (`strict`, `minimal`, `standard
 
 ## Phase 11E: SEO Validation Report Exporter (Complete)
 
-## Phase 11F: SEO Validation Batch Report Helpers (Complete)
-
 Provide a framework-neutral helper to export validation reports into multiple formats:
 
 *   `Web/Validation/SeoValidationReportExporter.php`
@@ -310,6 +308,23 @@ Return formats:
 *   Markdown string
 
 Useful for logging, dashboards, CI output, and PR issue comments.
+
+## Phase 11F: SEO Validation Batch Report Helpers (Complete)
+
+Provide a framework-neutral builder to batch validate multiple pages/products/entities in a single run:
+
+*   `Web/Validation/SeoValidationBatchReportBuilder.php`
+*   `Web/Validation/DTO/SeoValidationBatchReportDTO.php`
+
+Features:
+*   Requires a non-empty list of items. Each item requires a `meta` array/object, and accepts an optional `context` array.
+*   Supports a `sharedContext` merge, where item context overrides shared context.
+*   Provides aggregate counts and score stats: `totalCount`, `validCount`, `invalidCount`, `healthyCount`, `unhealthyCount`, `errorCount`, `warningCount`, `infoCount`, `averageScore`, `minScore`, `maxScore`.
+*   Summary rules:
+    *   Fail if any report is invalid.
+    *   Warning if all valid but any report is unhealthy or has warnings.
+    *   Pass if all valid, healthy, and warning-free.
+
 
 ---
 
