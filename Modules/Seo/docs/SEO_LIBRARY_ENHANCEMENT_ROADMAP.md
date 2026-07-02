@@ -176,6 +176,15 @@ Support:
 * content URL
 * embed URL
 
+## 10E: News Sitemap Support (Complete)
+
+Support:
+
+* Google News sitemap tags
+* publication name, language
+* title, date
+* access, genres, keywords, stock tickers
+
 ---
 
 # Phase 11: SEO Validation Helpers (Complete)

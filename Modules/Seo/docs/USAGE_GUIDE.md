@@ -200,12 +200,13 @@ echo $builder->render();
 
 ## 7. Sitemap XML String Example
 
-To easily render sitemap entries to XML strings without modifying core services, the library provides the `SitemapXmlStringRenderer`. It supports rendering basic URLs, alternate hreflang tags for multi-language indexing, Google image sitemap definitions, and Google video sitemap definitions.
+To easily render sitemap entries to XML strings without modifying core services, the library provides the `SitemapXmlStringRenderer`. It supports rendering basic URLs, alternate hreflang tags for multi-language indexing, Google image sitemap definitions, Google video sitemap definitions, and Google news sitemap definitions.
 
 ```php
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapAlternateUrlDTO;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapImageDTO;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapVideoDTO;
+use Maatify\Seo\Shared\DTO\Sitemap\SitemapNewsDTO;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapUrlDTO;
 use Maatify\Seo\Web\Sitemap\SitemapXmlStringRenderer;
 
@@ -240,11 +241,19 @@ $urlDto = new SitemapUrlDTO(
             duration: 600,
             publicationDate: '2023-10-01T12:00:00+00:00'
         )
+    ],
+    news: [
+        new SitemapNewsDTO(
+            publicationName: 'Example Daily',
+            publicationLanguage: 'en',
+            publicationDate: '2023-10-01',
+            title: 'Breaking News'
+        )
     ]
 );
 echo $renderer->renderUrlEntry($urlDto);
-// Output includes local xmlns:xhtml, xmlns:image, and xmlns:video:
-// <url xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+// Output includes local xmlns:xhtml, xmlns:image, xmlns:video, and xmlns:news:
+// <url xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
 //   <loc>https://example.com/en/page-1</loc>
 //   <lastmod>2023-10-01</lastmod>
 //   <changefreq>monthly</changefreq>
@@ -267,6 +276,14 @@ echo $renderer->renderUrlEntry($urlDto);
 //     <video:duration>600</video:duration>
 //     <video:publication_date>2023-10-01T12:00:00+00:00</video:publication_date>
 //   </video:video>
+//   <news:news>
+//     <news:publication>
+//       <news:name>Example Daily</news:name>
+//       <news:language>en</news:language>
+//     </news:publication>
+//     <news:publication_date>2023-10-01</news:publication_date>
+//     <news:title>Breaking News</news:title>
+//   </news:news>
 // </url>
 
 // Example with associative array
@@ -289,16 +306,26 @@ $arrayEntry = [
             'description' => 'Description 2',
             'contentLoc' => 'https://example.com/video2.mp4'
         ]
+    ],
+    'news' => [
+        [
+            'publicationName' => 'Tech Weekly',
+            'publicationLanguage' => 'en',
+            'publicationDate' => '2023-10-02',
+            'title' => 'New SEO Tools'
+        ]
     ]
 ];
 echo $renderer->renderUrlEntry($arrayEntry);
 
 // Rendering an entire URL Set (passing multiple URLs)
 $xmlOutput = $renderer->renderUrlSet([$urlDto, $arrayEntry]);
-// <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">...urls...</urlset>
+// <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">...urls...</urlset>
 ```
 
-> **Note:** The `xmlns:xhtml="http://www.w3.org/1999/xhtml"` namespace is dynamically added to the root `<urlset>` (or `<url>` if rendering a single entry) only when `alternates` are present. Similarly, `xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"` is added only when `images` exist, and `xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"` is added only when `videos` exist. They are included together when alternate URLs, images, and videos exist together. If none are supplied, the sitemap output remains clean and unchanged. Existing URL-set, hreflang, and image sitemap output without videos remains exactly as it was.
+> **Note:** The `xmlns:xhtml="http://www.w3.org/1999/xhtml"` namespace is dynamically added to the root `<urlset>` (or `<url>` if rendering a single entry) only when `alternates` are present. Similarly, `xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"` is added only when `images` exist, `xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"` is added only when `videos` exist, and `xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"` is added only when `news` exists. They are included together when alternate URLs, images, videos, and news exist together. If none are supplied, the sitemap output remains clean and unchanged. Existing URL-set, hreflang, and image sitemap output without videos or news remains exactly as it was.
+>
+> **News Fields Handling:** When using `SitemapNewsDTO`, the `publicationDate` is accepted as-is and rendered exactly as provided. Required fields are trimmed, and providing empty required values throws a `SeoInvalidArgumentException`. Optional empty strings are normalized to `null` and are entirely omitted from the XML output. All XML values are safely escaped by `XMLWriter`.
 
 ---
 

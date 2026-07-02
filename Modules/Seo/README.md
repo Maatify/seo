@@ -45,6 +45,7 @@ The module is complete and release-ready. It has the following foundational laye
 - **Phase 10B (Hreflang / Alternate URL Support):** Web string helpers for sitemap multi-language indexing (`xhtml:link`).
 - **Phase 10C (Image Sitemap Support):** Web string helpers for image sitemap standard integration (`image:image`).
 - **Phase 10D (Video Sitemap Support):** Web string helpers for video sitemap standard integration (`video:video`).
+- **Phase 10E (News Sitemap Support):** Web string helpers for news sitemap standard integration (`news:news`).
 - **Phase 11A (SEO Validation Helpers):** Framework-neutral helpers for auditing and validating generated SEO metadata arrays or objects to warn about missing fields or tag conflicts.
 - **Phase 11B (SEO Validation Score Helpers):** Framework-neutral calculator that computes actionable SEO scores, grades, and deductions from a validation result.
 - **Phase 11C (SEO Validation Report Helpers):** Framework-neutral builder that combines validation and scoring into a comprehensive reporting DTO.
@@ -133,4 +134,108 @@ $txt = new RobotsTxtDTO(
 );
 
 echo $renderer->render($txt);
+```
+
+## Sitemap Output Examples
+
+The Web layer provides helpers to safely output raw XML strings for sitemaps, including support for news sitemaps, video sitemaps, image sitemaps, and hreflang alternates.
+
+### Generating a News Sitemap with DTOs
+
+```php
+use Maatify\Seo\Shared\DTO\Sitemap\SitemapNewsDTO;
+use Maatify\Seo\Shared\DTO\Sitemap\SitemapUrlDTO;
+use Maatify\Seo\Web\Sitemap\SitemapXmlStringRenderer;
+
+$renderer = new SitemapXmlStringRenderer();
+
+$url = new SitemapUrlDTO(
+    loc: 'https://example.com/news/story',
+    news: [
+        new SitemapNewsDTO(
+            publicationName: 'Example Daily',
+            publicationLanguage: 'en',
+            publicationDate: '2026-07-01T10:00:00+00:00',
+            title: 'Breaking News',
+            access: 'Subscription',
+            genres: 'PressRelease',
+            keywords: 'markets, stocks',
+            stockTickers: 'NASDAQ:EXM',
+        ),
+    ],
+);
+
+$xml = $renderer->renderUrlSet([$url]);
+echo $xml;
+```
+
+### Generating a News Sitemap with Arrays
+
+```php
+use Maatify\Seo\Web\Sitemap\SitemapXmlStringRenderer;
+
+$renderer = new SitemapXmlStringRenderer();
+
+$xml = $renderer->renderUrlSet([
+    [
+        'loc' => 'https://example.com/news/story',
+        'news' => [
+            [
+                'publicationName' => 'Example Daily',
+                'publicationLanguage' => 'en',
+                'publicationDate' => '2026-07-01T10:00:00+00:00',
+                'title' => 'Breaking News',
+                'access' => 'Subscription',
+                'genres' => 'PressRelease',
+                'keywords' => 'markets, stocks',
+                'stockTickers' => 'NASDAQ:EXM',
+            ],
+        ],
+    ],
+]);
+echo $xml;
+```
+
+### Combined Sitemap Example
+
+You can seamlessly combine news sitemap tags with hreflang alternate URLs, images, and videos.
+
+```php
+use Maatify\Seo\Shared\DTO\Sitemap\SitemapAlternateUrlDTO;
+use Maatify\Seo\Shared\DTO\Sitemap\SitemapImageDTO;
+use Maatify\Seo\Shared\DTO\Sitemap\SitemapNewsDTO;
+use Maatify\Seo\Shared\DTO\Sitemap\SitemapUrlDTO;
+use Maatify\Seo\Shared\DTO\Sitemap\SitemapVideoDTO;
+use Maatify\Seo\Web\Sitemap\SitemapXmlStringRenderer;
+
+$renderer = new SitemapXmlStringRenderer();
+
+$url = new SitemapUrlDTO(
+    loc: 'https://example.com/en/news-product',
+    alternates: [
+        new SitemapAlternateUrlDTO('en', 'https://example.com/en/news-product'),
+    ],
+    images: [
+        new SitemapImageDTO('https://cdn.example.com/products/product-1.jpg', 'Product 1'),
+    ],
+    videos: [
+        new SitemapVideoDTO(
+            thumbnailLoc: 'https://cdn.example.com/videos/thumb.jpg',
+            title: 'Video title',
+            description: 'Video description',
+            contentLoc: 'https://cdn.example.com/videos/video.mp4',
+        ),
+    ],
+    news: [
+        new SitemapNewsDTO(
+            publicationName: 'Example Daily',
+            publicationLanguage: 'en',
+            publicationDate: '2026-07-01',
+            title: 'Product Launch',
+        ),
+    ],
+);
+
+$xml = $renderer->renderUrlSet([$url]);
+echo $xml;
 ```

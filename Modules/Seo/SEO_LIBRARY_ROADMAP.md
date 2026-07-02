@@ -194,6 +194,7 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   - **Phase 10B: Hreflang / Alternate URL Support (Complete):** Enhance Web string helper to support `xhtml:link` alternate URLs for multi-language indexing.
   - **Phase 10C: Image Sitemap Support (Complete):** Enhance Web string helper to support `image:image` tags and Google's image sitemap schema.
   - **Phase 10D: Video Sitemap Support (Complete):** Enhance Web string helper to support `video:video` tags and Google's video sitemap schema.
+  - **Phase 10E: News Sitemap Support (Complete):** Enhance Web string helper to support `news:news` tags and Google's news sitemap schema.
 
 - **Phase 11: Utilities and Diagnostics**
   - **Phase 11A: SEO Validation Helpers (Complete):** Provide a tool to inspect generated output array/DTO structures and warn about common issues (missing title, description too long, etc.).
