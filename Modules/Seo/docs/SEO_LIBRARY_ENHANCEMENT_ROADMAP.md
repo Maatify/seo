@@ -294,6 +294,21 @@ Useful for admin dashboard checks, automated QA, and continuous integration work
 
 Provides pre-configured validation option arrays (`strict`, `minimal`, `standard`) via `SeoValidationPreset` to streamline common workflows when using the validator, calculator, and report builder.
 
+## Phase 11E: SEO Validation Report Exporter (Complete)
+
+Provide a framework-neutral helper to export validation reports into multiple formats:
+
+*   `Web/Validation/SeoValidationReportExporter.php`
+
+Return formats:
+
+*   Complete array
+*   JSON string
+*   Compact summary array
+*   Markdown string
+
+Useful for logging, dashboards, CI output, and PR issue comments.
+
 ---
 
 # Phase 13: JSON-LD Schema Builders

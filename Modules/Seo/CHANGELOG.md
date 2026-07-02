@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.0.0] - Unreleased
+- **Added:** Implementation of Phase 11E SEO Validation Report Exporter including `SeoValidationReportExporter` to export reports to Array, JSON, Summary Array, and Markdown (see `docs/verification/PHASE_11E_SEO_VALIDATION_REPORT_EXPORTER_VERIFICATION_REPORT.md`).
 - **Added:** Implementation of Phase 10E News Sitemap Support in `SitemapXmlStringRenderer` and addition of `SitemapNewsDTO` for standard Google news sitemap indexing (see `docs/verification/PHASE_10E_NEWS_SITEMAP_SUPPORT_VERIFICATION_REPORT.md`).
 - **Added:** Implementation of Phase 11D SEO Validation Presets including `SeoValidationPreset` providing pre-configured validation and score option arrays (see `docs/verification/PHASE_11D_SEO_VALIDATION_PRESETS_VERIFICATION_REPORT.md`).
 - **Added:** Implementation of Phase 11C SEO Validation Report Helpers including `SeoValidationReportBuilder` and `SeoValidationReportDTO` for comprehensive combined reporting (see `docs/verification/PHASE_11C_SEO_VALIDATION_REPORT_HELPERS_VERIFICATION_REPORT.md`).

@@ -404,3 +404,15 @@ return new JsonResponse($report->toArray());
 ```
 
 The report builder is completely framework-neutral. It simply returns a DTO and has zero side effects: it does not mutate your original metadata, change internal validator logic, or emit any HTTP headers, routes, controllers, or responses.
+
+If you are exporting the report to external dashboards, QA tools, or CI environments, the `SeoValidationReportExporter` can provide the same data in JSON, compact summary arrays, or Markdown:
+
+```php
+use Maatify\Seo\Web\Validation\SeoValidationReportExporter;
+
+// For a dashboard API
+return new JsonResponse(SeoValidationReportExporter::toSummaryArray($report));
+
+// For a CLI tool or GitHub Action output
+echo SeoValidationReportExporter::toMarkdown($report);
+```

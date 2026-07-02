@@ -50,6 +50,7 @@ The module is complete and release-ready. It has the following foundational laye
 - **Phase 11B (SEO Validation Score Helpers):** Framework-neutral calculator that computes actionable SEO scores, grades, and deductions from a validation result.
 - **Phase 11C (SEO Validation Report Helpers):** Framework-neutral builder that combines validation and scoring into a comprehensive reporting DTO.
 - **Phase 11D (SEO Validation Presets):** Framework-neutral helper that provides pre-configured validation and score options (e.g. strict, minimal, standard) for streamlined usage.
+- **Phase 11E (SEO Validation Report Exporter):** Framework-neutral helper to export validation reports into arrays, JSON, summary arrays, and Markdown.
 
 ## Validation Report Example
 
@@ -83,6 +84,66 @@ $report = SeoValidationReportBuilder::build(
 // $report->score
 // $report->grade
 // $report->summary['status']
+```
+
+## Validation Report Export Example
+
+The `SeoValidationReportExporter` can export the report DTO into arrays, JSON, summary arrays, and Markdown.
+
+```php
+use Maatify\Seo\Web\Validation\SeoValidationPreset;
+use Maatify\Seo\Web\Validation\SeoValidationReportBuilder;
+use Maatify\Seo\Web\Validation\SeoValidationReportExporter;
+
+$preset = SeoValidationPreset::standard();
+$report = SeoValidationReportBuilder::build(
+    meta: $metaData,
+    validationOptions: $preset['validationOptions'],
+    scoreOptions: $preset['scoreOptions'],
+    context: [
+        'url' => 'https://example.com/products/demo',
+        'entityType' => 'product',
+        'entityId' => 123,
+        'language' => 'en',
+        'source' => 'qa',
+    ],
+);
+
+// Full array export
+$fullArray = SeoValidationReportExporter::toArray($report);
+
+// JSON string export
+$json = SeoValidationReportExporter::toJson($report);
+
+// Compact summary array
+$summary = SeoValidationReportExporter::toSummaryArray($report);
+/*
+[
+    'isValid' => true,
+    'isHealthy' => true,
+    'score' => 100,
+    'grade' => 'A',
+    'errorCount' => 0,
+    'warningCount' => 0,
+    'infoCount' => 0,
+    'status' => 'pass',
+    'message' => 'SEO validation passed.',
+]
+*/
+
+// Markdown export (useful for issue comments, CI output, etc.)
+// Note: Do not hardcode full markdown output if it is too long. Show short representative output only.
+$markdown = SeoValidationReportExporter::toMarkdown($report);
+/*
+# SEO Validation Report
+
+## Summary
+- Status: pass
+- Message: SEO validation passed.
+- Score: 100
+- Grade: A
+...
+*/
 ```
 
 ## Validation Scoring Example

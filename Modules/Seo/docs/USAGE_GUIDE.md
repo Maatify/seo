@@ -739,3 +739,36 @@ The `$report->summary['status']` and `$report->summary['message']` are determine
 - **`fail`**: If the validation has errors (`isValid` is false). Message: `SEO validation failed.`
 - **`warning`**: If there are no errors, but warnings exist OR the score is not healthy. Message: `SEO validation completed with warnings.`
 - **`pass`**: If valid, healthy, and no warnings exist. Message: `SEO validation passed.`
+
+#### Exporting the Report
+
+You can easily export the report into various formats using the `SeoValidationReportExporter`:
+
+```php
+use Maatify\Seo\Web\Validation\SeoValidationReportExporter;
+
+// Export as a complete array (same as calling $report->toArray())
+$array = SeoValidationReportExporter::toArray($report);
+
+// Export as a JSON string
+$json = SeoValidationReportExporter::toJson($report);
+
+// Export as a compact summary array for quick logging or dashboard APIs
+$summary = SeoValidationReportExporter::toSummaryArray($report);
+/*
+[
+    'isValid' => false,
+    'isHealthy' => true,
+    'score' => 90,
+    'grade' => 'A',
+    'errorCount' => 0,
+    'warningCount' => 1,
+    'infoCount' => 0,
+    'status' => 'warning',
+    'message' => 'SEO validation completed with warnings.'
+]
+*/
+
+// Export as human-readable Markdown for CI/CD output or pull request comments
+$markdown = SeoValidationReportExporter::toMarkdown($report);
+```

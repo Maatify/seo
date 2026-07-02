@@ -201,6 +201,7 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   - **Phase 11B: SEO Validation Score Helpers (Complete):** Provide a tool to compute SEO scores, grades, and deductions directly from validation results.
   - **Phase 11C: SEO Validation Report Helpers (Complete):** Provide a tool to integrate validation and scoring into a comprehensive framework-neutral reporting DTO.
   - **Phase 11D: SEO Validation Presets (Complete):** Provide pre-configured validation option arrays (strict, minimal, standard) to streamline common workflows.
+  - **Phase 11E: SEO Validation Report Exporter (Complete):** Provide a framework-neutral helper to export validation reports into arrays, JSON, summary arrays, and Markdown.
 
 ## 11. Risks / Decisions that Need Approval Before Coding
 
