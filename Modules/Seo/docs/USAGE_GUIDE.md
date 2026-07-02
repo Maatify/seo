@@ -795,6 +795,89 @@ $json = json_encode($batch, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
 The output DTO (`SeoValidationBatchReportDTO`) contains counts (`totalCount`, `validCount`, `invalidCount`), score stats (`averageScore`, `minScore`, `maxScore`), and summary rules: it fails if any report is invalid, warns if all reports are valid but any report is unhealthy or has warnings, and passes when all reports are valid, healthy, and warning-free.
 
+### Validation Batch Report Exporter
+
+The `SeoValidationBatchReportExporter` can export the batch DTO into arrays, JSON, summary arrays, and Markdown. It does not mutate the batch DTO, does not call validator/score/report/batch builder internally, and emits no HTTP output.
+
+`toArray()` returns the full batch DTO data using existing batch serialization.
+`toJson()` returns a JSON string, uses readable defaults, respects custom JSON flags, and throws `SeoInvalidArgumentException` if encoding fails.
+`toSummaryArray()` returns compact batch status/counts/score stats/message data.
+`toMarkdown()` returns a plain Markdown batch report with summary, status, message, valid/healthy flags, total/valid/invalid counts, healthy/unhealthy counts, error/warning/info counts, average/min/max score, per-report summaries, and report context when present.
+
+```php
+use Maatify\Seo\Web\Validation\SeoValidationBatchReportBuilder;
+use Maatify\Seo\Web\Validation\SeoValidationBatchReportExporter;
+use Maatify\Seo\Web\Validation\SeoValidationPreset;
+
+$preset = SeoValidationPreset::standard();
+$batch = SeoValidationBatchReportBuilder::build(
+    items: [
+        [
+            'meta' => [
+                'title' => 'Product A',
+                'description' => 'Product A description long enough for SEO snippets.',
+                'canonical' => 'https://example.com/products/a',
+            ],
+            'context' => [
+                'url' => 'https://example.com/products/a',
+                'entityType' => 'product',
+                'entityId' => 101,
+            ],
+        ],
+        [
+            'meta' => [
+                'title' => 'Product B',
+                'description' => 'Product B description long enough for SEO snippets.',
+                'canonical' => 'https://example.com/products/b',
+            ],
+            'context' => [
+                'url' => 'https://example.com/products/b',
+                'entityType' => 'product',
+                'entityId' => 102,
+            ],
+        ],
+    ],
+    validationOptions: $preset['validationOptions'],
+    scoreOptions: $preset['scoreOptions'],
+    sharedContext: [
+        'language' => 'en',
+        'source' => 'qa-crawl',
+    ],
+);
+
+// Full array export
+$fullArray = SeoValidationBatchReportExporter::toArray($batch);
+
+// JSON string export
+$json = SeoValidationBatchReportExporter::toJson($batch);
+
+// Compact summary array
+$summary = SeoValidationBatchReportExporter::toSummaryArray($batch);
+/*
+[
+    'isValid' => true,
+    'isHealthy' => true,
+    'totalCount' => 2,
+    'validCount' => 2,
+    'invalidCount' => 0,
+    'healthyCount' => 2,
+    'unhealthyCount' => 0,
+    'errorCount' => 0,
+    'warningCount' => 0,
+    'infoCount' => 0,
+    'averageScore' => 100.0,
+    'minScore' => 100,
+    'maxScore' => 100,
+    'status' => 'pass',
+    'message' => 'SEO batch validation passed.',
+]
+*/
+
+// Markdown export
+// Note: Do not hardcode full markdown output if it is too long. Show short representative output only.
+$markdown = SeoValidationBatchReportExporter::toMarkdown($batch);
+```
+
 ```php
 $batch->summary['status']; // pass | warning | fail
 $batch->totalCount;

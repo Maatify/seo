@@ -52,6 +52,7 @@ The module is complete and release-ready. It has the following foundational laye
 - **Phase 11D (SEO Validation Presets):** Framework-neutral helper that provides pre-configured validation and score options (e.g. strict, minimal, standard) for streamlined usage.
 - **Phase 11E (SEO Validation Report Exporter):** Framework-neutral helper to export validation reports into arrays, JSON, summary arrays, and Markdown.
 - **Phase 11F (SEO Validation Batch Report Helpers):** Framework-neutral builder to build SEO validation reports for multiple pages/products/entities in one batch. It provides aggregate counts, score stats, and summary status, and is useful for QA crawls, admin dashboards, audits, CI reports, and bulk product/category checks.
+- **Phase 11G (SEO Validation Batch Report Exporter):** Framework-neutral helper to export batch validation reports into arrays, JSON, summary arrays, and Markdown.
 
 ## Validation Report Example
 

@@ -203,6 +203,7 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   - **Phase 11D: SEO Validation Presets (Complete):** Provide pre-configured validation option arrays (strict, minimal, standard) to streamline common workflows.
   - **Phase 11E: SEO Validation Report Exporter (Complete):** Provide a framework-neutral helper to export validation reports into arrays, JSON, summary arrays, and Markdown.
   - **Phase 11F: SEO Validation Batch Report Helpers (Complete):** Provide a framework-neutral builder to batch validate multiple items at once and compute aggregate scores and stats.
+  - **Phase 11G: SEO Validation Batch Report Exporter (Complete):** Provide a framework-neutral helper to export batch validation reports into arrays, JSON, summary arrays, and Markdown.
 
 ## 11. Risks / Decisions that Need Approval Before Coding
 
