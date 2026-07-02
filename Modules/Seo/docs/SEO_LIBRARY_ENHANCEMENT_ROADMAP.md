@@ -325,6 +325,19 @@ Features:
     *   Warning if all valid but any report is unhealthy or has warnings.
     *   Pass if all valid, healthy, and warning-free.
 
+## Phase 11G: SEO Validation Batch Report Exporter (Complete)
+
+Provide a framework-neutral helper to export batch validation reports into multiple formats:
+
+*   `Web/Validation/SeoValidationBatchReportExporter.php`
+
+Formats:
+*   Array (full batch DTO data)
+*   JSON (supports custom flags)
+*   Compact summary array
+*   Markdown string
+
+Useful for logging, dashboards, CI output, and PR issue comments.
 
 ---
 
