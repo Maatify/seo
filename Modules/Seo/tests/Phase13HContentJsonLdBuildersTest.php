@@ -229,8 +229,8 @@ assertSameValue13H('itemlist schema defaults', [
 $itemListSchema = $itemListBuilder
     ->setName('Top 3 PHP Frameworks')
     ->setDescription('A list of the top PHP frameworks.')
-    ->addItem('Laravel')
-    ->addItem(['@type' => 'ListItem', 'item' => 'Symfony'], 'Symfony Framework')
+    ->addItem('https://example.com/laravel')
+    ->addItem(['@type' => 'ListItem', 'item' => 'https://example.com/symfony'], 'Symfony Framework')
     ->toArray();
 
 assertSameValue13H('itemlist schema full', [
@@ -240,11 +240,11 @@ assertSameValue13H('itemlist schema full', [
         [
             '@type' => 'ListItem',
             'position' => 1,
-            'item' => 'Laravel',
+            'item' => 'https://example.com/laravel',
         ],
         [
             '@type' => 'ListItem',
-            'item' => 'Symfony',
+            'item' => 'https://example.com/symfony',
             'position' => 2,
             'name' => 'Symfony Framework',
         ],
@@ -257,18 +257,18 @@ $itemListBuilder->clearItems();
 assertSameValue13H('itemlist schema cleared', [], $itemListBuilder->get('itemListElement'));
 
 $itemListBuilder->setItems([
-    'Zend Framework',
-    ['@type' => 'ListItem', 'item' => 'Slim']
+    'https://example.com/zend',
+    ['@type' => 'ListItem', 'item' => 'https://example.com/slim']
 ]);
 assertSameValue13H('itemlist schema setItems', [
     [
         '@type' => 'ListItem',
         'position' => 1,
-        'item' => 'Zend Framework',
+        'item' => 'https://example.com/zend',
     ],
     [
         '@type' => 'ListItem',
-        'item' => 'Slim',
+        'item' => 'https://example.com/slim',
         'position' => 2,
     ],
 ], $itemListBuilder->get('itemListElement'));

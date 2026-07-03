@@ -135,8 +135,8 @@ $itemListBuilder = new ItemListJsonLdBuilder();
 $schema = $itemListBuilder
     ->setName('Top 3 PHP Frameworks')
     ->setDescription('A list of the top PHP frameworks.')
-    ->addItem('Laravel')
-    ->addItem(['@type' => 'ListItem', 'item' => 'Symfony'], 'Symfony Framework')
+    ->addItem('https://example.com/laravel')
+    ->addItem(['@type' => 'ListItem', 'item' => 'https://example.com/symfony'], 'Symfony Framework')
     ->toArray();
 ```
 
