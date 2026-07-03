@@ -215,6 +215,11 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   - **Phase 13G: Person JSON-LD Builder (Complete):** Builder for generating Person schemas.
   - **Phase 13H: Content JSON-LD Builders Batch (Complete):** Builder for generating FAQPage/HowTo/Event/ItemList/WebPage schemas.
   - **Phase 13I: Commerce JSON-LD Builders Batch (Complete):** Builder for generating Review/AggregateRating/Offer/Service/LocalBusiness schemas.
+  - **Phase 13J: Media JSON-LD Builders Batch (Complete):** Builder for generating VideoObject/ImageObject/AudioObject schemas.
+  - **Phase 13K: Page Type JSON-LD Builders Batch (Complete):** Builder for generating AboutPage/ContactPage/CollectionPage/ProfilePage/SearchResultsPage schemas.
+  - **Phase 13L: Specialized Rich Results JSON-LD Builders Batch (Complete):** Builder for generating Recipe/JobPosting/Course/SoftwareApplication schemas.
+  - **Phase 13M: Extra Specialized JSON-LD Builders Batch (Complete):** Builder for generating Book/Movie/MusicAlbum/Dataset schemas.
+  - **Phase 13N: Final JSON-LD Builders Audit (Complete):** Final verification and compliance audit of the Phase 13 Builder System.
 
 ## 11. Risks / Decisions that Need Approval Before Coding
 
