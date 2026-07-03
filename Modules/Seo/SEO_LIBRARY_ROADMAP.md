@@ -210,6 +210,11 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   - **Phase 13B: Product JSON-LD Builder (Complete):** Builder for generating Product schemas.
   - **Phase 13C: Article JSON-LD Builder (Complete):** Builder for generating Article/NewsArticle/BlogPosting schemas.
   - **Phase 13D: Breadcrumb JSON-LD Builder (Complete):** Builder for generating BreadcrumbList schemas.
+  - **Phase 13E: Organization JSON-LD Builder (Complete):** Builder for generating Organization/Corporation/LocalBusiness schemas.
+  - **Phase 13F: WebSite JSON-LD Builder (Complete):** Builder for generating WebSite schemas.
+  - **Phase 13G: Person JSON-LD Builder (Complete):** Builder for generating Person schemas.
+  - **Phase 13H: Content JSON-LD Builders Batch (Complete):** Builder for generating FAQPage/HowTo/Event/ItemList/WebPage schemas.
+  - **Phase 13I: Commerce JSON-LD Builders Batch (Complete):** Builder for generating Review/AggregateRating/Offer/Service/LocalBusiness schemas.
 
 ## 11. Risks / Decisions that Need Approval Before Coding
 
