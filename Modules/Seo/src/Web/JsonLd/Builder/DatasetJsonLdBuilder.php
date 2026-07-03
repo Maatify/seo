@@ -35,11 +35,14 @@ final class DatasetJsonLdBuilder extends AbstractJsonLdBuilder
     public function setDistribution(array $distribution): static
     {
         if (!array_is_list($distribution)) {
-            return $this->set('distribution', $this->defaultTypedValue($distribution, 'DataDownload'));
+            /** @var array<string, mixed> $distributionObject */
+            $distributionObject = $distribution;
+
+            return $this->set('distribution', $this->defaultTypedValue($distributionObject, 'DataDownload'));
         }
 
         /** @var list<array<string, mixed>> $distributionList */
-        $distributionList = array_values($distribution);
+        $distributionList = $distribution;
         /** @var list<array<string, mixed>> $normalizedDistribution */
         $normalizedDistribution = [];
         foreach ($distributionList as $distributionItem) {
