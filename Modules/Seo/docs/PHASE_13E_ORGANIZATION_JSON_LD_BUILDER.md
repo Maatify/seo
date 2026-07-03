@@ -14,9 +14,15 @@ The `OrganizationJsonLdBuilder` is part of the `Maatify\Seo\Web\JsonLd\Builder` 
 - `url`
 - `logo`
 - `description`
-- `sameAs` (string or array of strings)
-- `contactPoint` (array or array of arrays)
-- `address` (array or `PostalAddress`)
+- `sameAs`:
+  - Use `setSameAs(array $sameAs)` for multiple URLs. This method does not accept a string directly.
+  - Use `addSameAs(string $url)` for a single URL.
+- `contactPoint`:
+  - Use `setContactPoint(array $contactPoint)` to set a single contact point.
+  - Use `addContactPoint(array $contactPoint)` to append to existing contact points.
+- `address`:
+  - Use `setAddress(array $address)` to pass an entire address array.
+  - Use `setPostalAddress(...)` to build it dynamically via named parameters.
 
 ## Usage Example
 
