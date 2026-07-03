@@ -105,9 +105,11 @@ final class OrganizationJsonLdBuilder extends AbstractJsonLdBuilder
             $sameAs = [];
         }
 
-        $sameAs[] = $url;
+        /** @var array<int, string> $normalizedSameAs */
+        $normalizedSameAs = array_values(array_filter($sameAs, 'is_string'));
+        $normalizedSameAs[] = $url;
 
-        return $this->setSameAs($sameAs);
+        return $this->setSameAs($normalizedSameAs);
     }
 
     /** @param array<string, mixed> $contactPoint */
@@ -165,7 +167,10 @@ final class OrganizationJsonLdBuilder extends AbstractJsonLdBuilder
         return $this->setAddress($address);
     }
 
-    /** @param array<string, mixed> $schema */
+    /**
+     * @param array<string, mixed> $schema
+     * @return array<string, mixed>
+     */
     private static function withDefaultType(array $schema, string $type): array
     {
         if (!isset($schema['@type'])) {
