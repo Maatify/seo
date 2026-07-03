@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace Maatify\Seo\Web\JsonLd\Builder;
 
+use Maatify\Seo\Web\JsonLd\Builder\Concerns\HasTypedValueNormalization;
+
 final class ContactPageJsonLdBuilder extends AbstractJsonLdBuilder
 {
+    use HasTypedValueNormalization;
+
     public function __construct()
     {
         parent::__construct([
@@ -34,20 +38,4 @@ final class ContactPageJsonLdBuilder extends AbstractJsonLdBuilder
     /** @param string|array<string, mixed> $contactPoint */
     public function setContactPoint(string|array $contactPoint): static { return $this->set('contactPoint', $this->normalizeTypedValue($contactPoint, 'ContactPoint', 'contactType')); }
 
-    /**
-     * @param string|array<string, mixed> $value
-     * @return array<string, mixed>
-     */
-    private function normalizeTypedValue(string|array $value, string $type, string $stringKey): array
-    {
-        if (is_string($value)) {
-            return ['@type' => $type, $stringKey => $value];
-        }
-
-        if (!isset($value['@type'])) {
-            $value['@type'] = $type;
-        }
-
-        return $value;
-    }
 }

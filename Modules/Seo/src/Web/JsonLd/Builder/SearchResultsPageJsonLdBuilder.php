@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace Maatify\Seo\Web\JsonLd\Builder;
 
+use Maatify\Seo\Web\JsonLd\Builder\Concerns\HasTypedValueNormalization;
+
 final class SearchResultsPageJsonLdBuilder extends AbstractJsonLdBuilder
 {
+    use HasTypedValueNormalization;
+
     public function __construct()
     {
         parent::__construct([
@@ -52,18 +56,6 @@ final class SearchResultsPageJsonLdBuilder extends AbstractJsonLdBuilder
         return $this->set('itemListElement', $normalized);
     }
 
-    /**
-     * @param string|array<string, mixed> $value
-     * @return array<string, mixed>
-     */
-    private function normalizeTypedValue(string|array $value, string $type, string $stringKey): array
-    {
-        if (is_string($value)) {
-            return ['@type' => $type, $stringKey => $value];
-        }
-        if (!isset($value['@type'])) { $value['@type'] = $type; }
-        return $value;
-    }
 
     /**
      * @param string|array<string, mixed> $item
