@@ -21,6 +21,7 @@ if (is_file($autoload)) {
 
 use Maatify\Seo\Web\JsonLd\Builder\ProductJsonLdBuilder;
 use Maatify\Seo\Web\JsonLd\Builder\ArticleJsonLdBuilder;
+use Maatify\Seo\Web\JsonLd\Builder\BreadcrumbJsonLdBuilder;
 use Maatify\Seo\Web\Render\JsonLdScriptRenderer;
 
 function printSection(string $title, string $output): void
@@ -69,3 +70,12 @@ $articleBuilder
     ->setKeywords(['SEO', 'JSON-LD', 'PHP']);
 
 printSection('Article/BlogPosting Schema Output (rendered via JsonLdScriptRenderer)', $renderer->render($articleBuilder->toArray()));
+
+// --- Breadcrumb JSON-LD Builder ---
+$breadcrumbBuilder = new BreadcrumbJsonLdBuilder();
+$breadcrumbBuilder
+    ->addBreadcrumb('Home', 'https://example.com')
+    ->addBreadcrumb('Blog', 'https://example.com/blog')
+    ->addBreadcrumb('How to Use JSON-LD Builders', 'https://example.com/blog/how-to-use-json-ld-builders');
+
+printSection('Breadcrumb Schema Output (rendered via JsonLdScriptRenderer)', $renderer->render($breadcrumbBuilder->toArray()));
