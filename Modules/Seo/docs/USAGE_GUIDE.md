@@ -128,6 +128,25 @@ $dto = $builder->renderDto();
 
 The library can generate structured data script tags using either raw associative arrays or the strictly typed `JsonLdSchemaDTO`.
 
+### Using JSON-LD Builders (Recommended):
+
+The library provides fluent builders for common schema types (e.g., `Article`, `Product`, `Organization`, `WebSite`).
+
+```php
+use Maatify\Seo\Web\JsonLd\Builder\WebSiteJsonLdBuilder;
+use Maatify\Seo\Web\Render\JsonLdScriptRenderer;
+
+$builder = new WebSiteJsonLdBuilder();
+$schemaArray = $builder
+    ->setName('Maatify Demo')
+    ->setUrl('https://example.com')
+    ->setSearchAction('https://example.com/search?q={search_term_string}')
+    ->toArray();
+
+$renderer = new JsonLdScriptRenderer();
+echo $renderer->render($schemaArray);
+```
+
 ### Using a raw associative array:
 
 ```php
