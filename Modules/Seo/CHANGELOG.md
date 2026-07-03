@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.0.0] - Unreleased
+- **Added:** Implementation of Phase 13F WebSite JSON-LD Builder (`WebSiteJsonLdBuilder`) to fluently generate WebSite JSON-LD output (see `docs/verification/PHASE_13F_WEBSITE_JSON_LD_BUILDER_VERIFICATION_REPORT.md`).
 - **Added:** Implementation of Phase 11G SEO Validation Batch Report Exporter including `SeoValidationBatchReportExporter` to export batch reports to Array, JSON, Summary Array, and Markdown (see `docs/verification/PHASE_11G_SEO_VALIDATION_BATCH_REPORT_EXPORTER_VERIFICATION_REPORT.md`).
 - **Added:** Implementation of Phase 11F SEO Validation Batch Report Helpers including `SeoValidationBatchReportBuilder` and `SeoValidationBatchReportDTO` to build SEO validation reports for multiple entities in one batch (see `docs/verification/PHASE_11F_SEO_VALIDATION_BATCH_REPORT_HELPERS_VERIFICATION_REPORT.md`).
 - **Added:** Implementation of Phase 11E SEO Validation Report Exporter including `SeoValidationReportExporter` to export reports to Array, JSON, Summary Array, and Markdown (see `docs/verification/PHASE_11E_SEO_VALIDATION_REPORT_EXPORTER_VERIFICATION_REPORT.md`).
