@@ -28,6 +28,7 @@ final class MovieJsonLdBuilder extends AbstractJsonLdBuilder
     /** @param array<int, string|array<string, mixed>> $actors */
     public function setActors(array $actors): static
     {
+        /** @var list<array<string, mixed>> $normalizedActors */
         $normalizedActors = [];
         foreach ($actors as $actor) {
             $normalizedActors[] = $this->normalizePerson($actor);

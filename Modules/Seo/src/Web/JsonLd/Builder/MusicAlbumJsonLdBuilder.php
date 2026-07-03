@@ -33,6 +33,7 @@ final class MusicAlbumJsonLdBuilder extends AbstractJsonLdBuilder
     /** @param array<int, string|array<string, mixed>> $tracks */
     public function setTracks(array $tracks): static
     {
+        /** @var list<array<string, mixed>> $normalizedTracks */
         $normalizedTracks = [];
         foreach ($tracks as $track) {
             $normalizedTracks[] = $this->normalizeTrack($track);

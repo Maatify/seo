@@ -40,6 +40,7 @@ final class DatasetJsonLdBuilder extends AbstractJsonLdBuilder
 
         /** @var list<array<string, mixed>> $distributionList */
         $distributionList = array_values($distribution);
+        /** @var list<array<string, mixed>> $normalizedDistribution */
         $normalizedDistribution = [];
         foreach ($distributionList as $distributionItem) {
             $normalizedDistribution[] = $this->normalizeDistribution($distributionItem);
