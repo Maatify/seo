@@ -21,19 +21,30 @@ use Maatify\Seo\Web\JsonLd\Builder\JobPostingJsonLdBuilder;
 use Maatify\Seo\Web\JsonLd\Builder\CourseJsonLdBuilder;
 use Maatify\Seo\Web\JsonLd\Builder\SoftwareApplicationJsonLdBuilder;
 
+function recursiveKsort(array &$array): void
+{
+    foreach ($array as &$value) {
+        if (is_array($value)) {
+            recursiveKsort($value);
+        }
+    }
+    ksort($array);
+}
+
 function assertSameValue(mixed $expected, mixed $actual, string $message): void
 {
-    if ($expected != $actual || (is_array($expected) && is_array($actual) && json_encode($expected) !== json_encode($actual) && $expected !== $actual)) {
-        // Let's do a safe array sort for associative arrays if we wanted, but == handles associative array equality ignoring order
+    $expectedSorted = $expected;
+    $actualSorted = $actual;
+
+    if (is_array($expectedSorted) && is_array($actualSorted)) {
+        recursiveKsort($expectedSorted);
+        recursiveKsort($actualSorted);
     }
-    if (is_array($expected) && is_array($actual)) {
-        if ($expected != $actual) {
-             throw new \RuntimeException("$message\nExpected: " . json_encode($expected) . "\nActual: " . json_encode($actual));
-        }
-    } else {
-        if ($expected !== $actual) {
-             throw new \RuntimeException("$message\nExpected: " . (string)$expected . "\nActual: " . (string)$actual);
-        }
+
+    if ($expectedSorted !== $actualSorted) {
+        $expectedStr = is_array($expectedSorted) ? json_encode($expectedSorted) : (string)$expectedSorted;
+        $actualStr = is_array($actualSorted) ? json_encode($actualSorted) : (string)$actualSorted;
+        throw new \RuntimeException("$message\nExpected: $expectedStr\nActual: $actualStr");
     }
 }
 
