@@ -28,7 +28,6 @@
      ```
 
 ## Compliance Checks
-- Zero external host-table FK dependencies.
 - Code resides strictly in `Maatify\Seo\Web\JsonLd\Builder`.
 - Framework neutrality verified (no HTTP, PSR-7, static globals).
 - No modifications needed for production codebase.
