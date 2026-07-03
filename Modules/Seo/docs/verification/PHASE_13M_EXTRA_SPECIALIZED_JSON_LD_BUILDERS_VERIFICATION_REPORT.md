@@ -45,7 +45,7 @@ Phase 13M: Extra Specialized JSON-LD Builders tests passed.
 - **Framework Neutrality:** Builders are self-contained DTO/Array generators that strictly avoid `header()` outputs, global states, container injections, or Laravel/Symfony coupling.
 - **No composer.lock:** Verified that `composer.lock` is not checked into the standalone library.
 - **Internal Details:** The `HasTypedValueNormalization` trait and internal helper methods such as `normalizeTypedValue`, `normalizePerson`, `normalizeTrack`, and `normalizeDistribution` remain strict implementation details and are **not** documented as part of the public API.
-- **Dependencies Cleaned:** Verified that `vendor/` is not part of this commit and no `composer.lock` was committed.
+- **Repository Cleanliness:** vendor/ is not part of this commit, and no composer.lock was committed.
 
 ## 5. Builders Verified
 1. **BookJsonLdBuilder** (Normalizes Person/Organization and handles AggregateRating/Offer lists)
