@@ -31,7 +31,15 @@ final class MusicAlbumJsonLdBuilder extends AbstractJsonLdBuilder
     /** @param string|array<int, string> $genre */
     public function setGenre(string|array $genre): static { return $this->set('genre', $genre); }
     /** @param array<int, string|array<string, mixed>> $tracks */
-    public function setTracks(array $tracks): static { return $this->set('track', array_map([$this, 'normalizeTrack'], array_values($tracks))); }
+    public function setTracks(array $tracks): static
+    {
+        $normalizedTracks = [];
+        foreach ($tracks as $track) {
+            $normalizedTracks[] = $this->normalizeTrack($track);
+        }
+
+        return $this->set('track', $normalizedTracks);
+    }
     /** @param string|array<string, mixed> $track */
     public function addTrack(string|array $track): static { return $this->appendValue('track', $this->normalizeTrack($track)); }
     public function setNumTracks(int $numTracks): static { return $this->set('numTracks', $numTracks); }
@@ -45,11 +53,23 @@ final class MusicAlbumJsonLdBuilder extends AbstractJsonLdBuilder
         return $this->normalizeTypedValue($track, 'MusicRecording', 'name');
     }
 
-    private function appendValue(string $key, mixed $value): static
+    /** @param array<string, mixed> $value */
+    private function appendValue(string $key, array $value): static
     {
         $values = $this->get($key);
-        if (!is_array($values) || isset($values['@type'])) { $values = $values === null ? [] : [$values]; }
+        if (!is_array($values)) {
+            $values = [];
+        } elseif (isset($values['@type'])) {
+            /** @var array<string, mixed> $existingValue */
+            $existingValue = $values;
+            $values = [$existingValue];
+        } else {
+            /** @var list<array<string, mixed>> $values */
+            $values = array_values($values);
+        }
+
         $values[] = $value;
+
         return $this->set($key, $values);
     }
 }

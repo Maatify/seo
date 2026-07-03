@@ -38,7 +38,14 @@ final class DatasetJsonLdBuilder extends AbstractJsonLdBuilder
             return $this->set('distribution', $this->defaultTypedValue($distribution, 'DataDownload'));
         }
 
-        return $this->set('distribution', array_map([$this, 'normalizeDistribution'], array_values($distribution)));
+        /** @var list<array<string, mixed>> $distributionList */
+        $distributionList = array_values($distribution);
+        $normalizedDistribution = [];
+        foreach ($distributionList as $distributionItem) {
+            $normalizedDistribution[] = $this->normalizeDistribution($distributionItem);
+        }
+
+        return $this->set('distribution', $normalizedDistribution);
     }
     /** @param array<string, mixed> $distribution */
     public function addDistribution(array $distribution): static { return $this->appendValue('distribution', $this->normalizeDistribution($distribution)); }
@@ -55,11 +62,23 @@ final class DatasetJsonLdBuilder extends AbstractJsonLdBuilder
         return $this->defaultTypedValue($distribution, 'DataDownload');
     }
 
-    private function appendValue(string $key, mixed $value): static
+    /** @param array<string, mixed> $value */
+    private function appendValue(string $key, array $value): static
     {
         $values = $this->get($key);
-        if (!is_array($values) || isset($values['@type'])) { $values = $values === null ? [] : [$values]; }
+        if (!is_array($values)) {
+            $values = [];
+        } elseif (isset($values['@type'])) {
+            /** @var array<string, mixed> $existingValue */
+            $existingValue = $values;
+            $values = [$existingValue];
+        } else {
+            /** @var list<array<string, mixed>> $values */
+            $values = array_values($values);
+        }
+
         $values[] = $value;
+
         return $this->set($key, $values);
     }
 }

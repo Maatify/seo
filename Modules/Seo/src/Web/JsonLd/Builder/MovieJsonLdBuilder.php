@@ -26,7 +26,15 @@ final class MovieJsonLdBuilder extends AbstractJsonLdBuilder
     /** @param string|array<string, mixed> $director */
     public function setDirector(string|array $director): static { return $this->set('director', $this->normalizeTypedValue($director, 'Person', 'name')); }
     /** @param array<int, string|array<string, mixed>> $actors */
-    public function setActors(array $actors): static { return $this->set('actor', array_map([$this, 'normalizePerson'], array_values($actors))); }
+    public function setActors(array $actors): static
+    {
+        $normalizedActors = [];
+        foreach ($actors as $actor) {
+            $normalizedActors[] = $this->normalizePerson($actor);
+        }
+
+        return $this->set('actor', $normalizedActors);
+    }
     /** @param string|array<string, mixed> $actor */
     public function addActor(string|array $actor): static { return $this->appendValue('actor', $this->normalizePerson($actor)); }
     /** @param string|array<string, mixed> $productionCompany */
@@ -47,11 +55,23 @@ final class MovieJsonLdBuilder extends AbstractJsonLdBuilder
         return $this->normalizeTypedValue($person, 'Person', 'name');
     }
 
-    private function appendValue(string $key, mixed $value): static
+    /** @param array<string, mixed> $value */
+    private function appendValue(string $key, array $value): static
     {
         $values = $this->get($key);
-        if (!is_array($values) || isset($values['@type'])) { $values = $values === null ? [] : [$values]; }
+        if (!is_array($values)) {
+            $values = [];
+        } elseif (isset($values['@type'])) {
+            /** @var array<string, mixed> $existingValue */
+            $existingValue = $values;
+            $values = [$existingValue];
+        } else {
+            /** @var list<array<string, mixed>> $values */
+            $values = array_values($values);
+        }
+
         $values[] = $value;
+
         return $this->set($key, $values);
     }
 }
