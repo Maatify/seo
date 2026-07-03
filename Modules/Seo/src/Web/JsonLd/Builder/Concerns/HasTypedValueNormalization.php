@@ -22,4 +22,17 @@ trait HasTypedValueNormalization
 
         return $value;
     }
+
+    /**
+     * @param array<string, mixed> $value
+     * @return array<string, mixed>
+     */
+    protected function defaultTypedValue(array $value, string $type): array
+    {
+        if (!isset($value['@type'])) {
+            $value['@type'] = $type;
+        }
+
+        return $value;
+    }
 }
