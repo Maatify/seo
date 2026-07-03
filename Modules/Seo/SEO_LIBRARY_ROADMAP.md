@@ -205,6 +205,12 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   - **Phase 11F: SEO Validation Batch Report Helpers (Complete):** Provide a framework-neutral builder to batch validate multiple items at once and compute aggregate scores and stats.
   - **Phase 11G: SEO Validation Batch Report Exporter (Complete):** Provide a framework-neutral helper to export batch validation reports into arrays, JSON, summary arrays, and Markdown.
 
+- **Phase 13: JSON-LD Builders**
+  - **Phase 13A: JSON-LD Builder Foundation (Complete):** Core interfaces, traits, and abstract classes for builders.
+  - **Phase 13B: Product JSON-LD Builder (Complete):** Builder for generating Product schemas.
+  - **Phase 13C: Article JSON-LD Builder (Complete):** Builder for generating Article/NewsArticle/BlogPosting schemas.
+  - **Phase 13D: Breadcrumb JSON-LD Builder (Complete):** Builder for generating BreadcrumbList schemas.
+
 ## 11. Risks / Decisions that Need Approval Before Coding
 
 - **Entity Identifier Type**: Host projects might use `int`, `string` (UUID), or mixed types for `entity_id`. Should `entity_id` in `maa_seo_*` tables be `VARCHAR(36)` to safely support UUIDs, even if the host uses integers? (Recommendation: Yes, `VARCHAR(36)`).

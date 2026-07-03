@@ -225,6 +225,13 @@ The Web layer includes framework-neutral helpers for auditing and validating gen
 - **`Web/Validation/DTO/SeoValidationBatchReportDTO.php`**: An aggregate DTO that stores the final batch results, including `isValid`, `isHealthy`, `totalCount`, `validCount`, `invalidCount`, `healthyCount`, `unhealthyCount`, `errorCount`, `warningCount`, `infoCount`, `averageScore`, `minScore`, `maxScore`, a list of `reports` (`SeoValidationReportDTO`), and a `summary` (rules: fail if invalid, warning if all valid but unhealthy or with warnings, pass if all valid, healthy, and warning-free). It implements `toArray()` and `jsonSerialize()` for easy exporting.
 - **`Web/Validation/SeoValidationBatchReportExporter.php`**: A framework-neutral exporter useful for exporting batch validation reports into arrays, JSON, summary arrays, and Markdown. It does not mutate the batch DTO, does not call validator/score/report/batch builder internally, and emits no HTTP output.
 
+### JSON-LD Builders
+The Web layer includes builders for generating specific JSON-LD schemas. These builders encapsulate the logic for creating complex schemas, providing a fluent interface for setting properties and ensuring the output matches Schema.org specifications.
+- **`Web/JsonLd/Builder/AbstractJsonLdBuilder.php`**: Base class implementing `JsonLdBuilderInterface` and using `JsonLdBuilderTrait`.
+- **`Web/JsonLd/Builder/ProductJsonLdBuilder.php`**: A builder for the `Product` JSON-LD schema, allowing easy configuration of product details like name, image, description, SKU, brand, offers, and aggregate ratings.
+- **`Web/JsonLd/Builder/ArticleJsonLdBuilder.php`**: A builder for the `Article`, `NewsArticle`, or `BlogPosting` JSON-LD schemas, supporting configuration of headlines, images, authors, publishers, and publication dates.
+- **`Web/JsonLd/Builder/BreadcrumbJsonLdBuilder.php`**: A builder for the `BreadcrumbList` JSON-LD schema, providing methods to add breadcrumb items (`addItem`, `addBreadcrumb`, `addItems`) and correctly sequencing them with `ListItem` and `position` properties.
+
 ### Web Output DTOs
 - **`Web/DTO/SeoHeadHtmlDTO.php`**: A framework-neutral, final read-only DTO that implements `\JsonSerializable`. It separates rendered HTML into individual string sections (`metaHtml`, `openGraphHtml`, `twitterCardHtml`, `jsonLdHtml`) and provides a pre-combined `fullHtml` output, allowing host applications flexibility in rendering without requiring template engine coupling.
 
