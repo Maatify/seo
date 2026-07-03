@@ -120,41 +120,41 @@ vendor/bin/phpstan analyse
 Result:
 
 ```text
-/bin/bash: line 1: vendor/bin/phpstan: No such file or directory
+ [OK] No errors
 ```
 
-Status: Not run in this checkout because dev dependencies are not installed and `vendor/bin/phpstan` is unavailable.
+Status: Passed.
 
 ## Test results
 
 Command:
 
 ```bash
-for f in tests/*Test.php; do php "$f" || exit 1; done
+find tests -name '*Test.php' -print0 | xargs -0 -n1 php
 ```
 
 Result:
 
 ```text
-Phase 10A sitemap index XML string renderer tests passed.
-Phase 10B sitemap hreflang XML string renderer tests passed.
-Phase 10C image sitemap XML string renderer tests passed.
+Phase 11G SEO validation batch report exporter tests passed.
+Phase 7E sitemap XML string renderer tests passed.
 Phase 10D video sitemap XML string renderer tests passed.
+Phase 11C SEO validation report helpers tests passed.
+Phase 10C image sitemap XML string renderer tests passed.
+Phase 7D Spatie schema adapter tests passed.
+Phase 13A JSON-LD builder foundation tests passed.
+Phase 7C fluent SEO builder tests passed.
+Phase 11F SEO validation batch report helpers tests passed.
+Phase 11D SEO validation presets tests passed.
+Phase 7A renderer tests passed.
+Phase 10B sitemap hreflang XML string renderer tests passed.
+Phase 10A sitemap index XML string renderer tests passed.
 Phase 10E news sitemap XML string renderer tests passed.
+Phase 11E SEO validation report exporter tests passed.
 Phase 11A SEO validation helpers tests passed.
 Phase 11B SEO validation score helpers tests passed.
-Phase 11C SEO validation report helpers tests passed.
-Phase 11D SEO validation presets tests passed.
-Phase 11E SEO validation report exporter tests passed.
-Phase 11F SEO validation batch report helpers tests passed.
-Phase 11G SEO validation batch report exporter tests passed.
-Phase 13A JSON-LD builder foundation tests passed.
-Phase 13B product JSON-LD builder tests passed.
-Phase 7A renderer tests passed.
-Phase 7C fluent SEO builder tests passed.
-Phase 7D Spatie schema adapter tests passed.
-Phase 7E sitemap XML string renderer tests passed.
 Phase 9A RobotsTxtRenderer tests passed.
+Phase 13B product JSON-LD builder tests passed.
 ```
 
 Status: Passed.
