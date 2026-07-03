@@ -55,7 +55,7 @@ The Phase 14A Social Meta Foundation implementation uses native PHP 8.2 features
 
 ### 5. Constraint Compliance Verification
 
-* **No `composer.lock`:** The `composer.lock` file is excluded from version control and deleted before committing.
+* **No `composer.lock`:** No `composer.lock` was committed and `vendor/` is not part of this commit.
 * **No framework coupling:** The classes in `Maatify\Seo\Web\Social\` rely exclusively on standard PHP functions (`htmlspecialchars`, `count`, etc.). There is no coupling to Laravel, Symfony, Slim, or any other framework container.
 * **No HTTP/PSR-7/controllers:** No response emitting, request parsing, or routing controllers exist within this codebase.
 * **No static global state:** All implementations instantiate stateful objects (`SocialMetaTag`, `SocialImage`, `SocialMetaCollection`) individually without singletons or global state tracking.
