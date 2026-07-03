@@ -31,19 +31,29 @@ final class FAQPageJsonLdBuilder extends AbstractJsonLdBuilder
     public function addQuestionArray(array $question): static
     {
         $questions = $this->get('mainEntity');
-        if (!is_array($questions)) {
-            $questions = [];
+        $normalizedQuestions = [];
+        if (is_array($questions)) {
+            foreach ($questions as $existingQuestion) {
+                if (is_array($existingQuestion)) {
+                    $normalizedQuestions[] = $this->normalizeQuestion($existingQuestion);
+                }
+            }
         }
 
-        $questions[] = $this->normalizeQuestion($question);
+        $normalizedQuestions[] = $this->normalizeQuestion($question);
 
-        return $this->setMainEntity($questions);
+        return $this->set('mainEntity', $normalizedQuestions);
     }
 
     /** @param array<int, array<string, mixed>> $questions */
     public function setMainEntity(array $questions): static
     {
-        return $this->set('mainEntity', array_map([$this, 'normalizeQuestion'], array_values($questions)));
+        $normalizedQuestions = [];
+        foreach (array_values($questions) as $question) {
+            $normalizedQuestions[] = $this->normalizeQuestion($question);
+        }
+
+        return $this->set('mainEntity', $normalizedQuestions);
     }
 
     public function clearQuestions(): static
@@ -52,8 +62,8 @@ final class FAQPageJsonLdBuilder extends AbstractJsonLdBuilder
     }
 
     /**
-     * @param array<string, mixed> $question
-     * @return array<string, mixed>
+     * @param array<array-key, mixed> $question
+     * @return array<array-key, mixed>
      */
     private function normalizeQuestion(array $question): array
     {

@@ -17,7 +17,7 @@ final class HowToJsonLdBuilder extends AbstractJsonLdBuilder
 
     public function setName(string $name): static { return $this->set('name', $name); }
     public function setDescription(string $description): static { return $this->set('description', $description); }
-    /** @param string|array<int|string, mixed> $image */
+    /** @param string|array<int, string>|array<string, mixed> $image */
     public function setImage(string|array $image): static { return $this->set('image', $image); }
     public function setTotalTime(string $totalTime): static { return $this->set('totalTime', $totalTime); }
     /** @param string|array<string, mixed> $estimatedCost */
@@ -27,7 +27,7 @@ final class HowToJsonLdBuilder extends AbstractJsonLdBuilder
     /** @param string|array<string, mixed> $tool */
     public function addTool(string|array $tool): static { return $this->appendTypedValue('tool', $tool, 'HowToTool'); }
 
-    /** @param string|array<int|string, mixed>|null $image */
+    /** @param string|array<int, string>|array<string, mixed>|null $image */
     public function addStep(string $name, ?string $text = null, ?string $url = null, string|array|null $image = null): static
     {
         $step = ['@type' => 'HowToStep', 'name' => $name];
@@ -36,16 +36,28 @@ final class HowToJsonLdBuilder extends AbstractJsonLdBuilder
         if ($image !== null) { $step['image'] = $image; }
 
         $steps = $this->get('step');
-        if (!is_array($steps)) { $steps = []; }
-        $steps[] = $step;
+        $normalizedSteps = [];
+        if (is_array($steps)) {
+            foreach ($steps as $existingStep) {
+                if (is_array($existingStep)) {
+                    $normalizedSteps[] = $this->normalizeStep($existingStep);
+                }
+            }
+        }
+        $normalizedSteps[] = $step;
 
-        return $this->setSteps($steps);
+        return $this->set('step', $normalizedSteps);
     }
 
     /** @param array<int, array<string, mixed>> $steps */
     public function setSteps(array $steps): static
     {
-        return $this->set('step', array_map([$this, 'normalizeStep'], array_values($steps)));
+        $normalizedSteps = [];
+        foreach (array_values($steps) as $step) {
+            $normalizedSteps[] = $this->normalizeStep($step);
+        }
+
+        return $this->set('step', $normalizedSteps);
     }
 
     public function clearSteps(): static { return $this->set('step', []); }
@@ -56,14 +68,21 @@ final class HowToJsonLdBuilder extends AbstractJsonLdBuilder
         if (is_string($value)) { $value = ['@type' => $type, 'name' => $value]; }
         elseif (!isset($value['@type'])) { $value['@type'] = $type; }
         $values = $this->get($key);
-        if (!is_array($values)) { $values = []; }
-        $values[] = $value;
-        return $this->set($key, $values);
+        $normalizedValues = [];
+        if (is_array($values)) {
+            foreach ($values as $existingValue) {
+                if (is_array($existingValue)) {
+                    $normalizedValues[] = $existingValue;
+                }
+            }
+        }
+        $normalizedValues[] = $value;
+        return $this->set($key, $normalizedValues);
     }
 
     /**
-     * @param array<string, mixed> $step
-     * @return array<string, mixed>
+     * @param array<array-key, mixed> $step
+     * @return array<array-key, mixed>
      */
     private function normalizeStep(array $step): array
     {

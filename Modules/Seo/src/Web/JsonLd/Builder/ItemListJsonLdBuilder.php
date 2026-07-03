@@ -22,9 +22,16 @@ final class ItemListJsonLdBuilder extends AbstractJsonLdBuilder
     public function addItem(string|array $item, ?string $name = null): static
     {
         $items = $this->get('itemListElement');
-        if (!is_array($items)) { $items = []; }
-        $items[] = $this->normalizeItem($item, count($items) + 1, $name);
-        return $this->set('itemListElement', $items);
+        $normalizedItems = [];
+        if (is_array($items)) {
+            foreach ($items as $existingItem) {
+                if (is_array($existingItem)) {
+                    $normalizedItems[] = $existingItem;
+                }
+            }
+        }
+        $normalizedItems[] = $this->normalizeItem($item, count($normalizedItems) + 1, $name);
+        return $this->set('itemListElement', $normalizedItems);
     }
 
     /** @param array<int, string|array<string, mixed>> $items */

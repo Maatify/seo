@@ -22,13 +22,13 @@ final class EventJsonLdBuilder extends AbstractJsonLdBuilder
     public function setEventAttendanceMode(string $eventAttendanceMode): static { return $this->set('eventAttendanceMode', $eventAttendanceMode); }
     /** @param string|array<string, mixed> $location */
     public function setLocation(string|array $location): static { return $this->set('location', $this->normalizeTypedValue($location, 'Place')); }
-    /** @param string|array<int|string, mixed> $image */
+    /** @param string|array<int, string>|array<string, mixed> $image */
     public function setImage(string|array $image): static { return $this->set('image', $image); }
     /** @param string|array<string, mixed> $organizer */
     public function setOrganizer(string|array $organizer): static { return $this->set('organizer', $this->normalizeTypedValue($organizer, 'Organization')); }
     /** @param string|array<string, mixed> $performer */
     public function setPerformer(string|array $performer): static { return $this->set('performer', $this->normalizeTypedValue($performer, 'Person')); }
-    /** @param array<string, mixed>|array<int, array<string, mixed>> $offers */
+    /** @param array<string, mixed>|list<array<string, mixed>> $offers */
     public function setOffers(array $offers): static { return $this->set('offers', $offers); }
 
     /**
