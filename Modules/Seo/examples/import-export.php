@@ -15,18 +15,20 @@ $seoOverrides = [
     [
         'entity_type' => 'product',
         'entity_id' => '123',
-        'title' => 'Custom Product Title',
-        'description' => 'A custom description for product 123.',
-        'is_active' => true,
+        'language_id' => 1,
+        'meta_title' => 'Custom Product Title',
+        'meta_description' => 'A custom description for product 123.',
     ]
 ];
 
 $redirects = [
     [
-        'source_url' => '/old-product-page',
-        'destination_url' => '/product/new-product-page',
-        'status_code' => 301,
-        'is_active' => true,
+        'entity_type' => 'product',
+        'language_id' => 1,
+        'requested_slug' => 'old-product-page',
+        'target_entity_type' => 'product',
+        'target_entity_id' => '123',
+        'http_status' => 301,
     ]
 ];
 
@@ -34,8 +36,8 @@ $slugHistory = [
     [
         'entity_type' => 'category',
         'entity_id' => '456',
+        'language_id' => 1,
         'old_slug' => 'old-category',
-        'new_slug' => 'new-category',
     ]
 ];
 
