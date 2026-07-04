@@ -190,7 +190,7 @@ final class SeoMetadataImporter
             $errors = array_merge($errors, $this->validateSlugHistoryRow($this->normalizeStringKeyArray($row), $index));
         }
 
-        return array_values($errors);
+        return $errors;
     }
 
     /**
@@ -363,21 +363,23 @@ final class SeoMetadataImporter
     /** @param array<string, mixed> $row */
     private function requireStringField(array $row, string $field): string
     {
-        if (!$this->hasRequiredStringField($row, $field)) {
+        $value = $row[$field] ?? null;
+        if (!is_string($value) || trim($value) === '') {
             throw new \LogicException('Required string field [' . $field . '] was not validated.');
         }
 
-        return $row[$field];
+        return $value;
     }
 
     /** @param array<string, mixed> $row */
     private function requirePositiveIntField(array $row, string $field): int
     {
-        if (!$this->hasPositiveIntField($row, $field)) {
+        $value = $row[$field] ?? null;
+        if (!is_int($value) || $value <= 0) {
             throw new \LogicException('Required positive integer field [' . $field . '] was not validated.');
         }
 
-        return $row[$field];
+        return $value;
     }
 
     /** @param array<string, mixed> $row */
