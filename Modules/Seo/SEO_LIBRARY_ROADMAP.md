@@ -221,6 +221,28 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   - **Phase 13M: Extra Specialized JSON-LD Builders Batch (Complete):** Builder for generating Book/Movie/MusicAlbum/Dataset schemas.
   - **Phase 13N: Final JSON-LD Builders Audit (Complete):** Final verification and compliance audit of the Phase 13 Builder System.
 
+- **Phase 14: Social Meta Builders**
+  - **Phase 14A: Social Meta Foundation (Complete):** Core interfaces, generic tags, collections, and render output DTOs.
+  - **Phase 14B: Open Graph Builder (Complete):** Specialized builder for `og:` tags.
+  - **Phase 14C: Twitter/X Card Builder (Complete):** Specialized builder for `twitter:` tags.
+  - **Phase 14D: Meta Image Helpers (Complete):** Factory for standardizing `SocialImage` DTOs.
+  - **Phase 14E: Social Preview Builder (Complete):** Composite builder orchestrating Open Graph and Twitter builders.
+  - **Phase 14F: Final Social Meta Builders Audit (Complete):** Verification and compliance audit of the Phase 14 suite.
+
+- **Phase 15: Canonical / URL / Hreflang Helpers**
+  - **Phase 15A: Canonical URL Builder (Complete):** Builder for resolving and generating canonical URLs.
+
+- **Batch 1: SEO Preset Factories & Meta Robots**
+  - **Batch 1A: Meta Robots Builder (Complete):** Builder for generating robust `robots` meta values.
+  - **Batch 1B: SEO Page Preset Factory (Complete):** High-level preset factory for standard page types.
+  - **Batch 1C: High-Level Domain SEO Preset Factories (Complete):** Domain-specific factories (Ecommerce, Content, LocalBusiness).
+
+- **Batch 2: Admin Previews & Migrations**
+  - **Batch 2: Admin Previews & Migrations (Complete):** Admin preview DTOs/factories (`SerpPreviewDTO`, `SocialPreviewDTO`, `SerpPreviewFactory`, `SocialPreviewFactory`) plus metadata import/export helpers (`SeoMetadataExportDTO`, `SeoMetadataImportResultDTO`, `SeoMetadataExporter`, `SeoMetadataImporter`).
+
+- **Batch 3: Hreflang Head Link Builder**
+  - **Batch 3: Hreflang Head Link Builder (Complete):** HTML head `<link rel="alternate" hreflang="..." href="...">` generation (`HreflangLinkBuilder`, `HreflangLinkDTO`, `HreflangLinkRenderer`).
+
 ## 11. Risks / Decisions that Need Approval Before Coding
 
 - **Entity Identifier Type**: Host projects might use `int`, `string` (UUID), or mixed types for `entity_id`. Should `entity_id` in `maa_seo_*` tables be `VARCHAR(36)` to safely support UUIDs, even if the host uses integers? (Recommendation: Yes, `VARCHAR(36)`).
