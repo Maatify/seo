@@ -21,7 +21,7 @@
 7. **Confirm duplicate add keeps first value and replace intentionally overrides:** Verified. `add()` checks `isset($this->links[$normalizedHreflang])` and returns early. `replace()` overrides directly.
 8. **Run PHPStan:** Verified.
 9. **Run standalone tests:** Verified.
-10. **Confirm GitHub Actions CI status:** CI workflows for the project were inspected (e.g., `ci.yml` exists, running PHPStan and standalone tests).
+10. **Confirm GitHub Actions CI status:** GitHub Actions CI completed successfully.
 11. **Add concise usage documentation:** Added `batch-3-hreflang-head-link.md`.
 12. **Add verification report with commands, results, and architectural review:** Added `batch-3-verification-report.md` (this file).
 13. **Ensure docs do not claim strict full BCP-47 validation beyond what is implemented:** Verified. A disclaimer note is explicitly included in the documentation.
