@@ -11,19 +11,29 @@ use Maatify\Seo\Web\JsonLd\Builder\ServiceJsonLdBuilder;
 
 final class LocalBusinessSeoPresetFactory
 {
-    /** @param array<string, mixed> $business @param array<string, mixed> $options */
+    /**
+     * @param array<string, mixed> $business
+     * @param array<string, mixed> $options
+     */
     public static function businessHome(string $title, ?string $description, array $business, array $options = []): SeoPagePresetOutputDTO
     {
         return SeoPagePresetFactory::home($title, $description, self::withBusinessSchema($business, $options, $description));
     }
 
-    /** @param array<string, mixed> $business @param array<string, mixed> $options */
+    /**
+     * @param array<string, mixed> $business
+     * @param array<string, mixed> $options
+     */
     public static function locationPage(string $title, ?string $description, array $business, array $options = []): SeoPagePresetOutputDTO
     {
         return SeoPagePresetFactory::generic($title, $description, self::withBusinessSchema($business, $options, $description));
     }
 
-    /** @param array<string, mixed> $service @param array<string, mixed> $business @param array<string, mixed> $options */
+    /**
+     * @param array<string, mixed> $service
+     * @param array<string, mixed> $business
+     * @param array<string, mixed> $options
+     */
     public static function servicePage(string $title, ?string $description, array $service, array $business, array $options = []): SeoPagePresetOutputDTO
     {
         $businessName = DomainSeoPresetFactoryHelper::requireString($business, 'name', 'business.name');
@@ -52,7 +62,11 @@ final class LocalBusinessSeoPresetFactory
         return SeoPagePresetFactory::generic($title, $description, $options);
     }
 
-    /** @param array<string, mixed> $business @param array<string, mixed> $contact @param array<string, mixed> $options */
+    /**
+     * @param array<string, mixed> $business
+     * @param array<string, mixed> $contact
+     * @param array<string, mixed> $options
+     */
     public static function contactPage(string $title, ?string $description, array $business, array $contact = [], array $options = []): SeoPagePresetOutputDTO
     {
         $page = (new ContactPageJsonLdBuilder())->setName($title);
@@ -76,7 +90,11 @@ final class LocalBusinessSeoPresetFactory
         return SeoPagePresetFactory::generic($title, $description, $options);
     }
 
-    /** @param array<string, mixed> $business @param array<string, mixed> $options @return array<string, mixed> */
+    /**
+     * @param array<string, mixed> $business
+     * @param array<string, mixed> $options
+     * @return array<string, mixed>
+     */
     private static function withBusinessSchema(array $business, array $options, ?string $description): array
     {
         $name = DomainSeoPresetFactoryHelper::requireString($business, 'name', 'business.name');

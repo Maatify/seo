@@ -9,7 +9,10 @@ use Maatify\Seo\Web\JsonLd\Builder\OfferJsonLdBuilder;
 
 final class EcommerceSeoPresetFactory
 {
-    /** @param array<string, mixed> $product @param array<string, mixed> $options */
+    /**
+     * @param array<string, mixed> $product
+     * @param array<string, mixed> $options
+     */
     public static function productDetail(string $title, ?string $description, array $product, array $options = []): SeoPagePresetOutputDTO
     {
         DomainSeoPresetFactoryHelper::requireString($product, 'name', 'product.name');
@@ -17,13 +20,19 @@ final class EcommerceSeoPresetFactory
         return SeoPagePresetFactory::product($title, $description, $product, $options);
     }
 
-    /** @param list<array<string, mixed>|string> $items @param array<string, mixed> $options */
+    /**
+     * @param list<array<string, mixed>|string> $items
+     * @param array<string, mixed> $options
+     */
     public static function categoryListing(string $title, ?string $description = null, array $items = [], array $options = []): SeoPagePresetOutputDTO
     {
         return SeoPagePresetFactory::category($title, $description, $items, $options);
     }
 
-    /** @param list<array<string, mixed>|string> $items @param array<string, mixed> $options */
+    /**
+     * @param list<array<string, mixed>|string> $items
+     * @param array<string, mixed> $options
+     */
     public static function searchResults(string $title, ?string $description = null, array $items = [], array $options = []): SeoPagePresetOutputDTO
     {
         // Search result pages should not be indexed by default. A caller may
@@ -35,13 +44,19 @@ final class EcommerceSeoPresetFactory
         return SeoPagePresetFactory::category($title, $description, $items, $options);
     }
 
-    /** @param list<array<string, mixed>|string> $items @param array<string, mixed> $options */
+    /**
+     * @param list<array<string, mixed>|string> $items
+     * @param array<string, mixed> $options
+     */
     public static function brandPage(string $title, ?string $description = null, array $items = [], array $options = []): SeoPagePresetOutputDTO
     {
         return SeoPagePresetFactory::category($title, $description, $items, $options);
     }
 
-    /** @param array<string, mixed> $offer @param array<string, mixed> $options */
+    /**
+     * @param array<string, mixed> $offer
+     * @param array<string, mixed> $options
+     */
     public static function offerLanding(string $title, ?string $description, array $offer = [], array $options = []): SeoPagePresetOutputDTO
     {
         $canonical = DomainSeoPresetFactoryHelper::canonicalFromOptions($options);

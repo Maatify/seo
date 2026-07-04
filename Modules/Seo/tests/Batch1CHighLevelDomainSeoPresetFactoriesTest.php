@@ -14,12 +14,20 @@ use Maatify\Seo\Shared\DTO\Schema\JsonLdSchemaDTO;
 use Maatify\Seo\Web\Page\ContentSeoPresetFactory;
 use Maatify\Seo\Web\Page\EcommerceSeoPresetFactory;
 use Maatify\Seo\Web\Page\LocalBusinessSeoPresetFactory;
+use Maatify\Seo\Web\Page\SeoPagePresetOutputDTO;
 
 $failures = 0;
 function assertSame1C(mixed $expected, mixed $actual, string $message): void { global $failures; if ($expected !== $actual) { $failures++; echo "FAIL: $message\nExpected: " . print_r($expected, true) . "\nActual: " . print_r($actual, true) . "\n"; } }
 function assertTrue1C(bool $actual, string $message): void { assertSame1C(true, $actual, $message); }
 function assertThrowsSeo1C(callable $callback, string $message): void { global $failures; try { $callback(); } catch (SeoInvalidArgumentException) { return; } $failures++; echo "FAIL: $message\nExpected SeoInvalidArgumentException.\n"; }
-function schemaTypes1C(object $output): array { return array_map(static fn (array $schema): string => (string) ($schema['@type'] ?? ''), $output->toArray()['schemas']); }
+/** @return list<string> */
+function schemaTypes1C(SeoPagePresetOutputDTO $output): array
+{
+    /** @var list<array<string, mixed>> $schemas */
+    $schemas = $output->toArray()['schemas'];
+
+    return array_map(static fn (array $schema): string => (string) ($schema['@type'] ?? ''), $schemas);
+}
 
 echo "Running Batch 1C High-Level Domain SEO Preset Factory Tests...\n\n";
 
