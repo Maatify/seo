@@ -118,6 +118,11 @@ assertThrowsSeoInvalidArgument(static fn () => SeoPagePresetFactory::generic('',
 assertThrowsSeoInvalidArgument(static fn () => SeoPagePresetFactory::product('Bad Product', null, []), 'Broken product required data is rejected');
 assertThrowsSeoInvalidArgument(static fn () => SeoPagePresetFactory::article('Bad Article', null, ['author' => 'Jane']), 'Broken article required data is rejected');
 assertThrowsSeoInvalidArgument(static fn () => SeoPagePresetFactory::breadcrumb('Bad Breadcrumb', null, [['name' => 'Home']]), 'Invalid breadcrumb shape is rejected');
+assertThrowsSeoInvalidArgument(static fn () => SeoPagePresetFactory::generic('Bad Query', null, ['canonicalBaseUrl' => 'https://example.com', 'queryParams' => ['nested' => ['bad']]]), 'Invalid canonical query parameter values are rejected');
+assertThrowsSeoInvalidArgument(static fn () => SeoPagePresetFactory::generic('Bad Allowed Query', null, ['canonicalBaseUrl' => 'https://example.com', 'allowedQueryParams' => ['page', 1]]), 'Invalid allowed query parameter lists are rejected');
+assertThrowsSeoInvalidArgument(static fn () => SeoPagePresetFactory::product('Bad Image Product', null, ['name' => 'Product', 'image' => ['ok.jpg', 123]]), 'Invalid product image lists are rejected');
+assertThrowsSeoInvalidArgument(static fn () => SeoPagePresetFactory::article('Bad Publisher', null, ['author' => 'Jane', 'datePublished' => '2026-07-04', 'publisher' => []]), 'Invalid article publisher data is rejected');
+assertThrowsSeoInvalidArgument(static fn () => SeoPagePresetFactory::article('Bad Article Image', null, ['author' => 'Jane', 'datePublished' => '2026-07-04', 'image' => ['ok.jpg', 123]]), 'Invalid article image lists are rejected');
 
 assertTrueValue(!str_contains($generic->html, 'Illuminate\\') && !str_contains($generic->html, 'Symfony\\') && !str_contains($generic->html, 'Response'), 'Preset output has no framework or HTTP coupling');
 
