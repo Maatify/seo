@@ -89,7 +89,7 @@ assertSameValue(
     'Builder render should output head link tags'
 );
 
-assertSameValue(true, is_string($builder->render()) && !class_exists('Illuminate\\Http\\Response') && !class_exists('Symfony\\Component\\HttpFoundation\\Response'), 'No framework/HTTP coupling');
+assertSameValue(true, trim($builder->render()) !== "" && !class_exists('Illuminate\\Http\\Response') && !class_exists('Symfony\\Component\\HttpFoundation\\Response'), 'No framework/HTTP coupling');
 
 echo "SUCCESS: All tests passed.\n";
 exit(0);
