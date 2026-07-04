@@ -302,3 +302,147 @@ $url = new SitemapUrlDTO(
 $xml = $renderer->renderUrlSet([$url]);
 echo $xml;
 ```
+
+
+## Page Preset Factories
+
+The library provides high-level preset factories in `SeoPagePresetFactory` and specialized domain factories (`EcommerceSeoPresetFactory`, `ContentSeoPresetFactory`, `LocalBusinessSeoPresetFactory`) to effortlessly generate fully-configured SEO output (`SeoPagePresetOutputDTO`) for standard page types without manually calling multiple builders. They compose existing builders and return DTO/output only.
+
+```php
+use Maatify\Seo\Web\Page\SeoPagePresetFactory;
+
+$preset = SeoPagePresetFactory::generic('About Us', 'About our company', [
+    'canonicalBaseUrl' => 'https://example.com',
+    'canonicalPath' => '/about',
+    'robots' => ['index', 'follow'],
+    'imageUrl' => 'https://example.com/about.jpg',
+    'siteName' => 'Example Site',
+]);
+
+echo $preset->html; // Fully rendered HTML tags
+```
+
+## Hreflang Head Link Builder
+
+The `HreflangLinkBuilder` provides a framework-agnostic way to construct and render `<link rel="alternate" hreflang="..." href="...">` tags for the HTML `<head>`. It does not interact with or modify sitemap XML hreflang generation.
+
+```php
+use Maatify\Seo\Web\Hreflang\HreflangLinkBuilder;
+
+$builder = new HreflangLinkBuilder();
+
+// Add single links
+$builder->add('en', 'https://example.com/en')
+        ->add('fr', 'https://example.com/fr');
+
+// Explicitly define the fallback
+$builder->xDefault('https://example.com/en');
+
+// Render tags directly to HTML for output
+echo $builder->render();
+```
+
+## Admin Previews
+
+The `SerpPreviewDTO`, `SocialPreviewDTO`, `SerpPreviewFactory`, and `SocialPreviewFactory` are used to generate mock views of Search Engine Results Pages (SERP) and Social Previews for consuming host applications in an admin dashboard or CMS. They are for host admin/CMS previews and do not render UI.
+
+```php
+use Maatify\Seo\Admin\Preview\SerpPreviewFactory;
+use Maatify\Seo\Admin\Preview\SocialPreviewFactory;
+
+$serpPreviewDTO = SerpPreviewFactory::fromPreset($presetOutput);
+$socialPreviewDTO = SocialPreviewFactory::fromPreset($presetOutput, siteName: 'My Awesome Site');
+
+// Export to JSON array for your frontend
+$serpArray = $serpPreviewDTO->toArray();
+$socialArray = $socialPreviewDTO->toArray();
+```
+
+## Metadata Import/Export Helpers
+
+The `SeoMetadataExporter` aggregates overrides, redirects, and slug history into a versioned format (`SeoMetadataExportDTO`), and the `SeoMetadataImporter` parses an array-based schema payload to validate and save the data (`SeoMetadataImportResultDTO`). The importer is create-only according to current repository contracts.
+
+```php
+use Maatify\Seo\Admin\Import\SeoMetadataImporter;
+
+// Perform a Dry Run (no data is persisted to the database)
+$dryRunResult = $importer->importArray($payload, dryRun: true);
+
+// Perform the actual Import
+$importResult = $importer->importArray($payload, dryRun: false);
+```
+
+## Social Builders
+
+The library provides dedicated builders for Open Graph (`OpenGraphBuilder`), Twitter/X Cards (`TwitterCardBuilder`), and a combined orchestration layer (`SocialPreviewBuilder`). Use them directly when you need strict type-safety, explicit ordering, and dedicated image control independently of the fluent builder or presets.
+
+```php
+use Maatify\Seo\Web\Social\SocialPreviewBuilder;
+
+$builder = new SocialPreviewBuilder();
+$builder->setTitle('Example Title')
+        ->setDescription('Example description')
+        ->setImage('https://example.com/cover.jpg')
+        ->setTwitterCard('summary_large_image');
+
+echo $builder->toHtml();
+```
+
+## JSON-LD Builders
+
+A comprehensive suite of specialized JSON-LD builders is available to natively generate arrays or JSON strings for structured data:
+- `ProductJsonLdBuilder`
+- `ArticleJsonLdBuilder` (also BlogPosting, NewsArticle)
+- `OrganizationJsonLdBuilder` (also LocalBusiness, Corporation, Store)
+- `FAQPageJsonLdBuilder`
+- `HowToJsonLdBuilder`
+- `EventJsonLdBuilder`
+- `ItemListJsonLdBuilder`
+- `WebPageJsonLdBuilder`
+- `WebSiteJsonLdBuilder`
+- `ReviewJsonLdBuilder`
+- `AggregateRatingJsonLdBuilder`
+- `OfferJsonLdBuilder`
+- `ServiceJsonLdBuilder`
+- `LocalBusinessJsonLdBuilder`
+
+```php
+use Maatify\Seo\Web\JsonLd\Builder\ProductJsonLdBuilder;
+use Maatify\Seo\Web\JsonLd\Builder\ArticleJsonLdBuilder;
+use Maatify\Seo\Web\JsonLd\Builder\OrganizationJsonLdBuilder;
+
+$productBuilder = new ProductJsonLdBuilder();
+$productBuilder->setName('Example Product')
+               ->setPrice('29.99')
+               ->setCurrency('USD');
+$productJson = $productBuilder->toJson();
+
+$articleBuilder = new ArticleJsonLdBuilder();
+$articleBuilder->setHeadline('Example Article')
+               ->setAuthor('Jane Doe')
+               ->setDatePublished('2023-10-27T10:00:00Z');
+$articleJson = $articleBuilder->toJson();
+
+$orgBuilder = new OrganizationJsonLdBuilder();
+$orgBuilder->setName('Example Organization')
+           ->setUrl('https://example.com')
+           ->setLogo('https://example.com/logo.png');
+$orgJson = $orgBuilder->toJson();
+```
+
+## MetaRobotsBuilder and CanonicalUrlBuilder
+
+These standalone builders provide fluent interfaces to manage `<meta name="robots">` tags and `<link rel="canonical">` tags independently. They are also reused internally by higher-level presets.
+
+```php
+use Maatify\Seo\Web\Robots\MetaRobotsBuilder;
+use Maatify\Seo\Web\Indexing\CanonicalUrlBuilder;
+
+$robotsBuilder = new MetaRobotsBuilder();
+$robotsBuilder->index()->follow()->maxSnippet(50);
+echo $robotsBuilder->toHtml();
+
+$canonicalBuilder = new CanonicalUrlBuilder('https://example.com');
+$canonicalBuilder->setPath('about-us')->setQueryParams(['sort' => 'desc']);
+echo $canonicalBuilder->toHtml();
+```

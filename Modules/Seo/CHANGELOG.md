@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.0.0] - Unreleased
+- **Added:** Documentation Coverage Audit completed to align public APIs with the README and ensure developer accessibility.
+- **Added:** Batch 3 Hreflang Head Link Builder for HTML head `<link rel="alternate" hreflang="...">` tag generation.
+- **Added:** Batch 2 Admin Previews (`SerpPreviewDTO`, `SocialPreviewDTO`) & Metadata Import/Export helpers.
+- **Added:** Batch 1C Domain SEO Preset Factories (`EcommerceSeoPresetFactory`, `ContentSeoPresetFactory`, `LocalBusinessSeoPresetFactory`) for high-level semantic setups.
+- **Added:** Batch 1B SeoPagePresetFactory as the primary orchestrator for common page types.
+- **Added:** Batch 1A MetaRobotsBuilder for standalone, exclusive management of `<meta name="robots">` tags.
+- **Added:** Phase 15A CanonicalUrlBuilder for programmatic construction of canonical links with normalized query strings.
+- **Added:** Phase 14 Social Meta Builders (`OpenGraphBuilder`, `TwitterCardBuilder`, `SocialPreviewBuilder`, `SocialImageFactory`).
+- **Added:** Phase 13 JSON-LD builder expansion for extensive Schema.org schemas (Foundation, Product, Article, Organization, Content, Media, Specialized entities, etc.).
+- **Added:** Phase 12 CI/Stability audits (`PHASE_12A_FINAL_STABILITY_AND_TEST_COVERAGE_AUDIT_REPORT.md`, `PHASE_12B_GITHUB_ACTIONS_CI_VERIFICATION_REPORT.md`).
 - **Added:** Implementation of Phase 13I Commerce JSON-LD Builders (`ReviewJsonLdBuilder`, `AggregateRatingJsonLdBuilder`, `OfferJsonLdBuilder`, `ServiceJsonLdBuilder`, `LocalBusinessJsonLdBuilder`) to fluently generate JSON-LD output (see `docs/verification/PHASE_13I_COMMERCE_JSON_LD_BUILDERS_VERIFICATION_REPORT.md`).
 - **Added:** Implementation of Phase 13F WebSite JSON-LD Builder (`WebSiteJsonLdBuilder`) to fluently generate WebSite JSON-LD output (see `docs/verification/PHASE_13F_WEBSITE_JSON_LD_BUILDER_VERIFICATION_REPORT.md`).
 - **Added:** Implementation of Phase 11G SEO Validation Batch Report Exporter including `SeoValidationBatchReportExporter` to export batch reports to Array, JSON, Summary Array, and Markdown (see `docs/verification/PHASE_11G_SEO_VALIDATION_BATCH_REPORT_EXPORTER_VERIFICATION_REPORT.md`).
