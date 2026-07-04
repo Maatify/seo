@@ -252,3 +252,24 @@ The SEO module is complete as a standalone library. The following items are inte
 - **Redirect resolver logic**: Framework routing decisions (evaluating an HTTP request against redirects and emitting a 301/410 response) belong entirely to the consuming host application or framework router.
 - **Controllers/framework integration**: Controllers, routes, and HTTP integration are intentionally excluded to keep the module fully decoupled from any specific framework (like Slim, Laravel, or Symfony).
 - **Host-specific product/category logic**: Domain-specific business logic for products, categories, or other entities remains strictly in the host application and is integrated via standard interfaces (contracts).
+
+
+## Accelerated Feature Batches
+The library has been extended via accelerated development batches that introduce highly useful high-level components.
+
+### Batch 1: SEO Preset Factories & Meta Robots
+- **`Web/Robots/MetaRobotsBuilder.php`**: Safely builds and aggregates robust `robots` meta values (e.g. `index, follow, max-image-preview:large`) avoiding invalid state collisions (like having both `index` and `noindex`).
+- **`Web/Preset/SeoPagePresetFactory.php`**: Acts as a central orchestrator returning `SeoPagePresetOutputDTO`. It natively reuses all specialized builders (Meta, Canonical, Hreflang, Schema, OpenGraph, TwitterCard) to generate completely configured SEO states for generic pages, products, articles, categories, and more.
+- **High-Level Domain Preset Factories**: Specific domain wrappers (`EcommerceSeoPresetFactory`, `ContentSeoPresetFactory`, `LocalBusinessSeoPresetFactory`) that further streamline preset creation for common vertical use cases.
+
+### Batch 2: Admin Previews & Migrations
+- **Admin Preview DTOs**: Provides DTOs (`SeoPreviewDTO`, `SocialPreviewDTO`, `SearchResultPreviewDTO`) allowing host admin panels to accurately display how an entity will look on Google, Facebook, and Twitter without directly coupling to UI frameworks.
+- **SQL Migrations**: Included the necessary `maa_seo_` table creations (slug history, redirects, overrides).
+
+### Batch 3: Hreflang Head Link Builder
+- **`Web/Indexing/HreflangHeadLinkBuilder.php`**: Transforms internal URL mapping structures into standard HTML `<link rel="alternate" hreflang="..." href="..." />` tags to support multilingual indexation at the page head level.
+
+### Phase 14 & 15 Extensions
+- **`Web/Social/OpenGraphBuilder.php` & `TwitterCardBuilder.php`**: Highly structured generation of social meta tags without namespace collisions.
+- **`Web/Social/SocialPreviewBuilder.php`**: A composite builder orchestrating both OG and Twitter components smoothly.
+- **`Web/Indexing/CanonicalUrlBuilder.php`**: Helper to construct and sanitize canonical URL values.

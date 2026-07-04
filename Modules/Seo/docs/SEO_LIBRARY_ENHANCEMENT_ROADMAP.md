@@ -371,7 +371,7 @@ Each builder should return:
 
 ---
 
-# Phase 14: SEO Factories / Page Presets
+# Phase 14: SEO Factories / Page Presets (Complete via Batch 1B & 1C)
 
 ## Goal
 
@@ -411,7 +411,7 @@ Factory returns:
 
 ---
 
-# Phase 15: Canonical / URL / Hreflang Helpers
+# Phase 15: Canonical / URL / Hreflang Helpers (Complete via Phase 15A & Batch 3)
 
 ## Goal
 
@@ -450,7 +450,7 @@ https://example.com/product?id=10
 
 ---
 
-# Phase 16: Meta Robots Helpers
+# Phase 16: Meta Robots Helpers (Complete via Batch 1A)
 
 ## Goal
 
@@ -481,7 +481,7 @@ index,follow,max-image-preview:large
 
 ---
 
-# Phase 17: OpenGraph / Twitter Presets
+# Phase 17: OpenGraph / Twitter Presets (Complete via Phase 14)
 
 ## Goal
 
@@ -503,7 +503,7 @@ Make social metadata easier to create.
 
 ---
 
-# Phase 18: Admin Preview DTOs
+# Phase 18: Admin Preview DTOs (Complete via Batch 2)
 
 ## Goal
 
