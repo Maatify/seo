@@ -511,9 +511,8 @@ Prepare data for admin preview screens without adding UI.
 
 ## Suggested DTOs
 
-* `Admin/DTO/SeoPreviewDTO.php`
+* `Admin/DTO/SerpPreviewDTO.php`
 * `Admin/DTO/SocialPreviewDTO.php`
-* `Admin/DTO/SearchResultPreviewDTO.php`
 
 ## Features
 

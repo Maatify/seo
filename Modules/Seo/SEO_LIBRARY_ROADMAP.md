@@ -238,10 +238,10 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   - **Batch 1C: High-Level Domain SEO Preset Factories (Complete):** Domain-specific factories (Ecommerce, Content, LocalBusiness).
 
 - **Batch 2: Admin Previews & Migrations**
-  - **Batch 2: Admin Previews & Migrations (Complete):** Admin Preview DTOs (SeoPreviewDTO, SocialPreviewDTO, SearchResultPreviewDTO) and SQL schema migrations.
+  - **Batch 2: Admin Previews & Migrations (Complete):** Admin preview DTOs/factories (`SerpPreviewDTO`, `SocialPreviewDTO`, `SerpPreviewFactory`, `SocialPreviewFactory`) plus metadata import/export helpers (`SeoMetadataExportDTO`, `SeoMetadataImportResultDTO`, `SeoMetadataExporter`, `SeoMetadataImporter`).
 
 - **Batch 3: Hreflang Head Link Builder**
-  - **Batch 3: Hreflang Head Link Builder (Complete):** Builder for `xhtml:link` alternate URLs.
+  - **Batch 3: Hreflang Head Link Builder (Complete):** HTML head `<link rel="alternate" hreflang="..." href="...">` generation (`HreflangLinkBuilder`, `HreflangLinkDTO`, `HreflangLinkRenderer`).
 
 ## 11. Risks / Decisions that Need Approval Before Coding
 

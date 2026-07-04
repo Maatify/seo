@@ -259,15 +259,15 @@ The library has been extended via accelerated development batches that introduce
 
 ### Batch 1: SEO Preset Factories & Meta Robots
 - **`Web/Robots/MetaRobotsBuilder.php`**: Safely builds and aggregates robust `robots` meta values (e.g. `index, follow, max-image-preview:large`) avoiding invalid state collisions (like having both `index` and `noindex`).
-- **`Web/Preset/SeoPagePresetFactory.php`**: Acts as a central orchestrator returning `SeoPagePresetOutputDTO`. It natively reuses all specialized builders (Meta, Canonical, Hreflang, Schema, OpenGraph, TwitterCard) to generate completely configured SEO states for generic pages, products, articles, categories, and more.
+- **`Web/Page/SeoPagePresetFactory.php`**: Acts as a central orchestrator returning `SeoPagePresetOutputDTO`. It natively reuses all specialized builders (Meta, Canonical, Hreflang, Schema, OpenGraph, TwitterCard) to generate completely configured SEO states for generic pages, products, articles, categories, and more.
 - **High-Level Domain Preset Factories**: Specific domain wrappers (`EcommerceSeoPresetFactory`, `ContentSeoPresetFactory`, `LocalBusinessSeoPresetFactory`) that further streamline preset creation for common vertical use cases.
 
 ### Batch 2: Admin Previews & Migrations
-- **Admin Preview DTOs**: Provides DTOs (`SeoPreviewDTO`, `SocialPreviewDTO`, `SearchResultPreviewDTO`) allowing host admin panels to accurately display how an entity will look on Google, Facebook, and Twitter without directly coupling to UI frameworks.
-- **SQL Migrations**: Included the necessary `maa_seo_` table creations (slug history, redirects, overrides).
+- **Admin Preview DTOs & Factories**: Provides DTOs (`SerpPreviewDTO`, `SocialPreviewDTO`) and factories (`SerpPreviewFactory`, `SocialPreviewFactory`) allowing host admin panels to accurately display how an entity will look on Google, Facebook, and Twitter without directly coupling to UI frameworks.
+- **Metadata Import/Export Helpers**: Provides `SeoMetadataExportDTO`, `SeoMetadataImportResultDTO`, `SeoMetadataExporter`, and `SeoMetadataImporter`.
 
 ### Batch 3: Hreflang Head Link Builder
-- **`Web/Indexing/HreflangHeadLinkBuilder.php`**: Transforms internal URL mapping structures into standard HTML `<link rel="alternate" hreflang="..." href="..." />` tags to support multilingual indexation at the page head level.
+- **HTML Head `<link rel="alternate" hreflang="..." href="...">` generation**: Transforms internal URL mapping structures into standard HTML `<link rel="alternate" hreflang="..." href="...">` tags to support multilingual indexation at the page head level. Includes `Web/Hreflang/HreflangLinkBuilder.php`, `Web/Hreflang/HreflangLinkDTO.php`, and `Web/Hreflang/HreflangLinkRenderer.php`.
 
 ### Phase 14 & 15 Extensions
 - **`Web/Social/OpenGraphBuilder.php` & `TwitterCardBuilder.php`**: Highly structured generation of social meta tags without namespace collisions.
