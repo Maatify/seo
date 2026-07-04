@@ -44,15 +44,14 @@ $builder->setTitle('Podcast Episode')
 // Use OpenGraphBuilder directly for OG-specific advanced settings
 $builder->openGraph()
         ->setType('music.song')
-        ->setAudio('https://example.com/episode.mp3')
-        ->setAudioType('audio/mpeg');
+        ->setAudio('https://example.com/episode.mp3');
 
 // Use TwitterCardBuilder directly for Twitter-specific advanced settings
 $builder->twitter()
         ->setCard('player')
         ->setPlayer('https://example.com/player')
-        ->setPlayerWidth('480')
-        ->setPlayerHeight('480');
+        ->setPlayerWidth(480)
+        ->setPlayerHeight(480);
 
 // Generate final HTML
 echo $builder->toHtml();
