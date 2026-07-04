@@ -30,12 +30,21 @@ assertSame1C('https://example.com/p/blue-shirt', $product->canonicalUrl, 'Produc
 $category = EcommerceSeoPresetFactory::categoryListing('Shirts', 'All shirts', [['url' => 'https://example.com/p/blue-shirt', 'name' => 'Blue Shirt']]);
 $search = EcommerceSeoPresetFactory::searchResults('Search shirts', 'Search results', ['https://example.com/p/blue-shirt']);
 $brand = EcommerceSeoPresetFactory::brandPage('Brand', 'Brand products', ['https://example.com/p/blue-shirt']);
-$offer = EcommerceSeoPresetFactory::offerLanding('Sale', 'Summer sale', ['price' => '19.99', 'currency' => 'USD'], ['canonicalUrl' => 'https://example.com/sale']);
+$offer = EcommerceSeoPresetFactory::offerLanding('Sale', 'Summer sale', ['price' => '19.99', 'currency' => 'USD'], [
+    'canonicalBaseUrl' => 'https://example.com',
+    'canonicalPath' => '/sale',
+    'queryParams' => ['page' => 2, 'utm' => 'x'],
+    'allowedQueryParams' => ['page'],
+]);
 assertSame1C('ItemList', $category->toArray()['schemas'][0]['@type'], 'Category listing produces ItemList output');
 assertSame1C('ItemList', $search->toArray()['schemas'][0]['@type'], 'Search results produces valid ItemList output');
 assertSame1C('noindex, follow', $search->robots, 'Search results defaults to noindex/follow');
 assertSame1C('ItemList', $brand->toArray()['schemas'][0]['@type'], 'Brand page produces valid ItemList output');
 assertTrue1C(in_array('Offer', schemaTypes1C($offer), true), 'Offer landing includes Offer schema');
+assertSame1C('https://example.com/sale?page=2', $offer->toArray()['schemas'][1]['url'], 'Offer schema URL matches canonical builder behavior');
+
+$indexedSearch = EcommerceSeoPresetFactory::searchResults('Indexable Search', 'Curated search results', [], ['robots' => ['index', 'follow']]);
+assertSame1C('index, follow', $indexedSearch->robots, 'Search results robots override is explicit via robots option');
 
 $article = ContentSeoPresetFactory::article('Article', 'Desc', ['author' => 'Jane', 'datePublished' => '2026-07-04']);
 $blog = ContentSeoPresetFactory::blogPost('Blog', 'Desc', ['author' => 'Jane', 'datePublished' => '2026-07-04']);
@@ -51,12 +60,18 @@ $business = ['name' => 'Example Plumbing', 'telephone' => '+15555550100', 'addre
 $home = LocalBusinessSeoPresetFactory::businessHome('Example Plumbing', 'Local plumber', $business, ['canonicalUrl' => 'https://example.com', 'extraSchemas' => [$extra]]);
 $location = LocalBusinessSeoPresetFactory::locationPage('Downtown Plumbing', 'Downtown location', $business, ['canonicalUrl' => 'https://example.com/downtown']);
 $service = LocalBusinessSeoPresetFactory::servicePage('Drain Cleaning', 'Drain cleaning service', ['name' => 'Drain Cleaning', 'serviceType' => 'Plumbing'], $business, ['canonicalUrl' => 'https://example.com/drain-cleaning']);
-$contact = LocalBusinessSeoPresetFactory::contactPage('Contact Us', 'Contact Example Plumbing', $business, ['contactType' => 'customer service'], ['canonicalUrl' => 'https://example.com/contact']);
+$contact = LocalBusinessSeoPresetFactory::contactPage('Contact Us', 'Contact Example Plumbing', $business, ['contactType' => 'customer service'], [
+    'canonicalBaseUrl' => 'https://example.com',
+    'canonicalPath' => '/contact',
+    'queryParams' => ['ref' => 'local', 'utm' => 'x'],
+    'allowedQueryParams' => ['ref'],
+]);
 assertTrue1C(in_array('LocalBusiness', schemaTypes1C($home), true), 'Business home includes LocalBusiness schema');
 assertTrue1C(in_array('Thing', schemaTypes1C($home), true), 'Business home preserves extra schemas');
 assertTrue1C(in_array('LocalBusiness', schemaTypes1C($location), true), 'Location page includes LocalBusiness schema');
 assertTrue1C(in_array('Service', schemaTypes1C($service), true), 'Service page includes Service schema');
 assertTrue1C(in_array('ContactPage', schemaTypes1C($contact), true), 'Contact page includes ContactPage schema');
+assertSame1C('https://example.com/contact?ref=local', $contact->toArray()['schemas'][2]['url'], 'ContactPage schema URL matches canonical builder behavior');
 
 $passThrough = EcommerceSeoPresetFactory::categoryListing('Filtered Shirts', 'All shirts', [], ['canonicalBaseUrl' => 'https://example.com', 'canonicalPath' => '/shirts', 'queryParams' => ['page' => 2, 'utm' => 'x'], 'allowedQueryParams' => ['page'], 'robots' => ['index', 'follow'], 'imageUrl' => 'https://example.com/shirts.jpg', 'siteName' => 'Example', 'locale' => 'en_US', 'twitterSite' => '@example', 'twitterCreator' => '@jane', 'breadcrumbs' => [['name' => 'Home', 'url' => 'https://example.com']]]);
 assertSame1C('https://example.com/shirts?page=2', $passThrough->canonicalUrl, 'Options pass-through preserves canonical builder options');

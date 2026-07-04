@@ -6,6 +6,7 @@ namespace Maatify\Seo\Web\Page;
 
 use Maatify\Seo\Exception\SeoInvalidArgumentException;
 use Maatify\Seo\Shared\DTO\Schema\JsonLdSchemaDTO;
+use Maatify\Seo\Web\Indexing\CanonicalUrlBuilder;
 
 /** @internal */
 final class DomainSeoPresetFactoryHelper
@@ -49,16 +50,29 @@ final class DomainSeoPresetFactoryHelper
             return self::expectString($options['canonicalUrl'], 'canonicalUrl');
         }
 
-        if (!array_key_exists('canonicalBaseUrl', $options)) {
+        if (!array_key_exists('canonicalBaseUrl', $options) && !array_key_exists('canonicalPath', $options)) {
             return null;
         }
 
-        $base = rtrim(self::expectString($options['canonicalBaseUrl'], 'canonicalBaseUrl'), '/');
-        $path = array_key_exists('canonicalPath', $options)
-            ? '/' . ltrim(self::expectString($options['canonicalPath'], 'canonicalPath'), '/')
-            : '';
+        $baseUrl = array_key_exists('canonicalBaseUrl', $options)
+            ? self::expectString($options['canonicalBaseUrl'], 'canonicalBaseUrl')
+            : null;
 
-        return $base . $path;
+        $builder = new CanonicalUrlBuilder($baseUrl);
+
+        if (array_key_exists('canonicalPath', $options)) {
+            $builder->setPath(self::expectString($options['canonicalPath'], 'canonicalPath'));
+        }
+
+        if (array_key_exists('queryParams', $options)) {
+            $builder->setQueryParams(self::queryParams($options['queryParams']));
+        }
+
+        if (array_key_exists('allowedQueryParams', $options)) {
+            $builder->preserveQueryParams(self::stringList($options['allowedQueryParams'], 'allowedQueryParams'));
+        }
+
+        return $builder->build();
     }
 
     /**
@@ -96,6 +110,67 @@ final class DomainSeoPresetFactoryHelper
             throw SeoInvalidArgumentException::invalidSchemaEntry($field);
         }
 
-        return $value;
+        $normalized = [];
+        foreach ($value as $key => $item) {
+            if (!is_string($key) || $key === '') {
+                throw SeoInvalidArgumentException::invalidValue($field, 'Expected associative array with non-empty string keys.');
+            }
+
+            $normalized[$key] = $item;
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @return array<string, string|int|float|bool|null>
+     */
+    private static function queryParams(mixed $value): array
+    {
+        if (!is_array($value)) {
+            throw SeoInvalidArgumentException::invalidValue('queryParams', 'Expected associative query parameter array.');
+        }
+
+        if ($value === []) {
+            return [];
+        }
+
+        if (array_is_list($value)) {
+            throw SeoInvalidArgumentException::invalidValue('queryParams', 'Expected associative query parameter array.');
+        }
+
+        $normalized = [];
+        foreach ($value as $key => $item) {
+            if (!is_string($key) || $key === '') {
+                throw SeoInvalidArgumentException::invalidValue('queryParams', 'Expected non-empty string query parameter names.');
+            }
+
+            if (!is_string($item) && !is_int($item) && !is_float($item) && !is_bool($item) && $item !== null) {
+                throw SeoInvalidArgumentException::invalidValue('queryParams', 'Expected scalar string, integer, float, boolean, or null values.');
+            }
+
+            $normalized[$key] = $item;
+        }
+
+        return $normalized;
+    }
+
+    /** @return list<string> */
+    private static function stringList(mixed $value, string $field): array
+    {
+        if (!is_array($value) || !array_is_list($value)) {
+            throw SeoInvalidArgumentException::invalidValue($field, 'Expected a list of strings.');
+        }
+
+        $normalized = [];
+        foreach ($value as $item) {
+            if (!is_string($item) || $item === '') {
+                throw SeoInvalidArgumentException::invalidValue($field, 'Expected a list of non-empty strings.');
+            }
+
+            $normalized[] = $item;
+        }
+
+        return $normalized;
     }
 }

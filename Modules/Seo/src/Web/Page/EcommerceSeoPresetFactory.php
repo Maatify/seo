@@ -26,7 +26,13 @@ final class EcommerceSeoPresetFactory
     /** @param list<array<string, mixed>|string> $items @param array<string, mixed> $options */
     public static function searchResults(string $title, ?string $description = null, array $items = [], array $options = []): SeoPagePresetOutputDTO
     {
-        return SeoPagePresetFactory::category($title, $description, $items, $options + ['robots' => ['noindex', 'follow']]);
+        // Search result pages should not be indexed by default. A caller may
+        // intentionally override this by passing an explicit robots option.
+        if (!array_key_exists('robots', $options)) {
+            $options['robots'] = ['noindex', 'follow'];
+        }
+
+        return SeoPagePresetFactory::category($title, $description, $items, $options);
     }
 
     /** @param list<array<string, mixed>|string> $items @param array<string, mixed> $options */
@@ -40,12 +46,33 @@ final class EcommerceSeoPresetFactory
     {
         $canonical = DomainSeoPresetFactoryHelper::canonicalFromOptions($options);
         $builder = new OfferJsonLdBuilder();
-        if ($canonical !== null) { $builder->setUrl($canonical); }
-        if (array_key_exists('price', $offer)) { $builder->setPrice(DomainSeoPresetFactoryHelper::expectPrice($offer['price'], 'offer.price')); }
-        if (array_key_exists('currency', $offer)) { $builder->setPriceCurrency(DomainSeoPresetFactoryHelper::expectString($offer['currency'], 'offer.currency')); }
-        if (array_key_exists('availability', $offer)) { $builder->setAvailability(DomainSeoPresetFactoryHelper::expectString($offer['availability'], 'offer.availability')); }
-        if (array_key_exists('seller', $offer)) { $builder->setSeller(is_array($offer['seller']) ? DomainSeoPresetFactoryHelper::associativeArray($offer['seller'], 'offer.seller') : DomainSeoPresetFactoryHelper::expectString($offer['seller'], 'offer.seller')); }
 
-        return SeoPagePresetFactory::generic($title, $description, DomainSeoPresetFactoryHelper::appendExtraSchema($options, new JsonLdSchemaDTO($builder->toArray())));
+        if ($canonical !== null) {
+            $builder->setUrl($canonical);
+        }
+
+        if (array_key_exists('price', $offer)) {
+            $builder->setPrice(DomainSeoPresetFactoryHelper::expectPrice($offer['price'], 'offer.price'));
+        }
+
+        if (array_key_exists('currency', $offer)) {
+            $builder->setPriceCurrency(DomainSeoPresetFactoryHelper::expectString($offer['currency'], 'offer.currency'));
+        }
+
+        if (array_key_exists('availability', $offer)) {
+            $builder->setAvailability(DomainSeoPresetFactoryHelper::expectString($offer['availability'], 'offer.availability'));
+        }
+
+        if (array_key_exists('seller', $offer)) {
+            $seller = is_array($offer['seller'])
+                ? DomainSeoPresetFactoryHelper::associativeArray($offer['seller'], 'offer.seller')
+                : DomainSeoPresetFactoryHelper::expectString($offer['seller'], 'offer.seller');
+
+            $builder->setSeller($seller);
+        }
+
+        $options = DomainSeoPresetFactoryHelper::appendExtraSchema($options, new JsonLdSchemaDTO($builder->toArray()));
+
+        return SeoPagePresetFactory::generic($title, $description, $options);
     }
 }
