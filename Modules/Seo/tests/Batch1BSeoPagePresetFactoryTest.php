@@ -25,6 +25,7 @@ $failures = 0;
 function assertSameValue(mixed $expected, mixed $actual, string $message): void
 {
     global $failures;
+    /** @var int $failures */
     if ($expected !== $actual) {
         $failures++;
         echo "FAIL: $message\n";
@@ -46,6 +47,7 @@ function assertContainsValue(string $needle, string $haystack, string $message):
 function assertThrowsSeoInvalidArgument(callable $callback, string $message): void
 {
     global $failures;
+    /** @var int $failures */
     try {
         $callback();
     } catch (SeoInvalidArgumentException) {
@@ -70,7 +72,7 @@ $generic = SeoPagePresetFactory::generic('About Us', 'About our company', [
     'twitterSite' => '@example',
 ]);
 
-assertTrueValue($generic->metaTags instanceof MetaTagsDTO, 'Generic preset builds MetaTagsDTO');
+assertSameValue(MetaTagsDTO::class, $generic->metaTags::class, 'Generic preset builds MetaTagsDTO');
 assertSameValue('https://example.com/about?page=2', $generic->canonicalUrl, 'Generic preset uses CanonicalUrlBuilder behavior');
 assertSameValue('index, follow, max-image-preview:large', $generic->robots, 'Robots array uses MetaRobotsBuilder output');
 assertContainsValue('property="og:title"', $generic->socialHtml, 'Social preview includes Open Graph fields');
@@ -89,6 +91,7 @@ $product = SeoPagePresetFactory::product('Blue Shirt', 'Cotton shirt', [
     'price' => '29.99',
     'currency' => 'USD',
 ], ['canonicalUrl' => 'https://example.com/products/blue-shirt', 'extraSchemas' => [$extra]]);
+/** @var list<array<string, mixed>> $productSchemas */
 $productSchemas = $product->toArray()['schemas'];
 assertSameValue('Product', $productSchemas[0]['@type'], 'Product preset includes Product JSON-LD schema');
 assertSameValue('Thing', $productSchemas[1]['@type'], 'Extra schemas are preserved');
@@ -96,27 +99,28 @@ assertSameValue('Thing', $productSchemas[1]['@type'], 'Extra schemas are preserv
 $category = SeoPagePresetFactory::category('Shirts', 'All shirts', [
     ['url' => 'https://example.com/products/blue-shirt', 'name' => 'Blue Shirt'],
 ]);
-assertSameValue('ItemList', $category->toArray()['schemas'][0]['@type'], 'Category preset includes ItemList JSON-LD schema');
+assertSameValue('ItemList', ((array)((array)$category->toArray()['schemas'])[0])['@type'], 'Category preset includes ItemList JSON-LD schema');
 
 $article = SeoPagePresetFactory::article('Launch News', 'Product launch', [
     'author' => 'Jane Doe',
     'datePublished' => '2026-07-04',
     'publisher' => 'Example',
 ], ['canonicalUrl' => 'https://example.com/news/launch']);
-assertSameValue('Article', $article->toArray()['schemas'][0]['@type'], 'Article preset includes Article JSON-LD schema');
+assertSameValue('Article', ((array)((array)$article->toArray()['schemas'])[0])['@type'], 'Article preset includes Article JSON-LD schema');
 
 $home = SeoPagePresetFactory::home('Example', 'Homepage', ['canonicalUrl' => 'https://example.com']);
-assertSameValue('WebSite', $home->toArray()['schemas'][0]['@type'], 'Home preset includes WebSite JSON-LD schema');
+assertSameValue('WebSite', ((array)((array)$home->toArray()['schemas'])[0])['@type'], 'Home preset includes WebSite JSON-LD schema');
 
 $breadcrumb = SeoPagePresetFactory::breadcrumb('Blue Shirt', 'Cotton shirt', [
     ['name' => 'Home', 'url' => 'https://example.com'],
     ['name' => 'Shirts', 'url' => 'https://example.com/shirts'],
 ]);
-assertSameValue('BreadcrumbList', $breadcrumb->toArray()['schemas'][1]['@type'], 'Breadcrumb-enabled preset includes BreadcrumbList JSON-LD schema');
+assertSameValue('BreadcrumbList', ((array)((array)$breadcrumb->toArray()['schemas'])[1])['@type'], 'Breadcrumb-enabled preset includes BreadcrumbList JSON-LD schema');
 
 assertThrowsSeoInvalidArgument(static fn () => SeoPagePresetFactory::generic('', 'Missing title'), 'Empty title is rejected');
 assertThrowsSeoInvalidArgument(static fn () => SeoPagePresetFactory::product('Bad Product', null, []), 'Broken product required data is rejected');
 assertThrowsSeoInvalidArgument(static fn () => SeoPagePresetFactory::article('Bad Article', null, ['author' => 'Jane']), 'Broken article required data is rejected');
+/** @phpstan-ignore argument.type */
 assertThrowsSeoInvalidArgument(static fn () => SeoPagePresetFactory::breadcrumb('Bad Breadcrumb', null, [['name' => 'Home']]), 'Invalid breadcrumb shape is rejected');
 assertThrowsSeoInvalidArgument(static fn () => SeoPagePresetFactory::generic('Bad Query', null, ['canonicalBaseUrl' => 'https://example.com', 'queryParams' => ['nested' => ['bad']]]), 'Invalid canonical query parameter values are rejected');
 assertThrowsSeoInvalidArgument(static fn () => SeoPagePresetFactory::generic('Bad Allowed Query', null, ['canonicalBaseUrl' => 'https://example.com', 'allowedQueryParams' => ['page', 1]]), 'Invalid allowed query parameter lists are rejected');
@@ -127,6 +131,7 @@ assertThrowsSeoInvalidArgument(static fn () => SeoPagePresetFactory::article('Ba
 assertTrueValue(!str_contains($generic->html, 'Illuminate\\') && !str_contains($generic->html, 'Symfony\\') && !str_contains($generic->html, 'Response'), 'Preset output has no framework or HTTP coupling');
 
 echo "\n";
+/** @var int $failures */
 if ($failures > 0) {
     echo "FAILED with $failures errors.\n";
     exit(1);
