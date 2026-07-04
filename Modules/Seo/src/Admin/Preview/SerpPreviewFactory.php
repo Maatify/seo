@@ -46,11 +46,16 @@ final class SerpPreviewFactory
             return null;
         }
         $parts = parse_url($url);
-        if (!is_array($parts) || !isset($parts['host']) || !is_string($parts['host'])) {
+        if (!is_array($parts)) {
             return $url;
         }
-        $path = isset($parts['path']) && is_string($parts['path']) ? $parts['path'] : '';
-        return $parts['host'] . $path;
+
+        $host = $parts['host'] ?? null;
+        if ($host === null) {
+            return $url;
+        }
+
+        return $host . ($parts['path'] ?? '');
     }
 
     /** @return list<string> */
