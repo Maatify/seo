@@ -13,7 +13,12 @@ composer require maatify/seo
 
 To see how the library functions in real-world scenarios, you can run the following standalone examples from the command line:
 
-* `php examples/basic-head-render.php`: Demonstrates simple rendering of standard meta tags and array-based JSON-LD.
+* `php examples/seo-page-presets.php`: Demonstrates simple rendering of standard meta tags and array-based JSON-LD.
+* `php examples/hreflang-generation.php`: Demonstrates hreflang generation.
+* `php examples/admin-previews.php`: Demonstrates admin SERP and Social previews.
+* `php examples/import-export.php`: Shows how to import and export SEO metadata.
+* `php examples/social-builders.php`: Demonstrates social builders for Open Graph and Twitter Cards.
+* `php examples/meta-robots-canonical.php`: Demonstrates robots and canonical builders.
 * `php examples/product-page-seo.php`: Shows how to construct and output open graph tags and schema specifically for product pages.
 * `php examples/category-page-seo.php`: Uses the `FluentSeoBuilder` to construct schema and metadata for category pages.
 * `php examples/schema-output.php`: Outputs structured data schemas from arrays, DTOs, and adapted optional spatie objects.
