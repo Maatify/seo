@@ -108,18 +108,10 @@ final class SeoPagePresetFactory
             $builder->setDescription($description);
         }
 
-        if (!array_is_list($items)) {
-            throw SeoInvalidArgumentException::invalidValue('items', 'Expected a list of category item URL strings or arrays.');
-        }
-
         foreach ($items as $item) {
             if (is_string($item)) {
                 $builder->addItem($item);
                 continue;
-            }
-
-            if (!is_array($item)) {
-                throw SeoInvalidArgumentException::invalidValue('items', 'Each category item must be a URL string or associative array.');
             }
 
             $url = $item['url'] ?? $item['item'] ?? null;
