@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.0.0] - Unreleased
+- Future stable release after RC validation.
 
 ## [1.0.0-rc.1] - 2026-07-05
 - **Summary:** Initial Release Candidate for the Maatify SEO library including fully implemented core, shared, admin, and web layers, robust JSON-LD schema support, metadata generation, output showcase, and final verifications.

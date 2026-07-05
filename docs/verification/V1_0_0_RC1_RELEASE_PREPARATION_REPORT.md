@@ -25,6 +25,7 @@
 ## Files Changed
 
 *   `CHANGELOG.md`
+*   `docs/verification/V1_0_0_RC1_RELEASE_PREPARATION_REPORT.md`
 
 ## Commands Run & Results
 
