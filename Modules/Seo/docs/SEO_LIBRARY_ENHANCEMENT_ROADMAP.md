@@ -621,6 +621,7 @@ Add:
 * Import/export helpers
 * CLI tooling
 * advanced social previews
+* [Optional Admin SEO Control Layer (RFC)](proposals/OPTIONAL_ADMIN_SEO_CONTROL_LAYER_RFC.md)
 
 ---
 
