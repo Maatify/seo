@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.0.0] - Unreleased
+- Future stable release after RC validation.
+
+## [1.0.0-rc.1] - 2026-07-05
+- **Summary:** Initial Release Candidate for the Maatify SEO library including fully implemented core, shared, admin, and web layers, robust JSON-LD schema support, metadata generation, output showcase, and final verifications.
 - **Added:** Implementation of Phase 13I Commerce JSON-LD Builders (`ReviewJsonLdBuilder`, `AggregateRatingJsonLdBuilder`, `OfferJsonLdBuilder`, `ServiceJsonLdBuilder`, `LocalBusinessJsonLdBuilder`) to fluently generate JSON-LD output (see `docs/verification/PHASE_13I_COMMERCE_JSON_LD_BUILDERS_VERIFICATION_REPORT.md`).
 - **Added:** Implementation of Phase 13F WebSite JSON-LD Builder (`WebSiteJsonLdBuilder`) to fluently generate WebSite JSON-LD output (see `docs/verification/PHASE_13F_WEBSITE_JSON_LD_BUILDER_VERIFICATION_REPORT.md`).
 - **Added:** Implementation of Phase 11G SEO Validation Batch Report Exporter including `SeoValidationBatchReportExporter` to export batch reports to Array, JSON, Summary Array, and Markdown (see `docs/verification/PHASE_11G_SEO_VALIDATION_BATCH_REPORT_EXPORTER_VERIFICATION_REPORT.md`).
