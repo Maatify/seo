@@ -120,7 +120,7 @@ Full documentation, including internal compliance checks, library references, an
 
 ## Design Principles
 
-This library strictly adheres to Maatify's core design standards for standalone modules:
+This library strictly adheres to Maatify's core design standards for standalone libraries:
 
 - **Host-Agnostic:** Designed to plug into any existing PHP project using standardized interface definitions.
 - **Pure Domain Logic:** Excludes any coupling to HTTP requests, global `$_SERVER` states, or environment `.env` files.
