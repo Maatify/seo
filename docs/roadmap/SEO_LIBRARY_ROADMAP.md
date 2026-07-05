@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-This roadmap outlines the design for the `Maatify\Seo` module, a standalone, extractable, and host-agnostic PHP SEO library for the Maatify ecosystem. It strictly adheres to `MODULE_BUILDING_STANDARD.md` and is designed to be fully reusable for any Maatify project. The library provides robust, schema-driven, and multilingual-ready tools to manage dynamic SEO metadata, canonical URLs, hreflang tags, schema generation (JSON-LD), redirects, slug histories, and sitemap indexing. Crucially, the library treats host system details as abstractions via interfaces, ensuring reusability across any future project without direct table joins or tight coupling to a specific framework.
+This roadmap outlines the design for the `Maatify\Seo` library, a standalone, extractable, and host-agnostic PHP SEO library for the Maatify ecosystem. It strictly adheres to `MODULE_BUILDING_STANDARD.md` and is designed to be fully reusable for any Maatify project. The library provides robust, schema-driven, and multilingual-ready tools to manage dynamic SEO metadata, canonical URLs, hreflang tags, schema generation (JSON-LD), redirects, slug histories, and sitemap indexing. Crucially, the library treats host system details as abstractions via interfaces, ensuring reusability across any future project without direct table joins or tight coupling to a specific framework.
 
 ## 2. What Belongs Inside the SEO Library
 
@@ -18,7 +18,7 @@ The `Maatify\Seo` library is responsible for:
 
 ## 3. What Must Remain Host-Provided Via Interfaces
 
-Since the module is host-agnostic and maintains no FK/JOIN dependencies on host tables, the host project must provide implementations for:
+Since the library is host-agnostic and maintains no FK/JOIN dependencies on host tables, the host project must provide implementations for:
 
 - **Routing Engine / URL Generator**: The host resolves the Primary URL from an Entity ID/UUID, Language, and Slug. The SEO library NEVER stores full URLs in its schema, and relies on the host to provide the URL via a contract.
 - **Product/Entity Repositories**: Data to populate Product Schema, Breadcrumbs, and Organization/Website details must be supplied by the host through defined DTOs or entity contracts.
@@ -161,7 +161,7 @@ A PDO-based schema is required for specific sub-systems where persistence provid
 *Note: The full SEO library is not completely done yet. Phases 1-5 below represent the completion of the Core/Shared library only. The upcoming layers (Admin and Web) are planned in Phase 6.*
 
 - **Phase 1: Foundation & Schemas (Complete - Core/Shared)**
-  Create directory structure, PHPStan config, module exception classes, Base DTOs (Schema generation, Meta tag generation), and define Host Interfaces.
+  Create directory structure, PHPStan config, library exception classes, Base DTOs (Schema generation, Meta tag generation), and define Host Interfaces.
 - **Phase 2: Persistence Layer & Services (Complete - Core/Shared)**
   Write SQL schemas (`maa_seo_slug_history`, `maa_seo_redirects`, `maa_seo_overrides`). Implement PDO repositories and Commands for saving/fetching overrides and redirect history. *(Note: Phase 2A Schema, 2B Repositories, 2C Services completed).*
 - **Phase 3: Core Services (Complete - Core/Shared)**
@@ -251,11 +251,11 @@ A PDO-based schema is required for specific sub-systems where persistence provid
 
 ## 12. Definition of Done
 
-- All required standard module files are present (`README.md`, `CHANGELOG.md`, `docs/SEO_LIBRARY_REFERENCE.md`, `composer.json`, `phpstan.neon`).
+- All required standard package files are present (`README.md`, `CHANGELOG.md`, `docs/SEO_LIBRARY_REFERENCE.md`, `composer.json`, `phpstan.neon`).
 - The library successfully runs independently with zero external host-table FKs.
 - `phpstan analyse -c phpstan.neon` returns NO errors at `level: max`.
 - Multi-language URL generation and hreflang tag management are fully supported via DTOs and Interfaces.
 - `maa_seo_*` schemas are documented, provided in `schema/`, and include clear comments (e.g., `Host-provided ID. No FK.`).
-- All module-specific exceptions extend a base `\RuntimeException` and implement `SeoExceptionInterface`.
+- All library-specific exceptions extend a base `\RuntimeException` and implement `SeoExceptionInterface`.
 - Persistence uses plain PDO (no ORMs).
-- Roadmap/design makes it obvious how the module drops into a future Maatify framework with zero changes.
+- Roadmap/design makes it obvious how the library drops into a future Maatify framework with zero changes.

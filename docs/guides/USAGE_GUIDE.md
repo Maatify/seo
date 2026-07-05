@@ -699,9 +699,9 @@ When implementing the Maatify SEO library, ensure you adhere strictly to the fol
 
 *   **Do not output HTTP responses directly from the library.** All SEO services and helpers return strings or DTOs. The host application must format the final HTTP response (e.g., managing the `Content-Type: application/xml` header for sitemaps).
 *   **Do not embed routing or controller logic.** Route mapping belongs exclusively within the host app.
-*   **Do not hardcode framework dependencies.** Do not attempt to use `Illuminate\Support` or `Symfony\Component\HttpFoundation` inside the core module. Ensure integration points use standard PHP functionality or provided contracts.
-*   **Do not commit `composer.lock`.** As a library module, `composer.lock` should not be tracked to allow proper dependency resolution in host environments.
-*   **Do not rely on the `spatie/schema-org` package unless installed.** The module does not enforce this package as a required dependency. The provided adapter checks for class existence before relying on the object methods, allowing the host application to opt-in independently.
+*   **Do not hardcode framework dependencies.** Do not attempt to use `Illuminate\Support` or `Symfony\Component\HttpFoundation` inside the core library. Ensure integration points use standard PHP functionality or provided contracts.
+*   **Do not commit `composer.lock`.** As a library package, `composer.lock` should not be tracked to allow proper dependency resolution in host environments.
+*   **Do not rely on the `spatie/schema-org` package unless installed.** The library does not enforce this package as a required dependency. The provided adapter checks for class existence before relying on the object methods, allowing the host application to opt-in independently.
 
 ### Validation Report Builder
 

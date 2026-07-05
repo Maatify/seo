@@ -355,7 +355,7 @@ While the SEO library provides a `SeoBindings.php` file mapping interfaces to fa
 
 ## 11. Persistence Integration Guidance
 
-For features requiring database storage (like manual SEO overrides or slug histories), the module expects a plain `PDO` instance.
+For features requiring database storage (like manual SEO overrides or slug histories), the library expects a plain `PDO` instance.
 
 - **Host Provides PDO:** The host app is responsible for establishing the database connection and providing the `PDO` object to the SEO repositories (either manually or via the host's DI container).
 - **No `.env` reading:** The SEO library must not read `.env` files, config files, or environment variables directly.
@@ -365,7 +365,7 @@ For features requiring database storage (like manual SEO overrides or slug histo
 
 ## 12. Error Handling
 
-- **Module Exceptions:** The SEO library throws specific module exceptions (e.g., `SeoNotFoundException`, `SeoConflictException`) when operations fail.
+- **Library Exceptions:** The SEO library throws specific library exceptions (e.g., `SeoNotFoundException`, `SeoConflictException`) when operations fail.
 - **Host Responsibility:** The host application is responsible for catching these exceptions, logging them, and converting them into appropriate HTTP status codes (like 404 Not Found or 400 Bad Request).
 - The library should never call `http_response_code()` or throw HTTP-specific framework exceptions (like `Symfony\Component\HttpKernel\Exception\NotFoundHttpException`).
 
@@ -373,7 +373,7 @@ For features requiring database storage (like manual SEO overrides or slug histo
 
 ## 13. Common Integration Mistakes
 
-To maintain module integrity, ensure you **do not**:
+To maintain library integrity, ensure you **do not**:
 
 *   **Add controllers or routes to the library.** Routing belongs to the host application.
 *   **Return PSR-7, Laravel, or Symfony responses from library classes.** Return strings or DTOs only.

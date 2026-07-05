@@ -2,8 +2,8 @@
 
 Complete API reference and design rules for the Maatify SEO library.
 
-## Current Module Structure
-The module is divided into Shared, Admin (planned), and Web (planned) components, ensuring clean boundaries between persistence, business logic, and presentation.
+## Current Library Structure
+The library is divided into Shared, Admin (planned), and Web (planned) components, ensuring clean boundaries between persistence, business logic, and presentation.
 
 **Note:** For the SEO library, `src/Web/` is the approved layer name replacing the standard `Customer/` layer. `src/Web/` is strictly for host website consumption services and DTOs. It does not include controllers, routes, HTTP responses, or framework integration.
 
@@ -163,7 +163,7 @@ Services manage the core business orchestration and throw standard `SeoNotFoundE
 
 ### Shared Layer
 - **`RedirectCommandService`**: Orchestrates `create`, `update`, `softDelete`, and `hardDelete` operations for redirects.
-- **`RedirectQueryService`**: Retrieves redirect records, throwing module exceptions on failure.
+- **`RedirectQueryService`**: Retrieves redirect records, throwing library exceptions on failure.
 - **`SlugHistoryCommandService`**: Orchestrates `create`, `softDelete`, and `hardDelete` operations for slug history entries.
 - **`SlugHistoryQueryService`**: Retrieves slug history records.
 - **`SeoOverrideCommandService`**: Orchestrates `create`, `update`, `softDelete`, and `hardDelete` operations for SEO overrides.
@@ -237,10 +237,10 @@ The Web layer includes builders for generating specific JSON-LD schemas. These b
 
 ## Final Compliance and Audit
 The SEO library has successfully completed its final compliance audit, verifying the implementation of the Shared, Admin, Web, and Bootstrap layers.
-- The module remains strictly standalone, framework-neutral, and host-agnostic.
-- The `src/Web/` layer was approved as an exception to the standard `src/Customer/` directory rule for this module.
+- The library remains strictly standalone, framework-neutral, and host-agnostic.
+- The `src/Web/` layer was approved as an exception to the standard `src/Customer/` directory rule for this library.
 - No direct database access occurs outside of the `Shared/Infrastructure/Persistence/` repositories.
-- No HTTP responses, templates, routing, or controllers exist within the module.
+- No HTTP responses, templates, routing, or controllers exist within the library.
 
 ## Contracts (Host Interfaces)
 - `HostUrlGeneratorInterface`
@@ -248,9 +248,9 @@ The SEO library has successfully completed its final compliance audit, verifying
 - `HostSearchContextInterface`
 
 ## Out of Scope / Host Responsibilities
-The SEO library is complete as a standalone library. The following items are intentionally omitted because the module is strictly framework-neutral and host-agnostic. These are not missing phases and do not block module completeness:
+The SEO library is complete as a standalone library. The following items are intentionally omitted because the library is strictly framework-neutral and host-agnostic. These are not missing phases and do not block completeness:
 - **Redirect resolver logic**: Framework routing decisions (evaluating an HTTP request against redirects and emitting a 301/410 response) belong entirely to the consuming host application or framework router.
-- **Controllers/framework integration**: Controllers, routes, and HTTP integration are intentionally excluded to keep the module fully decoupled from any specific framework (like Slim, Laravel, or Symfony).
+- **Controllers/framework integration**: Controllers, routes, and HTTP integration are intentionally excluded to keep the library fully decoupled from any specific framework (like Slim, Laravel, or Symfony).
 - **Host-specific product/category logic**: Domain-specific business logic for products, categories, or other entities remains strictly in the host application and is integrated via standard interfaces (contracts).
 
 
