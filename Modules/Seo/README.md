@@ -13,11 +13,17 @@ composer require maatify/seo
 
 To see how the library functions in real-world scenarios, you can run the following standalone examples from the command line:
 
+* `php examples/admin-previews.php`: Demonstrates how to generate SERP and Social previews for the admin interface.
 * `php examples/basic-head-render.php`: Demonstrates simple rendering of standard meta tags and array-based JSON-LD.
-* `php examples/product-page-seo.php`: Shows how to construct and output open graph tags and schema specifically for product pages.
 * `php examples/category-page-seo.php`: Uses the `FluentSeoBuilder` to construct schema and metadata for category pages.
+* `php examples/hreflang-generation.php`: Demonstrates hreflang link generation for multi-language indexing.
+* `php examples/import-export.php`: Shows how to use SEO metadata import and export functionalities.
+* `php examples/meta-robots-canonical.php`: Uses builders to construct meta robots tags and canonical URLs.
+* `php examples/product-page-seo.php`: Shows how to construct and output open graph tags and schema specifically for product pages.
 * `php examples/schema-output.php`: Outputs structured data schemas from arrays, DTOs, and adapted optional spatie objects.
+* `php examples/seo-page-presets.php`: Demonstrates generic, e-commerce, content, and local business SEO page presets.
 * `php examples/sitemap-output.php`: Render sitemap XML outputs natively using provided DTOs and renderers.
+* `php examples/social-builders.php`: Uses OpenGraph and TwitterCard builders to generate social metadata.
 
 ## Implemented Layers
 The module is complete and release-ready. It has the following foundational layers implemented for the **Core/Shared SEO library** (Phases 1-5) the **Admin Layer** (Phase 6A), the **Web Layer** (Phase 6B), **Bootstrap/DI Full Wiring** (Phase 6C), and **Final Module Compliance Audit** (Phase 6D).

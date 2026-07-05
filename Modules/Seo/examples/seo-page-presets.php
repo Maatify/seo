@@ -37,12 +37,9 @@ $productPreset = EcommerceSeoPresetFactory::productDetail(
         'image' => ['https://example.com/tshirt.png'],
         'description' => 'A very nice t-shirt.',
         'sku' => 'TSHIRT-001',
-        'offers' => [
-            '@type' => 'Offer',
-            'price' => '19.99',
-            'priceCurrency' => 'USD',
-            'availability' => 'https://schema.org/InStock',
-        ],
+        'price' => '19.99',
+        'currency' => 'USD',
+        'availability' => 'https://schema.org/InStock',
     ],
     [
         'canonicalUrl' => 'https://example.com/product/tshirt',
