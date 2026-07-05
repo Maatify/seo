@@ -1,5 +1,20 @@
 # Maatify SEO Library
 
+[![Latest Version](https://img.shields.io/packagist/v/maatify/seo.svg?style=for-the-badge)](https://packagist.org/packages/maatify/seo)
+[![PHP Version](https://img.shields.io/packagist/php-v/maatify/seo.svg?style=for-the-badge)](https://packagist.org/packages/maatify/seo)
+[![License](https://img.shields.io/packagist/l/maatify/seo.svg?style=for-the-badge)](LICENSE)
+
+![PHPStan](https://img.shields.io/badge/PHPStan-Level%20Max-4E8CAE)
+
+[![Changelog](https://img.shields.io/badge/Changelog-View-blue)](CHANGELOG.md)
+
+![Monthly Downloads](https://img.shields.io/packagist/dm/maatify/seo?label=Monthly%20Downloads&color=00A8E8)
+![Total Downloads](https://img.shields.io/packagist/dt/maatify/seo?label=Total%20Downloads&color=2AA9E0)
+
+![Maatify Ecosystem](https://img.shields.io/badge/Maatify-Ecosystem-blueviolet?style=for-the-badge)
+
+[![Install](https://img.shields.io/badge/Install-composer%20require-blue?style=for-the-badge)](https://packagist.org/packages/maatify/seo)
+
 A framework-agnostic PHP SEO library for metadata generation, JSON-LD schemas, sitemaps, hreflang, redirects, slug history, validation, and admin-oriented SEO tooling.
 
 ## Table of Contents
