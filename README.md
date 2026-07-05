@@ -7,6 +7,7 @@
 ![PHPStan](https://img.shields.io/badge/PHPStan-Level%20Max-4E8CAE)
 
 [![Changelog](https://img.shields.io/badge/Changelog-View-blue)](CHANGELOG.md)
+[![Security](https://img.shields.io/badge/Security-Policy-important)](SECURITY.md)
 
 ![Monthly Downloads](https://img.shields.io/packagist/dm/maatify/seo?label=Monthly%20Downloads&color=00A8E8)
 ![Total Downloads](https://img.shields.io/packagist/dt/maatify/seo?label=Total%20Downloads&color=2AA9E0)
