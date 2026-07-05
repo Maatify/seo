@@ -1,8 +1,31 @@
 {
     "name": "maatify/seo",
-    "description": "Standalone SEO Library for the Maatify Ecosystem",
+    "description": "Standalone SEO library for metadata, JSON-LD, sitemaps, hreflang, redirects, slug history, and SEO validation.",
     "type": "library",
     "license": "MIT",
+    "keywords": [
+        "seo",
+        "metadata",
+        "json-ld",
+        "schema",
+        "sitemap",
+        "hreflang",
+        "robots",
+        "canonical",
+        "open-graph",
+        "twitter-card"
+    ],
+    "homepage": "https://github.com/Maatify/seo",
+    "support": {
+        "issues": "https://github.com/Maatify/seo/issues",
+        "source": "https://github.com/Maatify/seo"
+    },
+    "authors": [
+        {
+            "name": "Maatify",
+            "homepage": "https://maatify.dev"
+        }
+    ],
     "require": {
         "php": ">=8.2",
         "ext-xmlwriter": "*"
@@ -17,5 +40,7 @@
     },
     "suggest": {
         "spatie/schema-org": "Optional integration for converting Spatie schema objects into Maatify JSON-LD DTOs."
-    }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
 }
