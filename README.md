@@ -1,8 +1,8 @@
 # Maatify SEO Library
 
-[![Latest Version](https://img.shields.io/packagist/v/maatify/seo.svg?style=for-the-badge)](https://packagist.org/packages/maatify/seo)
-[![PHP Version](https://img.shields.io/packagist/php-v/maatify/seo.svg?style=for-the-badge)](https://packagist.org/packages/maatify/seo)
-[![License](https://img.shields.io/packagist/l/maatify/seo.svg?style=for-the-badge)](LICENSE)
+[![Latest Version](https://img.shields.io/packagist/v/maatify/seo?style=for-the-badge)](https://packagist.org/packages/maatify/seo)
+[![PHP Version](https://img.shields.io/packagist/php-v/maatify/seo?style=for-the-badge)](https://packagist.org/packages/maatify/seo)
+[![License](https://img.shields.io/packagist/l/maatify/seo?style=for-the-badge)](https://packagist.org/packages/maatify/seo)
 
 ![PHPStan](https://img.shields.io/badge/PHPStan-Level%20Max-4E8CAE)
 
