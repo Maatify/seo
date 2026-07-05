@@ -7,7 +7,7 @@
 1. Created a new proposal document: `docs/proposals/OPTIONAL_ADMIN_SEO_CONTROL_LAYER_RFC.md`.
 2. Documented the RFC detailing problem statement, goals, non-goals, architecture, components, open questions, and acceptance criteria.
 3. Kept wording precise to explicitly mark the feature as optional, non-blocking for current releases, and firmly post-v1.0.0. No controllers or routes were promised.
-4. Linked the RFC from `docs/SEO_LIBRARY_ENHANCEMENT_ROADMAP.md` under the "Later / optional" section.
+4. Linked the RFC from `docs/roadmap/SEO_LIBRARY_ENHANCEMENT_ROADMAP.md` under the "Later / optional" section.
 
 ## Verification Checklist
 
@@ -20,6 +20,6 @@
 ```bash
 $ ls -la docs/proposals/
 # Result: OPTIONAL_ADMIN_SEO_CONTROL_LAYER_RFC.md is present.
-$ grep "Admin SEO Control Layer" docs/SEO_LIBRARY_ENHANCEMENT_ROADMAP.md
+$ grep "Admin SEO Control Layer" docs/roadmap/SEO_LIBRARY_ENHANCEMENT_ROADMAP.md
 # Result: Link present under 'Later / optional'.
 ```

@@ -1,6 +1,6 @@
 # Phase 13G: Person JSON-LD Builder
 
-The `PersonJsonLdBuilder` is part of the SEO module's JSON-LD suite, offering a framework-agnostic way to generate `Person` schema markup.
+The `PersonJsonLdBuilder` is part of the SEO library's JSON-LD suite, offering a framework-agnostic way to generate `Person` schema markup.
 
 ## Usage Example
 

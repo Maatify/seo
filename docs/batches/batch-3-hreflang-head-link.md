@@ -1,6 +1,6 @@
 # Batch 3: Hreflang Head Link Builder
 
-This document describes the usage of the Hreflang Head Link Builder components in the Maatify SEO module.
+This document describes the usage of the Hreflang Head Link Builder components in the Maatify SEO library.
 
 ## Overview
 

@@ -1,7 +1,7 @@
 # Verification Report: Phase 13L Specialized Rich Results JSON-LD Builders
 
 ## Context
-This report validates the functionality, architecture compliance, and quality of the Phase 13L JSON-LD builders in the Maatify SEO module.
+This report validates the functionality, architecture compliance, and quality of the Phase 13L JSON-LD builders in the Maatify SEO library.
 The Phase 13L builders include:
 - `RecipeJsonLdBuilder`
 - `JobPostingJsonLdBuilder`

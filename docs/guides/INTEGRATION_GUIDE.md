@@ -108,7 +108,7 @@ $app->get('/products/{id}', function (Request $request, Response $response, arra
 
 ## 5. Laravel Integration
 
-In Laravel, manage SEO inside Controllers, View Composers, or dedicated host-level services. **Do not add Laravel-specific packages or dependencies to the SEO module itself.**
+In Laravel, manage SEO inside Controllers, View Composers, or dedicated host-level services. **Do not add Laravel-specific packages or dependencies to the SEO library itself.**
 
 ```php
 namespace App\Http\Controllers;
@@ -378,7 +378,7 @@ To maintain module integrity, ensure you **do not**:
 *   **Add controllers or routes to the library.** Routing belongs to the host application.
 *   **Return PSR-7, Laravel, or Symfony responses from library classes.** Return strings or DTOs only.
 *   **Call framework helpers inside library code.** (e.g., `request()`, `route()`, `env()`).
-*   **Output headers from renderers.** Do not use `header('Content-Type: ...')` inside the SEO module.
+*   **Output headers from renderers.** Do not use `header('Content-Type: ...')` inside the SEO library.
 *   **Commit `composer.lock`.** This is a reusable library; dependency resolution happens at the host application level.
 *   **Add framework packages as dependencies.** (e.g., `illuminate/support`, `symfony/http-foundation`). Keep dependencies generic.
 

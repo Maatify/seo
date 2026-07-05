@@ -7,7 +7,7 @@
 - `src/Web/JsonLd/Builder/AbstractJsonLdBuilder.php`
 - `src/Web/JsonLd/Builder/JsonLdBuildException.php`
 - `tests/Phase13AJsonLdBuilderFoundationTest.php`
-- `docs/PHASE_13A_JSON_LD_BUILDER_FOUNDATION.md`
+- `docs/phases/PHASE_13A_JSON_LD_BUILDER_FOUNDATION.md`
 - `docs/verification/PHASE_13A_JSON_LD_BUILDER_FOUNDATION_VERIFICATION_REPORT.md`
 
 ## Public API summary

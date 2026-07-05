@@ -1,4 +1,4 @@
-# Maatify SEO Module Usage Guide
+# Maatify SEO Library Usage Guide
 
 ## 1. Overview
 
@@ -186,7 +186,7 @@ echo $renderer->render($schemaDto);
 
 If your project utilizes the popular `spatie/schema-org` package, the SEO library provides an optional adapter (`SpatieSchemaAdapter`) to convert Spatie schema objects into native `JsonLdSchemaDTO` objects.
 
-**Note:** The `spatie/schema-org` dependency is strictly optional and not required by the Maatify SEO module. It is provided via `composer suggest`.
+**Note:** The `spatie/schema-org` dependency is strictly optional and not required by the Maatify SEO library. It is provided via `composer suggest`.
 
 ```php
 use Maatify\Seo\Web\Builder\FluentSeoBuilder;
@@ -626,7 +626,7 @@ $xmlContent = $result->xml;
 
 ## 12. Recommended Host Application Usage
 
-The Maatify SEO module is designed to integrate cleanly into any PHP framework without introducing hard dependencies on the framework itself.
+The Maatify SEO library is designed to integrate cleanly into any PHP framework without introducing hard dependencies on the framework itself.
 
 ### Plain PHP
 Use the provided builders or renderers directly within your PHP views.
@@ -695,7 +695,7 @@ Always pass the pre-rendered HTML string (or the `SeoHeadHtmlDTO`) to your templ
 
 ## 13. Common Mistakes
 
-When implementing the Maatify SEO module, ensure you adhere strictly to the following guidelines:
+When implementing the Maatify SEO library, ensure you adhere strictly to the following guidelines:
 
 *   **Do not output HTTP responses directly from the library.** All SEO services and helpers return strings or DTOs. The host application must format the final HTTP response (e.g., managing the `Content-Type: application/xml` header for sitemaps).
 *   **Do not embed routing or controller logic.** Route mapping belongs exclusively within the host app.

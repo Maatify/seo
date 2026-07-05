@@ -1,6 +1,6 @@
 # Documentation Coverage Audit
 
-This audit evaluates the documentation completeness and developer experience of the Maatify SEO module, focusing on discovering APIs, validating the CHANGELOG, and ensuring proper practical examples exist.
+This audit evaluates the documentation completeness and developer experience of the Maatify SEO library, focusing on discovering APIs, validating the CHANGELOG, and ensuring proper practical examples exist.
 
 ## 1. Missing README Sections
 

@@ -33,7 +33,7 @@ Following `MODULE_BUILDING_STANDARD.md`:
 
 ├── README.md
 ├── CHANGELOG.md
-├── SEO_MODULE_REFERENCE.md
+├── docs/SEO_LIBRARY_REFERENCE.md
 ├── composer.json
 ├── phpstan.neon
 ├── schema/
@@ -158,7 +158,7 @@ A PDO-based schema is required for specific sub-systems where persistence provid
 
 ## 10. Implementation Phases
 
-*Note: The full SEO module is not completely done yet. Phases 1-5 below represent the completion of the Core/Shared library only. The upcoming layers (Admin and Web) are planned in Phase 6.*
+*Note: The full SEO library is not completely done yet. Phases 1-5 below represent the completion of the Core/Shared library only. The upcoming layers (Admin and Web) are planned in Phase 6.*
 
 - **Phase 1: Foundation & Schemas (Complete - Core/Shared)**
   Create directory structure, PHPStan config, module exception classes, Base DTOs (Schema generation, Meta tag generation), and define Host Interfaces.
@@ -171,13 +171,13 @@ A PDO-based schema is required for specific sub-systems where persistence provid
 - **Phase 4: Sitemap Generation (Complete - Core/Shared)**
   Implement `SitemapGeneratorService` using `XMLWriter` to support dynamic sitemap index and language-specific XMLs.
 - **Phase 5: Documentation & Polish (Complete - Core/Shared)**
-  Finalized `README.md`, `SEO_MODULE_REFERENCE.md`, and verified PHPStan level max passes natively.
+  Finalized `README.md`, `docs/SEO_LIBRARY_REFERENCE.md`, and verified PHPStan level max passes natively.
 
 - **Phase 6: Full Module Completion (Complete)**
   - **Phase 6A: Admin Layer (Complete):** Implement admin-specific command, query, and service classes for managing SEO overrides, redirects, and slug history.
   - **Phase 6B: Web Layer (Complete):** Implement host website consumption services/DTOs. (Replaces standard Customer layer; no controllers or routes).
   - **Phase 6C: Bootstrap/DI Full Wiring (Complete):** Complete dependency injection wiring for all layers.
-  - **Phase 6D: Final Module Compliance Audit (Complete):** Ensure full compliance with all Maatify module standards. The full SEO module is complete and release-ready.
+  - **Phase 6D: Final Module Compliance Audit (Complete):** Ensure full compliance with all Maatify module standards. The full SEO library is complete and release-ready.
 
 - **Phase 7: Usability and Rendering (Complete)**
   - **Phase 7A: HTML Rendering Helpers (Complete):** Extract final HTML generation out of commands to pure PHP string renderers.
@@ -251,7 +251,7 @@ A PDO-based schema is required for specific sub-systems where persistence provid
 
 ## 12. Definition of Done
 
-- All required standard module files are present (`README.md`, `CHANGELOG.md`, `SEO_MODULE_REFERENCE.md`, `composer.json`, `phpstan.neon`).
+- All required standard module files are present (`README.md`, `CHANGELOG.md`, `docs/SEO_LIBRARY_REFERENCE.md`, `composer.json`, `phpstan.neon`).
 - The library successfully runs independently with zero external host-table FKs.
 - `phpstan analyse -c phpstan.neon` returns NO errors at `level: max`.
 - Multi-language URL generation and hreflang tag management are fully supported via DTOs and Interfaces.

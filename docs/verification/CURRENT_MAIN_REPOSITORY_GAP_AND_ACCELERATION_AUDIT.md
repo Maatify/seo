@@ -11,7 +11,7 @@ Based on a direct filesystem and source code audit, the following systems are fu
 - **Render Output Tools**: Output DTOs, HTML renderers, `RobotsTxtRenderer`.
 
 ## 2. Documented Systems that are Missing or Stale
-The roadmap document (`SEO_LIBRARY_ROADMAP.md`) is heavily out-of-sync with the real code state:
+The roadmap document (`docs/roadmap/SEO_LIBRARY_ROADMAP.md`) is heavily out-of-sync with the real code state:
 - **Phase 13 (JSON-LD Builders)**: Listed as incomplete or pending in the roadmap, but is 100% finished.
 - **Phase 14 (SEO Factories / Page Presets)**: The roadmap defines Phase 14 as "SEO Factories / Page Presets". In reality, the codebase implemented **Social Meta Builders** under Phase 14 identifiers.
 - **Phase 15 (Canonical / URL / Hreflang Helpers)**: The roadmap lists this as a major upcoming phase, but `CanonicalUrlBuilder` is already complete. (Hreflang builder might still be pending, but sitemap hreflang is done).
@@ -53,4 +53,4 @@ The following validation commands were run to ensure code health during this aud
   - **Result**: `SUCCESS: All tests passed.` (All standalone module test files executed without exceptions or failures).
 
 ## Final Recommendation
-Update `SEO_LIBRARY_ROADMAP.md` to accurately reflect the completion of Phases 13, 14, and 15A. Then, immediately execute **Batch 1 (SEO Preset Factories & Meta Robots)** to provide the highest value integration developer experience.
+Update `docs/roadmap/SEO_LIBRARY_ROADMAP.md` to accurately reflect the completion of Phases 13, 14, and 15A. Then, immediately execute **Batch 1 (SEO Preset Factories & Meta Robots)** to provide the highest value integration developer experience.
