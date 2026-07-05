@@ -3,7 +3,7 @@
 ## Files added
 
 - `tests/Phase13EOrganizationJsonLdBuilderTest.php`
-- `docs/PHASE_13E_ORGANIZATION_JSON_LD_BUILDER.md`
+- `docs/phases/PHASE_13E_ORGANIZATION_JSON_LD_BUILDER.md`
 - `docs/verification/PHASE_13E_ORGANIZATION_JSON_LD_BUILDER_VERIFICATION_REPORT.md`
 
 ## Public API summary

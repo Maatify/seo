@@ -4,7 +4,7 @@
 
 - `src/Web/JsonLd/Builder/ProductJsonLdBuilder.php`
 - `tests/Phase13BProductJsonLdBuilderTest.php`
-- `docs/PHASE_13B_PRODUCT_JSON_LD_BUILDER.md`
+- `docs/phases/PHASE_13B_PRODUCT_JSON_LD_BUILDER.md`
 - `docs/verification/PHASE_13B_PRODUCT_JSON_LD_BUILDER_VERIFICATION_REPORT.md`
 
 ## Public API summary

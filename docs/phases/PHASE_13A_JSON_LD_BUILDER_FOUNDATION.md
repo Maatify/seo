@@ -50,7 +50,7 @@ Provides a simple extensible base class for future typed builders. It accepts an
 
 ### `JsonLdBuildException`
 
-Wraps JSON encoding failures in a library exception that implements `SeoExceptionInterface`. This keeps JSON-LD encoding failures inside the SEO module exception boundary instead of leaking raw `JsonException` instances from `toJson()`.
+Wraps JSON encoding failures in a library exception that implements `SeoExceptionInterface`. This keeps JSON-LD encoding failures inside the SEO library exception boundary instead of leaking raw `JsonException` instances from `toJson()`.
 
 ## Usage examples
 

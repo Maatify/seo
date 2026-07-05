@@ -1,6 +1,6 @@
 # Phase 13L: Specialized Rich Results JSON-LD Builders
 
-This document details the usage of the Phase 13L Specialized Rich Results JSON-LD builders in the Maatify SEO module. These builders are framework-neutral and standalone.
+This document details the usage of the Phase 13L Specialized Rich Results JSON-LD builders in the Maatify SEO library. These builders are framework-neutral and standalone.
 
 ## Table of Contents
 1. [Recipe JSON-LD Builder](#recipe-json-ld-builder)

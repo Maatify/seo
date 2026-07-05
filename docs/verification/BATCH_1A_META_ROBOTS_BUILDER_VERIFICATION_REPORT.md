@@ -5,7 +5,7 @@ This verification report confirms the validation of the `MetaRobotsBuilder` impl
 
 ## Files Changed
 - `tests/Batch1AMetaRobotsBuilderTest.php` (Created)
-- `docs/BATCH_1A_META_ROBOTS_BUILDER.md` (Created)
+- `docs/batches/BATCH_1A_META_ROBOTS_BUILDER.md` (Created)
 - `docs/verification/BATCH_1A_META_ROBOTS_BUILDER_VERIFICATION_REPORT.md` (Created)
 
 *(Note: Production code remained unmodified and no `composer.lock` was committed.)*

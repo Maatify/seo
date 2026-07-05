@@ -12,7 +12,7 @@ Verify the implementation of high-level SEO page preset factories (`SeoPagePrese
 5. **Run PHPStan:** Verified. Modified `Batch1BSeoPagePresetFactoryTest.php` to resolve strict typing issues detected by PHPStan Level 9 analysis (mostly resolving `mixed` type array access in tests). PHPStan now passes perfectly.
 6. **Run standalone tests:** Verified. Tests successfully pass using the standalone PHP test runner, confirming expected structural outputs and exception logic.
 7. **Confirm CI status:** Verified. CI workflow completed successfully.
-8. **Add/update concise documentation for Batch 1B usage:** Created `docs/BATCH_1B_SEO_PAGE_PRESET_FACTORY.md` detailing all preset factories and usage.
+8. **Add/update concise documentation for Batch 1B usage:** Created `docs/batches/BATCH_1B_SEO_PAGE_PRESET_FACTORY.md` detailing all preset factories and usage.
 9. **Add/update verification report:** This report.
 10. **Ensure docs do not claim features not implemented:** Verified. Docs precisely mirror the implemented methods (e.g., `generic`, `product`, `article`, `category`, `home`, `breadcrumb`).
 

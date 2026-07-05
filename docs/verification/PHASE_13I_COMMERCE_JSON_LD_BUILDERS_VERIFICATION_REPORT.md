@@ -1,7 +1,7 @@
 # Phase 13I Commerce JSON-LD Builders Verification Report
 
 ## Overview
-This report verifies the implementation of Phase 13I: Commerce JSON-LD Builders within the Maatify SEO module.
+This report verifies the implementation of Phase 13I: Commerce JSON-LD Builders within the Maatify SEO library.
 The batch includes `ReviewJsonLdBuilder`, `AggregateRatingJsonLdBuilder`, `OfferJsonLdBuilder`, `ServiceJsonLdBuilder`, and `LocalBusinessJsonLdBuilder`.
 
 ## Architecture Compliance
@@ -48,4 +48,4 @@ The implementation introduces standard PHP files with no new external dependenci
 Ensured that no `composer.lock` file was committed to the repository, adhering to the standalone library module rules.
 
 ## Conclusion
-Phase 13I Commerce JSON-LD Builders meet all architectural, stability, and typing requirements of the Maatify SEO module. The code is completely standalone and strictly zero-dependency framework neutral. Verification is complete and successful.
+Phase 13I Commerce JSON-LD Builders meet all architectural, stability, and typing requirements of the Maatify SEO library. The code is completely standalone and strictly zero-dependency framework neutral. Verification is complete and successful.

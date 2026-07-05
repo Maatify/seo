@@ -69,7 +69,7 @@ Phase 9A RobotsTxtRenderer tests passed.
 - [x] HTML/XML/Markdown rendering returns strings only.
 - [x] No `composer.lock`.
 - [x] Optional integrations remain optional/suggested dependencies.
-- [x] Follows the approved exception: SEO module uses `src/Web/` instead of standard `src/Customer/`.
+- [x] Follows the approved exception: SEO library uses `src/Web/` instead of standard `src/Customer/`.
 - [x] Production classes remain framework-neutral.
 - [x] Optional Spatie schema integration remains optional.
 - [x] APIs (sitemap, robots, rendering, builder, validation, scoring, report, batch export) are internally consistent.

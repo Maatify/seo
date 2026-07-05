@@ -1,7 +1,7 @@
 # Phase 13C: Article JSON-LD Builder Verification Report
 
 ## Overview
-This report verifies the implementation of the `ArticleJsonLdBuilder` in the Maatify SEO module. The builder provides a fluent interface for constructing `Article`, `BlogPosting`, and `NewsArticle` Schema.org JSON-LD data structures.
+This report verifies the implementation of the `ArticleJsonLdBuilder` in the Maatify SEO library. The builder provides a fluent interface for constructing `Article`, `BlogPosting`, and `NewsArticle` Schema.org JSON-LD data structures.
 
 ## Verification Checklist
 

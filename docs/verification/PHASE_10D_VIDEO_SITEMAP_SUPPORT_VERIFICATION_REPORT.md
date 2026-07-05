@@ -2,7 +2,7 @@
 
 ## Scope Reviewed
 
-Verified the implementation of Video Sitemap Support within the `SitemapXmlStringRenderer` and related DTOs as defined in Phase 10D of the `SEO_LIBRARY_ROADMAP.md`.
+Verified the implementation of Video Sitemap Support within the `SitemapXmlStringRenderer` and related DTOs as defined in Phase 10D of the `docs/roadmap/SEO_LIBRARY_ROADMAP.md`.
 
 ## Files Reviewed
 

@@ -33,7 +33,7 @@ Make the library easier to understand, test manually, and integrate into real pr
 
 Add:
 
-* `docs/USAGE_GUIDE.md`
+* `docs/guides/USAGE_GUIDE.md`
 * Basic SEO head rendering example
 * Product page SEO example
 * Category page SEO example
@@ -46,7 +46,7 @@ Add:
 
 Add:
 
-* `docs/INTEGRATION_GUIDE.md`
+* `docs/guides/INTEGRATION_GUIDE.md`
 
 Cover:
 

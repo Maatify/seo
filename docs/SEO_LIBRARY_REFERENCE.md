@@ -1,4 +1,4 @@
-# SEO Module Reference
+# SEO Library Reference
 
 Complete API reference and design rules for the Maatify SEO library.
 
@@ -236,7 +236,7 @@ The Web layer includes builders for generating specific JSON-LD schemas. These b
 - **`Web/DTO/SeoHeadHtmlDTO.php`**: A framework-neutral, final read-only DTO that implements `\JsonSerializable`. It separates rendered HTML into individual string sections (`metaHtml`, `openGraphHtml`, `twitterCardHtml`, `jsonLdHtml`) and provides a pre-combined `fullHtml` output, allowing host applications flexibility in rendering without requiring template engine coupling.
 
 ## Final Compliance and Audit
-The SEO module has successfully completed its final compliance audit, verifying the implementation of the Shared, Admin, Web, and Bootstrap layers.
+The SEO library has successfully completed its final compliance audit, verifying the implementation of the Shared, Admin, Web, and Bootstrap layers.
 - The module remains strictly standalone, framework-neutral, and host-agnostic.
 - The `src/Web/` layer was approved as an exception to the standard `src/Customer/` directory rule for this module.
 - No direct database access occurs outside of the `Shared/Infrastructure/Persistence/` repositories.
@@ -248,7 +248,7 @@ The SEO module has successfully completed its final compliance audit, verifying 
 - `HostSearchContextInterface`
 
 ## Out of Scope / Host Responsibilities
-The SEO module is complete as a standalone library. The following items are intentionally omitted because the module is strictly framework-neutral and host-agnostic. These are not missing phases and do not block module completeness:
+The SEO library is complete as a standalone library. The following items are intentionally omitted because the module is strictly framework-neutral and host-agnostic. These are not missing phases and do not block module completeness:
 - **Redirect resolver logic**: Framework routing decisions (evaluating an HTTP request against redirects and emitting a 301/410 response) belong entirely to the consuming host application or framework router.
 - **Controllers/framework integration**: Controllers, routes, and HTTP integration are intentionally excluded to keep the module fully decoupled from any specific framework (like Slim, Laravel, or Symfony).
 - **Host-specific product/category logic**: Domain-specific business logic for products, categories, or other entities remains strictly in the host application and is integrated via standard interfaces (contracts).

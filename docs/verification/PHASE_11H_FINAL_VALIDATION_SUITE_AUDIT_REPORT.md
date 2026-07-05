@@ -37,11 +37,11 @@ The following phases were verified:
 ## 4. Docs Reviewed
 * `README.md`
 * `CHANGELOG.md`
-* `SEO_LIBRARY_ROADMAP.md`
-* `SEO_MODULE_REFERENCE.md`
-* `docs/SEO_LIBRARY_ENHANCEMENT_ROADMAP.md`
-* `docs/USAGE_GUIDE.md`
-* `docs/INTEGRATION_GUIDE.md`
+* `docs/roadmap/SEO_LIBRARY_ROADMAP.md`
+* `docs/SEO_LIBRARY_REFERENCE.md`
+* `docs/roadmap/SEO_LIBRARY_ENHANCEMENT_ROADMAP.md`
+* `docs/guides/USAGE_GUIDE.md`
+* `docs/guides/INTEGRATION_GUIDE.md`
 
 ## 5. API Consistency Audit
 * Validator returns validation result only. (**Passed**)

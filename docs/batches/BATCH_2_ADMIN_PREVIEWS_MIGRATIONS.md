@@ -1,6 +1,6 @@
 # Batch 2: Admin Previews & Migrations
 
-This document outlines the usage of the Admin Previews and Metadata Import/Export functionality within the Maatify SEO module.
+This document outlines the usage of the Admin Previews and Metadata Import/Export functionality within the Maatify SEO library.
 
 ## 1. Admin Previews
 

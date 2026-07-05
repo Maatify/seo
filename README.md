@@ -1,4 +1,4 @@
-# Maatify SEO Module
+# Maatify SEO Library
 
 This is the standalone Maatify SEO library. It provides host-agnostic tools to manage SEO metadata, schema generation (JSON-LD), redirects, slug history, and sitemaps.
 

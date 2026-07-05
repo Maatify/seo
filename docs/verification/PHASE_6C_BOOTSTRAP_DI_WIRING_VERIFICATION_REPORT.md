@@ -1,7 +1,7 @@
 # Phase 6C: Bootstrap/DI Full Wiring Verification Report
 
 ## Scope Reviewed
-The scope of this verification is to ensure the completion of the SEO module Phase 6C, which provides Bootstrap/DI full wiring. This involves verifying that the module exposes a single shared entry point `Bootstrap/SeoBindings.php` with all required bindings, no framework integration, and no business logic.
+The scope of this verification is to ensure the completion of the SEO library Phase 6C, which provides Bootstrap/DI full wiring. This involves verifying that the module exposes a single shared entry point `Bootstrap/SeoBindings.php` with all required bindings, no framework integration, and no business logic.
 
 ## Files/Layers Reviewed
 - `src/Bootstrap/SeoBindings.php`
