@@ -27,22 +27,24 @@ composer require maatify/seo
 
 ## Quick Start
 
-Creating a basic page metadata output and rendering it using a Fluent Builder:
+Creating a basic page metadata output and rendering it using existing public APIs:
 
 ```php
-use Maatify\Seo\Web\Page\FluentSeoBuilder;
-use Maatify\Seo\Web\Html\SeoHtmlRenderer;
+use Maatify\Seo\Shared\DTO\MetaTagsDTO;
+use Maatify\Seo\Web\Render\SeoHeadHtmlRenderer;
 
-$builder = new FluentSeoBuilder('https://example.com/about');
-$builder->setTitle('About Us')
-        ->setDescription('Learn more about our framework-agnostic SEO library.')
-        ->setCanonicalUrl('https://example.com/about')
-        ->setOpenGraph('About Us', 'Learn more about our framework-agnostic SEO library.');
+$metaTags = new MetaTagsDTO(
+    title: 'About Us',
+    description: 'Learn more about our framework-agnostic SEO library.',
+    canonicalUrl: 'https://example.com/about',
+    openGraphTitle: 'About Us',
+    openGraphDescription: 'Learn more about our framework-agnostic SEO library.',
+    openGraphUrl: 'https://example.com/about',
+    openGraphType: 'website',
+);
 
-$metadata = $builder->toArray();
-
-$renderer = new SeoHtmlRenderer();
-echo $renderer->render($metadata);
+$renderer = new SeoHeadHtmlRenderer();
+echo $renderer->render($metaTags);
 ```
 
 ## Features

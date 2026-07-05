@@ -16,7 +16,7 @@ The historical timeline and phase-by-phase implementation logs were removed from
 - **Added:** A concise, one-paragraph description highlighting the library's primary function and framework-agnostic nature.
 - **Added:** A clear `Table of Contents` for easy navigation.
 - **Added:** `Requirements` section stating PHP version and extension dependencies.
-- **Added:** A short `Quick Start` section demonstrating basic metadata generation via the Fluent Builder.
+- **Added:** A short `Quick Start` section demonstrating basic metadata generation. (Corrected to use existing `MetaTagsDTO` and `SeoHeadHtmlRenderer` public APIs instead of broken namespaces).
 - **Added:** A summarized `Features` section, grouping related functionalities instead of listing sequential development phases.
 - **Added:** A `Practical Examples` section listing available, runnable CLI scripts for demonstration.
 - **Added:** An `Architecture Overview` outlining the layered structure (Core -> Admin -> Host) and emphasizing the lack of framework/ORM coupling.
