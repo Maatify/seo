@@ -13,7 +13,8 @@ composer require maatify/seo
 
 To see how the library functions in real-world scenarios, you can run the following standalone examples from the command line:
 
-* `php examples/seo-page-presets.php`: Demonstrates simple rendering of standard meta tags and array-based JSON-LD.
+* `php examples/basic-head-render.php`: Demonstrates simple rendering of standard meta tags and array-based JSON-LD.
+* `php examples/seo-page-presets.php`: Demonstrates high-level SEO presets for pages, products, articles, and local businesses.
 * `php examples/hreflang-generation.php`: Demonstrates hreflang generation.
 * `php examples/admin-previews.php`: Demonstrates admin SERP and Social previews.
 * `php examples/import-export.php`: Shows how to import and export SEO metadata.
