@@ -91,6 +91,8 @@ To see how the library functions in real-world scenarios, you can run the follow
 - `php examples/seo-page-presets.php`: Generic, e-commerce, content, and local business SEO page presets.
 - `php examples/sitemap-output.php`: Native sitemap XML outputs using provided DTOs and renderers.
 - `php examples/social-builders.php`: OpenGraph and TwitterCard builders to generate social metadata.
+- `php examples/phase7-output-showcase.php`: Showcases rendered SEO head output helpers and DTO output sections.
+- `php examples/phase13-jsonld-builders.php`: Demonstrates the JSON-LD builder suite across supported schema types.
 
 ## Architecture Overview
 
