@@ -1,5 +1,9 @@
 # Maatify SEO Library
 
+![Maatify.dev](https://www.maatify.dev/assets/img/img/maatify_logo_white.svg)
+
+---
+
 [![Latest Version](https://img.shields.io/packagist/v/maatify/seo?style=for-the-badge)](https://packagist.org/packages/maatify/seo)
 [![PHP Version](https://img.shields.io/packagist/php-v/maatify/seo?style=for-the-badge)](https://packagist.org/packages/maatify/seo)
 [![License](https://img.shields.io/packagist/l/maatify/seo?style=for-the-badge)](https://packagist.org/packages/maatify/seo)
