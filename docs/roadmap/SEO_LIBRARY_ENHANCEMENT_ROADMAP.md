@@ -369,6 +369,75 @@ Each builder should return:
 * No static global state
 * No HTTP handling
 
+
+
+---
+
+# Phase 13O — Advanced Product & Variant Structured Data
+
+## Goal
+
+Fully reflect the structured-data gaps that currently exist in the library. This section addresses existing deferred requirements (ProductGroup, product variant structured-data support, richer schema/CI validation) and newly identified enhancements (AggregateOffer first-class support, semantic structured-data validation) while completing partially implemented features (Product typed fields).
+
+## 13O-1 Product Builder Completeness
+
+*   missing Product fields (e.g., GTIN, MPN, priceValidUntil)
+*   richer Offer fields
+*   preserve backward compatibility
+
+## 13O-2 ProductGroup / Product Variants
+
+*   **Note:** This is an already planned historically but still outstanding requirement.
+*   ProductGroup builder
+*   productGroupID
+*   variesBy
+*   hasVariant
+*   Product variant relationships (isVariantOf, inProductGroupWithID)
+*   variant properties (color, size, material, pattern)
+
+## 13O-3 AggregateOffer
+
+*   **Note:** This is a newly identified enhancement.
+*   dedicated builder (`AggregateOfferJsonLdBuilder`)
+*   pricing range fields (lowPrice, highPrice)
+*   offer count
+*   nested offers where appropriate
+*   Product integration
+
+## 13O-4 Typed Structured Data Composition
+
+*   Product + Offer
+*   Product + AggregateOffer
+*   ProductGroup + variants
+*   avoid raw-array requirement for supported schemas
+
+## 13O-5 Tests / Examples / Documentation
+
+*   unit/manual tests following repository convention
+*   ProductGroup example
+*   multi-variant example
+*   AggregateOffer example
+*   migration/backward-compatibility notes
+
+---
+
+# Phase 13P — Structured Data Semantic Validation
+
+## Goal
+
+Provide deep schema-type semantic validation, distinguishing between Schema.org correctness and Google eligibility. This covers a partially implemented feature that requires completion and a richer schema validation direction planned historically.
+
+## Checks
+
+Cover:
+*   Product validator
+*   Offer validator
+*   AggregateOffer validator
+*   ProductGroup validator
+*   reusable structured validation DTOs/results
+*   batch validation compatibility
+*   CI-friendly output
+*   distinction between Schema.org correctness and Google eligibility
 ---
 
 # Phase 14: SEO Factories / Page Presets (Complete via Batch 1B & 1C)
@@ -603,16 +672,17 @@ Add:
 
 ## Best practical order
 
-1. Phase 8: Developer Experience & Docs
-2. Phase 11: SEO Validation Helpers
-3. Phase 9: Robots.txt Output Helpers
-4. Phase 10A: Sitemap Index Renderer
-6. Phase 15: Canonical / URL / Hreflang Helpers
-7. Phase 13: JSON-LD Schema Builders
-8. Phase 14: SEO Factories / Page Presets
-9. Phase 16: Meta Robots Helpers
-10. Phase 18: Admin Preview DTOs
-11. Phase 21: CI / Release Readiness
+1. Phase 13O: Advanced Product & Variant Structured Data (Completeness, ProductGroup, AggregateOffer, Typed Composition)
+2. Phase 13P: Structured Data Semantic Validation
+3. Phase 13O-5: Examples/Tests/Docs
+4. Phase 21: CI / Release Readiness / Optional Rich Results Verification Enhancements
+5. Phase 8: Developer Experience & Docs
+6. Phase 9: Robots.txt Output Helpers
+7. Phase 10A: Sitemap Index Renderer
+8. Phase 15: Canonical / URL / Hreflang Helpers
+9. Phase 14: SEO Factories / Page Presets
+10. Phase 16: Meta Robots Helpers
+11. Phase 18: Admin Preview DTOs
 
 ## Later / optional
 
@@ -629,13 +699,12 @@ Add:
 
 The strongest next real-world enhancement is:
 
-## SEO Validation Helpers
+## Advanced Product & Variant Structured Data
 
-Because it lets the host application know whether a page/product/category has good SEO or not.
+Because the Product builder needs completeness, ProductGroup is a deferred requirement that needs support, and AggregateOffer is a newly identified enhancement that needs first-class support.
 
 After that:
 
-1. Robots.txt renderer
-2. Sitemap index renderer
-3. JSON-LD schema builders
-4. Usage docs and examples polish
+1. Semantic structured-data validation (Phase 13P)
+2. Examples, tests, and documentation (Phase 13O-5)
+3. CI / Rich Results verification enhancements (Phase 21)
