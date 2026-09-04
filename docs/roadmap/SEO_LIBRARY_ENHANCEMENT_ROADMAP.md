@@ -432,24 +432,31 @@ Provide deep schema-type semantic validation, distinguishing between Schema.org 
 
 This phase must clearly distinguish three validation layers:
 
-1. **Generic JSON-LD structural validation (Largely Complete)**
-   * basic array/object shape
-   * schema entries
-   * `@type` presence and similar generic structural checks
+1. **Current / partially implemented validation foundation**
+   * basic JSON-LD array shape
+   * non-empty schema entries
+   * existing generic/meta validation
 
-2. **Schema.org semantic validation (To be Completed)**
-   * schema-type-specific relationships and properties
-   * Product / Offer / AggregateOffer / ProductGroup consistency
+2. **Outstanding generic structural validation**
+   * `@type` presence
+   * other generic schema structural checks that are not actually implemented yet
+
+3. **Outstanding semantic validation**
+   * Product
+   * Offer
+   * AggregateOffer
+   * ProductGroup
+   * schema-type relationships/properties
    * specific validators (Product, Offer, AggregateOffer, ProductGroup)
    * reusable structured validation DTOs/results
    * batch validation compatibility
 
-3. **Google-specific eligibility / Rich Results / Merchant validation (Future Work)**
+4. **Google-specific eligibility / Rich Results / Merchant validation (Future Work)**
    * Google eligibility rules are not identical to Schema.org validity
    * the library must not claim to perfectly reproduce Google's validators
    * CI-friendly output
 
-Make clear that the current implementation primarily provides generic structural/meta validation and that deeper semantic validation is future work.
+Structured-data validation foundation is partially implemented; deep semantic validation remains outstanding.
 ---
 
 # Phase 14: SEO Factories / Page Presets (Complete via Batch 1B & 1C)
@@ -653,28 +660,47 @@ No actual CLI package is required unless needed later.
 
 ---
 
----
-
-# Phase 21: CI / Rich Results Verification Enhancements
+# Phase 21: Quality / CI / Release Readiness (Extended)
 
 ## Goal
 
-Carry forward Google / CI validation explicitly.
+Protect the library from regressions and expand CI/CD pipelines to include structured-data and Rich Results validation.
 
-## Requirements
+## Add GitHub Actions
+
+Run:
+
+* composer validate
+* composer install
+* php -l for src/tests/examples
+* phpstan analyse
+* all manual PHP tests
+* examples syntax check
+
+## Optional Release-Readiness Items
+
+Add:
+
+* release checklist
+* tag checklist
+* package usage checklist
+
+## Google / CI Validation Enhancements
+
+Extend Phase 21 with structured-data verification:
 
 * CI/CD schema validation
 * CI-friendly structured-data validation output
-* Google Rich Results verification workflow where practical
+* optional Google Rich Results verification workflow
 * Rich Results monitoring direction
-* Merchant/Product structured-data eligibility verification where applicable
+* Merchant/Product eligibility verification where applicable
 
 ## Constraints
 
-* core library remains framework-neutral
-* core library remains host-agnostic
-* no mandatory Google/Search Console/external-service dependency in runtime
-* external verification/monitoring belongs in optional tooling/integration workflows where appropriate
+* framework-neutral
+* host-agnostic
+* no mandatory Google/Search Console/external-service runtime dependency
+* external verification/monitoring belongs in optional tooling/integration workflows
 
 ---
 
