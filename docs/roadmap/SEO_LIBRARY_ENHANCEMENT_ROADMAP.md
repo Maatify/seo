@@ -377,7 +377,7 @@ Each builder should return:
 
 ## Goal
 
-Fully reflect the structured-data gaps that currently exist in the library. This section addresses existing deferred requirements (ProductGroup, product variant structured-data support, richer schema / CI validation direction) and newly identified enhancements (first-class AggregateOffer support) while completing partially implemented features (Product typed-field completeness, semantic structured-data validation).
+Fully reflect the structured-data gaps that currently exist in the library. This section addresses existing deferred requirements (ProductGroup, product variant structured-data support, richer schema / CI validation direction) and newly identified enhancements (first-class AggregateOffer support) while completing partially implemented features (Product typed-field completeness, structured-data validation foundation / generic structural validation layer) and addressing outstanding requirements (deep Schema.org semantic validation).
 
 ## 13O-1 Product Builder Completeness
 
@@ -426,7 +426,7 @@ Fully reflect the structured-data gaps that currently exist in the library. This
 
 ## Goal
 
-Provide deep schema-type semantic validation, distinguishing between Schema.org correctness and Google eligibility. This covers a partially implemented feature that requires completion and a richer schema validation direction planned historically.
+Provide deep schema-type semantic validation, distinguishing between Schema.org correctness and Google eligibility. The structured-data validation foundation / generic structural validation is partially implemented and requires completion, while deep Schema.org semantic validation itself remains outstanding (including Product, Offer, AggregateOffer, ProductGroup, and schema-type relationship/property validation).
 
 ## Checks
 
