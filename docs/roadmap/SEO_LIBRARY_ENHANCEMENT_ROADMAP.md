@@ -377,12 +377,13 @@ Each builder should return:
 
 ## Goal
 
-Fully reflect the structured-data gaps that currently exist in the library. This section addresses existing deferred requirements (ProductGroup, product variant structured-data support, richer schema/CI validation) and newly identified enhancements (AggregateOffer first-class support, semantic structured-data validation) while completing partially implemented features (Product typed fields).
+Fully reflect the structured-data gaps that currently exist in the library. This section addresses existing deferred requirements (ProductGroup, product variant structured-data support, richer schema / CI validation direction) and newly identified enhancements (first-class AggregateOffer support) while completing partially implemented features (Product typed-field completeness, semantic structured-data validation).
 
 ## 13O-1 Product Builder Completeness
 
-*   missing Product fields (e.g., GTIN, MPN, priceValidUntil)
-*   richer Offer fields
+*   missing Product fields (GTIN, MPN)
+*   richer Offer integration (seller, priceValidUntil)
+*   variant relationships / variant properties
 *   preserve backward compatibility
 
 ## 13O-2 ProductGroup / Product Variants
@@ -429,15 +430,26 @@ Provide deep schema-type semantic validation, distinguishing between Schema.org 
 
 ## Checks
 
-Cover:
-*   Product validator
-*   Offer validator
-*   AggregateOffer validator
-*   ProductGroup validator
-*   reusable structured validation DTOs/results
-*   batch validation compatibility
-*   CI-friendly output
-*   distinction between Schema.org correctness and Google eligibility
+This phase must clearly distinguish three validation layers:
+
+1. **Generic JSON-LD structural validation (Largely Complete)**
+   * basic array/object shape
+   * schema entries
+   * `@type` presence and similar generic structural checks
+
+2. **Schema.org semantic validation (To be Completed)**
+   * schema-type-specific relationships and properties
+   * Product / Offer / AggregateOffer / ProductGroup consistency
+   * specific validators (Product, Offer, AggregateOffer, ProductGroup)
+   * reusable structured validation DTOs/results
+   * batch validation compatibility
+
+3. **Google-specific eligibility / Rich Results / Merchant validation (Future Work)**
+   * Google eligibility rules are not identical to Schema.org validity
+   * the library must not claim to perfectly reproduce Google's validators
+   * CI-friendly output
+
+Make clear that the current implementation primarily provides generic structural/meta validation and that deeper semantic validation is future work.
 ---
 
 # Phase 14: SEO Factories / Page Presets (Complete via Batch 1B & 1C)
@@ -641,30 +653,28 @@ No actual CLI package is required unless needed later.
 
 ---
 
-# Phase 21: Quality / CI / Release Readiness
+---
+
+# Phase 21: CI / Rich Results Verification Enhancements
 
 ## Goal
 
-Protect the library from regressions.
+Carry forward Google / CI validation explicitly.
 
-## Add GitHub Actions
+## Requirements
 
-Run:
+* CI/CD schema validation
+* CI-friendly structured-data validation output
+* Google Rich Results verification workflow where practical
+* Rich Results monitoring direction
+* Merchant/Product structured-data eligibility verification where applicable
 
-* composer validate
-* composer install
-* php -l for src/tests/examples
-* phpstan analyse
-* all manual PHP tests
-* examples syntax check
+## Constraints
 
-## Optional
-
-Add:
-
-* release checklist
-* tag checklist
-* package usage checklist
+* core library remains framework-neutral
+* core library remains host-agnostic
+* no mandatory Google/Search Console/external-service dependency in runtime
+* external verification/monitoring belongs in optional tooling/integration workflows where appropriate
 
 ---
 
@@ -672,17 +682,14 @@ Add:
 
 ## Best practical order
 
-1. Phase 13O: Advanced Product & Variant Structured Data (Completeness, ProductGroup, AggregateOffer, Typed Composition)
-2. Phase 13P: Structured Data Semantic Validation
-3. Phase 13O-5: Examples/Tests/Docs
-4. Phase 21: CI / Release Readiness / Optional Rich Results Verification Enhancements
-5. Phase 8: Developer Experience & Docs
-6. Phase 9: Robots.txt Output Helpers
-7. Phase 10A: Sitemap Index Renderer
-8. Phase 15: Canonical / URL / Hreflang Helpers
-9. Phase 14: SEO Factories / Page Presets
-10. Phase 16: Meta Robots Helpers
-11. Phase 18: Admin Preview DTOs
+1. Phase 13O-1: Product builder completeness
+2. Phase 13O-2: ProductGroup / variant support
+3. Phase 13O-3: AggregateOffer
+4. Phase 13O-4: Typed structured-data composition
+5. Phase 13P: Structured-data semantic validation
+6. Phase 13O-5: Tests / examples / documentation for the new work
+7. Phase 21: Optional CI / Rich Results verification enhancements
+8. Phase 8: Developer Experience & Docs
 
 ## Later / optional
 
