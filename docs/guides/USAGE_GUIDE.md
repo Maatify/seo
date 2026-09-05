@@ -182,7 +182,126 @@ echo $renderer->render($schemaDto);
 
 ---
 
-## 6. Optional Spatie Schema Adapter Example
+## 6. Advanced Product Structured Data
+
+Phase 13O introduced advanced, typed nested composition for e-commerce schemas.
+
+### Legacy Implicit Offers vs. Explicit Offers API
+
+Historically, you could set price and currency directly on the `ProductJsonLdBuilder` (e.g., `setPrice('10.00')`), which implicitly created an underlying `Offer` array. This is still perfectly valid.
+
+However, if you need typed `Offer` objects, multiple offers, or an `AggregateOffer`, use the **Explicit Offers API**: `setOffers()` and `addOffer()`.
+
+*Warning: Passing a non-empty value to `setOffers()` or using `addOffer()` places the builder into explicit state. Once in explicit state, calling legacy implicit offer methods (like `setPrice()`) will immediately throw a `JsonLdBuildException`. (Note: `setOffers()` with no arguments or an empty array `[]` is a no-op and does not trigger explicit state).*
+
+### Product with Explicit Offer
+
+Using `setOffers()` allows you to inject fully typed builders:
+
+```php
+use Maatify\Seo\Web\JsonLd\Builder\ProductJsonLdBuilder;
+use Maatify\Seo\Web\JsonLd\Builder\OfferJsonLdBuilder;
+use Maatify\Seo\Web\JsonLd\Builder\OrganizationJsonLdBuilder;
+
+$seller = (new OrganizationJsonLdBuilder())->setName('My Store');
+$offer = (new OfferJsonLdBuilder())
+    ->setPrice('19.99')
+    ->setPriceCurrency('USD')
+    ->setSeller($seller);
+
+$product = (new ProductJsonLdBuilder())
+    ->setName('Widget')
+    ->setOffers($offer);
+```
+
+### Product with AggregateOffer
+
+To indicate a price range, use the `AggregateOfferJsonLdBuilder`:
+
+```php
+use Maatify\Seo\Web\JsonLd\Builder\ProductJsonLdBuilder;
+use Maatify\Seo\Web\JsonLd\Builder\AggregateOfferJsonLdBuilder;
+
+$aggregateOffer = (new AggregateOfferJsonLdBuilder())
+    ->setLowPrice('10.00')
+    ->setHighPrice('50.00')
+    ->setPriceCurrency('USD')
+    ->setOfferCount(5);
+
+$product = (new ProductJsonLdBuilder())
+    ->setName('Widget Collection')
+    ->setOffers($aggregateOffer);
+```
+
+### Multiple Offers
+
+You can use `addOffer()` to build a list, or pass variadic arguments/arrays to `setOffers()`:
+
+```php
+$product->setOffers($offer1, $offer2);
+// or
+$product->addOffer($offer1)->addOffer($offer2);
+// Raw arrays are also accepted. Their keys (including explicit @context) are preserved,
+// but resolution remains recursive for any nested JsonLdBuilderInterface instances inside them:
+$product->addOffer(['@type' => 'Offer', 'price' => '5.00', 'priceCurrency' => 'USD']);
+```
+
+### ProductGroup and Product Variants
+
+To represent a parent product containing multiple variants, use `ProductGroupJsonLdBuilder` and link `ProductJsonLdBuilder` variants.
+
+```php
+use Maatify\Seo\Web\JsonLd\Builder\ProductGroupJsonLdBuilder;
+use Maatify\Seo\Web\JsonLd\Builder\ProductJsonLdBuilder;
+
+$redVariant = (new ProductJsonLdBuilder())
+    ->setSku('TS-RED-L')
+    ->setColor('Red')
+    ->setSize('L');
+
+$blueVariant = (new ProductJsonLdBuilder())
+    ->setSku('TS-BLU-M')
+    ->setColor('Blue')
+    ->setSize('M');
+
+$productGroup = (new ProductGroupJsonLdBuilder())
+    ->setName('T-Shirt Line')
+    ->setProductGroupID('TSHIRT-BASE')
+    ->setVariesBy(['https://schema.org/color', 'https://schema.org/size'])
+    ->setHasVariant($redVariant, $blueVariant);
+```
+
+### Linking Child to Parent (Variant Relationship)
+
+If you are rendering the child `Product` schema page, you can declare its relationship back to the parent `ProductGroup` using the `setIsVariantOf()` and `setInProductGroupWithID()` APIs:
+
+```php
+use Maatify\Seo\Web\JsonLd\Builder\ProductJsonLdBuilder;
+use Maatify\Seo\Web\JsonLd\Builder\ProductGroupJsonLdBuilder;
+
+// Using a typed ProductGroup Builder as the parent
+$parentGroup = (new ProductGroupJsonLdBuilder())
+    ->setProductGroupID('TSHIRT-BASE')
+    ->setName('T-Shirt Line');
+
+// Example writing the `isVariantOf` property
+$childVariant1 = (new ProductJsonLdBuilder())
+    ->setName('Red T-Shirt')
+    ->setSku('TS-RED-L')
+    ->setIsVariantOf($parentGroup); // Embeds the typed parent node (or if given a string, it becomes a ProductGroup node with productGroupID)
+
+// Example writing the `inProductGroupWithID` property
+$childVariant2 = (new ProductJsonLdBuilder())
+    ->setName('Blue T-Shirt')
+    ->setSku('TS-BLU-L')
+    ->setInProductGroupWithID('TSHIRT-BASE'); // Writes the string ID directly
+```
+
+*Note: The builders ensure that nested `@context` tags are automatically stripped from typed builders during output, while the root builder retains its context. Raw array contexts are not touched. The library builds Schema.org-oriented JSON-LD structures but does not enforce semantic validation or guarantee Google Rich Results eligibility.*
+
+---
+
+## 7. Optional Spatie Schema Adapter Example
 
 If your project utilizes the popular `spatie/schema-org` package, the SEO library provides an optional adapter (`SpatieSchemaAdapter`) to convert Spatie schema objects into native `JsonLdSchemaDTO` objects.
 
@@ -217,7 +336,7 @@ echo $builder->render();
 
 ---
 
-## 7. Sitemap XML String Example
+## 8. Sitemap XML String Example
 
 To easily render sitemap entries to XML strings without modifying core services, the library provides the `SitemapXmlStringRenderer`. It supports rendering basic URLs, alternate hreflang tags for multi-language indexing, Google image sitemap definitions, Google video sitemap definitions, and Google news sitemap definitions.
 
@@ -348,7 +467,7 @@ $xmlOutput = $renderer->renderUrlSet([$urlDto, $arrayEntry]);
 
 ---
 
-## 8. Sitemap Index XML String Example
+## 9. Sitemap Index XML String Example
 
 To render a sitemap index directly to an XML string, use the `SitemapIndexXmlStringRenderer`.
 
@@ -375,7 +494,7 @@ echo $renderer->renderIndex([$dto, $arrayEntry]);
 
 ---
 
-## 9. Robots.txt String Output Example
+## 10. Robots.txt String Output Example
 
 To quickly render a `robots.txt` string dynamically, you can use the `RobotsTxtRenderer`.
 
@@ -418,7 +537,7 @@ echo $renderer->render($txt);
 
 ---
 
-## 10. SEO Metadata Validation Example
+## 11. SEO Metadata Validation Example
 
 The `SeoMetaValidator` allows you to audit generated SEO metadata (arrays or objects) to verify that essential tags and formats are correctly configured. It does not output HTML or throw exceptions for bad SEO data; instead, it returns an aggregated `SeoValidationResultDTO`. This is extremely useful for pre-flight checks, automated tests, or admin dashboard warnings.
 
@@ -597,7 +716,7 @@ $customScoreDto = SeoValidationScoreCalculator::score($result, $scoreOptions);
 
 ---
 
-## 11. Existing SitemapGeneratorService Example
+## 12. Existing SitemapGeneratorService Example
 
 The core `SitemapGeneratorService` remains available. It is responsible for orchestrating sitemap generation logic and returning structured DTOs (`SitemapGenerationResultDTO`), which represents a structural abstraction over the XML data.
 
@@ -624,7 +743,7 @@ $xmlContent = $result->xml;
 
 ---
 
-## 12. Recommended Host Application Usage
+## 13. Recommended Host Application Usage
 
 The Maatify SEO library is designed to integrate cleanly into any PHP framework without introducing hard dependencies on the framework itself.
 
@@ -693,7 +812,7 @@ Always pass the pre-rendered HTML string (or the `SeoHeadHtmlDTO`) to your templ
 
 ---
 
-## 13. Common Mistakes
+## 14. Common Mistakes
 
 When implementing the Maatify SEO library, ensure you adhere strictly to the following guidelines:
 
