@@ -220,6 +220,7 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   - **Phase 13L: Specialized Rich Results JSON-LD Builders Batch (Complete):** Builder for generating Recipe/JobPosting/Course/SoftwareApplication schemas.
   - **Phase 13M: Extra Specialized JSON-LD Builders Batch (Complete):** Builder for generating Book/Movie/MusicAlbum/Dataset schemas.
   - **Phase 13N: Final JSON-LD Builders Audit (Complete):** Final verification and compliance audit of the Phase 13 Builder System.
+  - **Phase 13O: Advanced Product Structured Data (Complete):** Builders for generating ProductGroup and AggregateOffer schemas, and typed structured-data composition.
 
 - **Phase 14: Social Meta Builders**
   - **Phase 14A: Social Meta Foundation (Complete):** Core interfaces, generic tags, collections, and render output DTOs.

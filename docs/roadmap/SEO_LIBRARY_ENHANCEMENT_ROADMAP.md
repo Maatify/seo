@@ -373,20 +373,20 @@ Each builder should return:
 
 ---
 
-# Phase 13O — Advanced Product & Variant Structured Data
+# Phase 13O — Advanced Product & Variant Structured Data (Complete)
 
 ## Goal
 
-Fully reflect the structured-data gaps that currently exist in the library. This section addresses existing deferred requirements (ProductGroup, product variant structured-data support, richer schema / CI validation direction) and newly identified enhancements (first-class AggregateOffer support) while completing partially implemented features (Product typed-field completeness, structured-data validation foundation / generic structural validation layer) and addressing outstanding requirements (deep Schema.org semantic validation).
+Fully reflect the structured-data gaps that previously existed in the library. This section addressed deferred requirements (ProductGroup, product variant structured-data support, richer schema / CI validation direction) and newly identified enhancements (first-class AggregateOffer support) while completing partially implemented features (Product typed-field completeness). Deep Schema.org semantic validation remains outstanding in Phase 13P.
 
-## 13O-1 Product Builder Completeness
+## 13O-1 Product Builder Completeness (Complete)
 
 *   missing Product fields (GTIN, MPN)
 *   richer Offer integration (seller, priceValidUntil)
 *   variant relationships / variant properties
 *   preserve backward compatibility
 
-## 13O-2 ProductGroup / Product Variants
+## 13O-2 ProductGroup / Product Variants (Complete)
 
 *   **Note:** This is an already planned historically but still outstanding requirement.
 *   ProductGroup builder
@@ -396,7 +396,7 @@ Fully reflect the structured-data gaps that currently exist in the library. This
 *   Product variant relationships (isVariantOf, inProductGroupWithID)
 *   variant properties (color, size, material, pattern)
 
-## 13O-3 AggregateOffer
+## 13O-3 AggregateOffer (Complete)
 
 *   **Note:** This is a newly identified enhancement.
 *   dedicated builder (`AggregateOfferJsonLdBuilder`)
@@ -405,14 +405,14 @@ Fully reflect the structured-data gaps that currently exist in the library. This
 *   nested offers where appropriate
 *   Product integration
 
-## 13O-4 Typed Structured Data Composition
+## 13O-4 Typed Structured Data Composition (Complete)
 
 *   Product + Offer
 *   Product + AggregateOffer
 *   ProductGroup + variants
 *   avoid raw-array requirement for supported schemas
 
-## 13O-5 Tests / Examples / Documentation
+## 13O-5 Tests / Examples / Documentation (Complete)
 
 *   unit/manual tests following repository convention
 *   ProductGroup example
@@ -708,14 +708,9 @@ Extend Phase 21 with structured-data verification:
 
 ## Best practical order
 
-1. Phase 13O-1: Product builder completeness
-2. Phase 13O-2: ProductGroup / variant support
-3. Phase 13O-3: AggregateOffer
-4. Phase 13O-4: Typed structured-data composition
-5. Phase 13P: Structured-data semantic validation
-6. Phase 13O-5: Tests / examples / documentation for the new work
-7. Phase 21: Optional CI / Rich Results verification enhancements
-8. Phase 8: Developer Experience & Docs
+1. Phase 13P: Structured-data semantic validation
+2. Phase 21: Optional CI / Rich Results verification enhancements
+3. Phase 8: Developer Experience & Docs
 
 ## Later / optional
 
@@ -732,12 +727,8 @@ Extend Phase 21 with structured-data verification:
 
 The strongest next real-world enhancement is:
 
-## Advanced Product & Variant Structured Data
-
-Because the Product builder needs completeness, ProductGroup is a deferred requirement that needs support, and AggregateOffer is a newly identified enhancement that needs first-class support.
+## Semantic structured-data validation (Phase 13P)
 
 After that:
 
-1. Semantic structured-data validation (Phase 13P)
-2. Examples, tests, and documentation (Phase 13O-5)
-3. CI / Rich Results verification enhancements (Phase 21)
+1. CI / Rich Results verification enhancements (Phase 21)

@@ -70,7 +70,7 @@ echo $renderer->render($metaTags);
 ## Features
 
 - **Metadata generation:** Easily construct standard HTML meta tags and canonical URLs.
-- **JSON-LD schemas:** Framework-agnostic structured data generation for SEO (e.g., Breadcrumbs, Products) via strictly typed DTOs.
+- **JSON-LD schemas:** Framework-agnostic structured data generation for SEO (e.g., Breadcrumbs, Products, ProductGroup, AggregateOffer) via strictly typed builders.
 - **Social metadata:** Generate Open Graph and Twitter Card tags seamlessly.
 - **Sitemap generation:** In-memory XML sitemap generation stream dynamically powered by strict DTOs.
 - **Hreflang support:** Multi-language indexing (`xhtml:link`) generation helpers.
