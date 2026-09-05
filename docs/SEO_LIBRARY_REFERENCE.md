@@ -14,7 +14,7 @@ The library is divided into Shared, Admin, and Web components, ensuring clean bo
     ├── Admin/      # Admin-facing features (DTO, Export, Import, Preview, Redirect, SeoOverride, SlugHistory)
     ├── Bootstrap/  # Dependency Injection bindings (SeoBindings.php)
     ├── Exception/  # Shared library exceptions
-    ├── Shared/     # Persistence layer (Repositories, PDO)
+    ├── Shared/     # Shared contracts, DTOs, services, commands, and persistence infrastructure
     └── Web/        # Web consumption (Builder, DTO, Hreflang, Indexing, JsonLd, Page, Render, Robots, Schema, SeoRender, Sitemap, Social, Validation)
 ```
 

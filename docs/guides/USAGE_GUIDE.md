@@ -284,13 +284,17 @@ $parentGroup = (new ProductGroupJsonLdBuilder())
     ->setProductGroupID('TSHIRT-BASE')
     ->setName('T-Shirt Line');
 
-$childVariant = (new ProductJsonLdBuilder())
+// Example writing the `isVariantOf` property
+$childVariant1 = (new ProductJsonLdBuilder())
     ->setName('Red T-Shirt')
     ->setSku('TS-RED-L')
-    // Option A: Embed the typed parent node
-    ->setIsVariantOf($parentGroup)
-    // Option B: Provide the parent ID string directly
-    ->setInProductGroupWithID('TSHIRT-BASE');
+    ->setIsVariantOf($parentGroup); // Embeds the typed parent node (or if given a string, it becomes a ProductGroup node with productGroupID)
+
+// Example writing the `inProductGroupWithID` property
+$childVariant2 = (new ProductJsonLdBuilder())
+    ->setName('Blue T-Shirt')
+    ->setSku('TS-BLU-L')
+    ->setInProductGroupWithID('TSHIRT-BASE'); // Writes the string ID directly
 ```
 
 *Note: The builders ensure that nested `@context` tags are automatically stripped from typed builders during output, while the root builder retains its context. Raw array contexts are not touched. The library builds valid JSON-LD structures but does not enforce semantic validation or guarantee Google Rich Results eligibility.*
