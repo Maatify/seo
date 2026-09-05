@@ -3,7 +3,7 @@
 Complete API reference and design rules for the Maatify SEO library.
 
 ## Current Library Structure
-The library is divided into Shared, Admin (planned), and Web (planned) components, ensuring clean boundaries between persistence, business logic, and presentation.
+The library is divided into Shared, Admin, and Web components, ensuring clean boundaries between persistence, business logic, and presentation.
 
 **Note:** For the SEO library, `src/Web/` is the approved layer name replacing the standard `Customer/` layer. `src/Web/` is strictly for host website consumption services and DTOs. It does not include controllers, routes, HTTP responses, or framework integration.
 
@@ -240,7 +240,7 @@ The Web layer includes builders for constructing Schema.org-oriented JSON-LD str
 - **`Web/JsonLd/Builder/ArticleJsonLdBuilder.php`**: A builder for the `Article`, `NewsArticle`, or `BlogPosting` JSON-LD schemas, supporting configuration of headlines, images, authors, publishers, and publication dates.
 - **`Web/JsonLd/Builder/BreadcrumbJsonLdBuilder.php`**: A builder for the `BreadcrumbList` JSON-LD schema, providing methods to add breadcrumb items (`addItem`, `addBreadcrumb`, `addItems`) and correctly sequencing them with `ListItem` and `position` properties.
 
-Typed composition is intentionally output-time behavior: builder objects remain stored as supplied until `toArray()` or `toJson()` is called. Root `@context` values remain on the root schema, while `@context` values initialized by nested typed builders are omitted from the nested node. Raw arrays are not normalized or type-injected by the composition foundation; their own values, including `@context`, remain under caller control.
+Typed composition is intentionally output-time behavior: builder objects remain stored as supplied until `toArray()` or `toJson()` is called. Root `@context` values remain on the root schema, while `@context` values initialized by nested typed builders are omitted from the nested node. Resolution is recursive: nested `JsonLdBuilderInterface` instances inside raw arrays are resolved and have their `@context` stripped. Raw associative arrays preserve their keys and explicit `@context` values (unless they are nested typed builders).
 
 ### Web Output DTOs
 - **`Web/DTO/SeoHeadHtmlDTO.php`**: A framework-neutral, final read-only DTO that implements `\JsonSerializable`. It separates rendered HTML into individual string sections (`metaHtml`, `openGraphHtml`, `twitterCardHtml`, `jsonLdHtml`) and provides a pre-combined `fullHtml` output, allowing host applications flexibility in rendering without requiring template engine coupling.

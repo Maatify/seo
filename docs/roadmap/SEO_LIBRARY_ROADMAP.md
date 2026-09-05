@@ -10,7 +10,7 @@ The `Maatify\Seo` library is responsible for:
 
 - Generating and structuring HTML Meta tags (Title, Description, Robots, OpenGraph, Twitter Cards, Canonical).
 - Generating multilingual Hreflang tags.
-- Generating valid Schema.org JSON-LD (BreadcrumbList, Product, Organization, Website, SearchAction).
+- Generating Schema.org-oriented JSON-LD structures (BreadcrumbList, Product, Organization, Website, SearchAction).
 - Sitemap generation logic (Sitemap Index and individual language/category sitemaps).
 - Managing URL stability logic: Slug history, detection of slug changes, and automatic 301 redirects.
 - Providing SEO overrides (custom meta title/description mapping for specific entities/languages).
@@ -89,7 +89,7 @@ Following `MODULE_BUILDING_STANDARD.md`:
 ## 5. Proposed Public Services
 
 - **`MetaGeneratorService`**: Orchestrates the assembly of `<title>`, `<meta>`, canonical, and hreflang tags per the current language and provided entity data. Merges host data with any database SEO overrides.
-- **`SchemaGeneratorService`**: Outputs fully validated JSON-LD blocks for products, organizations, and breadcrumbs, preventing empty properties or invalid nested schemas (like `OutOfStock` translation).
+- **`SchemaGeneratorService`**: Outputs Schema.org-oriented JSON-LD structures for products, organizations, and breadcrumbs, preventing empty properties or invalid nested schemas (like `OutOfStock` translation).
 - **`SitemapGeneratorService`**: Orchestrates valid XML output (index and language-specific sitemaps), fetching URL node arrays from the host.
 - **`RedirectManagerService`**: Checks a requested slug against `maa_seo_redirects` to see if a 301/410 response is required.
 - **`SlugHistoryService`**: Called by the host when an entity's slug changes to record the old slug and establish an automatic 301 redirect.
@@ -158,7 +158,7 @@ A PDO-based schema is required for specific sub-systems where persistence provid
 
 ## 10. Implementation Phases
 
-*Note: The full SEO library is not completely done yet. Phases 1-5 below represent the completion of the Core/Shared library only. The upcoming layers (Admin and Web) are planned in Phase 6.*
+*Note: The full SEO library is complete, including Core/Shared, Admin, and Web layers.*
 
 - **Phase 1: Foundation & Schemas (Complete - Core/Shared)**
   Create directory structure, PHPStan config, library exception classes, Base DTOs (Schema generation, Meta tag generation), and define Host Interfaces.
