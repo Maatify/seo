@@ -5,13 +5,16 @@
 ### 1.1 Existing Classes & Traits
 *   **`JsonLdBuilderInterface` & `JsonLdBuilderTrait`**: Provide foundational array manipulation (`set`, `get`, `remove`, `toArray`, `toJson`). Currently, `set()` simply stores values and `toArray()` returns `$this->schema` without resolving nested builders.
 *   **`ProductJsonLdBuilder`**: Supports core fields.
-    *   *Limitation:* Pricing and availability are handled implicitly via `setOfferField()`, generating a single unstructured `Offer` array.
+    *   *Limitation:* Pricing and availability are handled implicitly via `setOfferField()`, generating an implicitly constructed raw associative `Offer` array.
     *   *Gap:* Missing `GTIN`, `MPN`, variant properties (`color`, `size`, `material`, `pattern`), and relationship tracking (`isVariantOf`). Missing safe typed composition capabilities.
 *   **`OfferJsonLdBuilder`**: Contains `price`, `priceCurrency`, `availability`, `validFrom`, `priceValidUntil`, and `seller(string|array)`.
     *   *Limitation:* `setSeller` requires an upgrade to support `JsonLdBuilderInterface` without breaking existing `string|array` usage.
 
 ### 1.2 The Gaps
-1.  **Product Fields**: Missing Global Trade Item Numbers (GTIN/MPN) and physical variant descriptors.
+1.  **Product Fields**: Missing distinct identifier properties:
+    *   GTIN (Global Trade Item Number)
+    *   MPN (Manufacturer Part Number)
+    *   Physical variant descriptors.
 2.  **ProductGroup**: Missing `ProductGroupJsonLdBuilder` entirely.
 3.  **AggregateOffer**: Missing `AggregateOfferJsonLdBuilder`.
 4.  **Composition Foundation**: Typed builders cannot cleanly absorb other typed builders without destructive manual array manipulation.
@@ -92,6 +95,7 @@ The behavior for variadic collection setters (`array|JsonLdBuilderInterface ...$
     *   Checks `$hasExplicitOffers`.
     *   If `true`: MUST throw `JsonLdBuildException` immediately.
     *   If `false`: Builds/updates the legacy Offer array.
+    *   **Crucial Implementation Rule:** When saving the array, it MUST bypass the explicit state override by calling `parent::set('offers', $offer)` instead of `$this->set('offers', $offer)`. This guarantees that legacy chaining (`setCurrency()->setPrice()`) does not trigger an exception.
 
 ---
 
@@ -240,23 +244,24 @@ public function setSeller(string|array|JsonLdBuilderInterface $seller): static
 To ensure all PRs are independently stable and verifiable without introducing broken APIs, the foundation (`resolveNode`) MUST be built first. We technically map the roadmap requirements as follows:
 
 1.  **Work Unit 1 (Implements the foundation required by Roadmap 13O-4):**
-    *   Update `JsonLdBuilderTrait` with `resolveNode()`.
-    *   Update `OfferJsonLdBuilder` to accept `JsonLdBuilderInterface` in `setSeller`.
-    *   Test: `Phase13OCompositionTest.php`.
+    *   Update `src/Web/JsonLd/Builder/JsonLdBuilderTrait.php` with `resolveNode()`.
+    *   Update `src/Web/JsonLd/Builder/OfferJsonLdBuilder.php` to accept `JsonLdBuilderInterface` in `setSeller`.
+    *   Test: `tests/Phase13OCompositionTest.php`.
 2.  **Work Unit 2 (Fulfills Roadmap 13O-1 / Product Completeness):**
-    *   Add GTIN/MPN/variant descriptors to `ProductJsonLdBuilder`.
+    *   Update `src/Web/JsonLd/Builder/ProductJsonLdBuilder.php` with GTIN/MPN/variant descriptors.
     *   Implement `setOffers` / `addOffer` and the generic `remove()` explicit state flag override.
-    *   Test: Append to `Phase13BProductJsonLdBuilderTest.php`.
+    *   Implement internal `parent::set()` bypass inside `setOfferField()`.
+    *   Test: Append to `tests/Phase13BProductJsonLdBuilderTest.php`.
 3.  **Work Unit 3 (Fulfills Roadmap 13O-2 / ProductGroup):**
-    *   Create `ProductGroupJsonLdBuilder`.
-    *   Implement `setIsVariantOf` and `setInProductGroupWithID` in Product.
-    *   Test: `Phase13OProductGroupJsonLdBuilderTest.php`.
+    *   Create `src/Web/JsonLd/Builder/ProductGroupJsonLdBuilder.php`.
+    *   Implement `setIsVariantOf` and `setInProductGroupWithID` in `src/Web/JsonLd/Builder/ProductJsonLdBuilder.php`.
+    *   Test: `tests/Phase13OProductGroupJsonLdBuilderTest.php`.
 4.  **Work Unit 4 (Fulfills Roadmap 13O-3 / AggregateOffer):**
-    *   Create `AggregateOfferJsonLdBuilder`.
-    *   Test: `Phase13OAggregateOfferJsonLdBuilderTest.php`.
+    *   Create `src/Web/JsonLd/Builder/AggregateOfferJsonLdBuilder.php`.
+    *   Test: `tests/Phase13OAggregateOfferJsonLdBuilderTest.php`.
 5.  **Work Unit 5 (Fulfills Roadmap 13O-5 / Documentation):**
-    *   Sync `SEO_LIBRARY_REFERENCE.md`.
-    *   Add `PHASE_13O_PRODUCT_STRUCTURED_DATA_VERIFICATION_REPORT.md`.
+    *   Sync `docs/SEO_LIBRARY_REFERENCE.md`.
+    *   Create `docs/verification/PHASE_13O_PRODUCT_STRUCTURED_DATA_VERIFICATION_REPORT.md`.
 
 *(Note: Roadmap 13O-4 "Typed Composition" is functionally complete across Work Units 1, 2, 3, and 4).*
 
