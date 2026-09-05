@@ -388,7 +388,7 @@ Fully reflect the structured-data gaps that previously existed in the library. T
 
 ## 13O-2 ProductGroup / Product Variants (Complete)
 
-*   **Note:** This is an already planned historically but still outstanding requirement.
+*   **Note:** This was a historically planned requirement that is now completed.
 *   ProductGroup builder
 *   productGroupID
 *   variesBy
