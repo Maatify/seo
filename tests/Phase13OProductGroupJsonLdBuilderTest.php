@@ -328,7 +328,6 @@ assertSameValue13OProductGroup('exact ProductGroup multi-variant scenario', [
 $exactProductRelationship = (new ProductJsonLdBuilder())
     ->setSku('TS-RED-L')
     ->setColor('Red')
-    ->setSize('L')
     ->setIsVariantOf('TSHIRT-BASE')
     ->toArray();
 assertSameValue13OProductGroup('exact Product to ProductGroup relationship scenario', [
@@ -336,7 +335,6 @@ assertSameValue13OProductGroup('exact Product to ProductGroup relationship scena
     '@type' => 'Product',
     'sku' => 'TS-RED-L',
     'color' => 'Red',
-    'size' => 'L',
     'isVariantOf' => [
         '@type' => 'ProductGroup',
         'productGroupID' => 'TSHIRT-BASE',
