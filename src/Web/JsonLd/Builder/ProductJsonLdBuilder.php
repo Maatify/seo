@@ -61,6 +61,24 @@ final class ProductJsonLdBuilder extends AbstractJsonLdBuilder
         return $this->set('pattern', $pattern);
     }
 
+    /** @param string|array<int|string, mixed>|JsonLdBuilderInterface $productGroup */
+    public function setIsVariantOf(string|array|JsonLdBuilderInterface $productGroup): static
+    {
+        if (is_string($productGroup)) {
+            $productGroup = [
+                '@type' => 'ProductGroup',
+                'productGroupID' => $productGroup,
+            ];
+        }
+
+        return $this->set('isVariantOf', $productGroup);
+    }
+
+    public function setInProductGroupWithID(string $productGroupID): static
+    {
+        return $this->set('inProductGroupWithID', $productGroupID);
+    }
+
     public function setBrand(string $brand): static
     {
         return $this->set('brand', [
