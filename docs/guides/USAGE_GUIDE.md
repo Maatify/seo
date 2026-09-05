@@ -241,7 +241,8 @@ You can use `addOffer()` to build a list, or pass variadic arguments/arrays to `
 $product->setOffers($offer1, $offer2);
 // or
 $product->addOffer($offer1)->addOffer($offer2);
-// Raw arrays are also accepted and preserved:
+// Raw arrays are also accepted. Their keys (including explicit @context) are preserved,
+// but resolution remains recursive for any nested JsonLdBuilderInterface instances inside them:
 $product->addOffer(['@type' => 'Offer', 'price' => '5.00', 'priceCurrency' => 'USD']);
 ```
 

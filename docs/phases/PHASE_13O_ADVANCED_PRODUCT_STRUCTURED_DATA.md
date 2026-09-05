@@ -68,7 +68,7 @@ For developers upgrading to Phase 13O:
 - Existing uses of `ProductJsonLdBuilder` scalar methods (`setPrice()`, `setCurrency()`) remain perfectly valid and unchanged.
 - You can mix raw associative arrays with explicit `OfferJsonLdBuilder` instances in `setOffers()` safely.
 - If you were manually overriding the `offers` array using `set('offers', ...)` and manually managing the legacy scalar properties, this behavior is untouched. However, utilizing `setOffers()` is now the recommended approach for custom data.
-- **Warning:** Do not mix `setOffers()` / `addOffer()` with legacy scalar methods like `setPrice()`. Doing so will now throw a `JsonLdBuildException`.
+- **Warning:** The order of operations dictates the boundary. Calling legacy scalar methods (like `setPrice()`) *first* and then activating explicit state via `setOffers(...)` or `addOffer(...)` is safe; the explicit data simply replaces the legacy data. However, once explicit state is activated, any subsequent call to a legacy scalar method will immediately throw a `JsonLdBuildException`.
 
 ## 4. Limitations and Boundaries
 

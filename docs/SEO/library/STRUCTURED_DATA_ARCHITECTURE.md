@@ -60,7 +60,7 @@ It is crucial to understand what the library *does* and *does not* do.
 -   Provides fluent, object-oriented APIs to construct associative arrays.
 -   Manages the complex rules of nesting builders and stripping redundant `@context` tags.
 -   Ensures type safety in builder arguments and handles list flattening (e.g., converting a variadic input into a standard list).
--   Outputs perfectly formatted JSON strings (via `JsonLdScriptRenderer`).
+-   Outputs raw JSON strings via `toJson()`, or HTML `<script type="application/ld+json">...</script>` strings containing the encoded payloads via `JsonLdScriptRenderer::render()`.
 
 ### What the Library Does NOT Do
 -   **No Semantic Validation:** The library does not check if your GTIN is mathematically valid, if your URL is reachable, or if you missed a "required" Schema.org property.
