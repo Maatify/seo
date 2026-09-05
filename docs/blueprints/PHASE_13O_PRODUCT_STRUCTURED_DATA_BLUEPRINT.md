@@ -94,8 +94,7 @@ The behavior for variadic collection setters (`array|JsonLdBuilderInterface ...$
 6.  **Legacy Internal Writing (`setOfferField()`)**:
     *   Checks `$hasExplicitOffers`.
     *   If `true`: MUST throw `JsonLdBuildException` immediately.
-    *   If `false`: Builds/updates the legacy Offer array.
-    *   **Crucial Implementation Rule:** When saving the array, it MUST bypass the explicit state override by calling `parent::set('offers', $offer)` instead of `$this->set('offers', $offer)`. This guarantees that legacy chaining (`setCurrency()->setPrice()`) does not trigger an exception.
+    *   If `false`: Builds/updates the legacy Offer array and saves it directly via the normal `$this->set('offers', $offer)` behavior (since `set` is not overridden).
 
 ---
 
@@ -250,7 +249,6 @@ To ensure all PRs are independently stable and verifiable without introducing br
 2.  **Work Unit 2 (Fulfills Roadmap 13O-1 / Product Completeness):**
     *   Update `src/Web/JsonLd/Builder/ProductJsonLdBuilder.php` with GTIN/MPN/variant descriptors.
     *   Implement `setOffers` / `addOffer` and the generic `remove()` explicit state flag override.
-    *   Implement internal `parent::set()` bypass inside `setOfferField()`.
     *   Test: Append to `tests/Phase13BProductJsonLdBuilderTest.php`.
 3.  **Work Unit 3 (Fulfills Roadmap 13O-2 / ProductGroup):**
     *   Create `src/Web/JsonLd/Builder/ProductGroupJsonLdBuilder.php`.
