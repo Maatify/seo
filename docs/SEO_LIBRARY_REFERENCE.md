@@ -3,56 +3,19 @@
 Complete API reference and design rules for the Maatify SEO library.
 
 ## Current Library Structure
-The library is divided into Shared, Admin (planned), and Web (planned) components, ensuring clean boundaries between persistence, business logic, and presentation.
+The library is divided into Shared, Admin, and Web components, ensuring clean boundaries between persistence, business logic, and presentation.
 
-**Note:** For the SEO library, `src/Web/` is the approved layer name replacing the standard `Customer/` layer. `src/Web/` is strictly for host website consumption services and DTOs. It does not include controllers, routes, HTTP responses, or framework integration.
+**Note:** For the SEO library, `src/Web/` is the approved layer name replacing the standard `Customer/` layer. `src/Web/` is strictly for framework-neutral host-facing SEO consumption capabilities, services, DTOs, builders, renderers, and helpers. It does not include controllers, routes, HTTP responses, or framework integration.
 
 ```text
-
-├── docs/
-├── schema/
-│   ├── maa_seo_overrides.sql
-│   ├── maa_seo_redirects.sql
-│   └── maa_seo_slug_history.sql
+├── docs/       # Documentation and guides
+├── schema/     # SQL schemas for standalone usage
 └── src/
-    ├── Admin/
-    │   ├── Redirect/
-    │   │   ├── Command/
-    │   │   ├── Contract/
-    │   │   ├── DTO/
-    │   │   ├── Infrastructure/Repository/
-    │   │   └── Service/
-    │   ├── SeoOverride/
-    │   │   ├── Command/
-    │   │   ├── Contract/
-    │   │   ├── DTO/
-    │   │   ├── Infrastructure/Repository/
-    │   │   └── Service/
-    │   └── SlugHistory/
-    │       ├── Command/
-    │       ├── Contract/
-    │       ├── DTO/
-    │       ├── Infrastructure/Repository/
-    │       └── Service/
-    ├── Bootstrap/
-    │   └── SeoBindings.php
-    ├── Exception/
-    │   ├── SeoCodeAlreadyExistsException.php
-    │   ├── SeoConflictException.php
-    │   ├── SeoErrorCode.php
-    │   ├── SeoExceptionInterface.php
-    │   ├── SeoInvalidArgumentException.php
-    │   └── SeoNotFoundException.php
-    ├── Shared/
-    │   ├── Command/
-    │   ├── Contract/
-    │   ├── DTO/
-    │   ├── Infrastructure/Persistence/
-    │   └── Service/
-    └── Web/
-        └── SeoRender/
-            ├── DTO/
-            └── Service/
+    ├── Admin/      # Admin-facing features (DTO, Export, Import, Preview, Redirect, SeoOverride, SlugHistory)
+    ├── Bootstrap/  # Dependency Injection bindings (SeoBindings.php)
+    ├── Exception/  # Shared library exceptions
+    ├── Shared/     # Shared contracts, DTOs, services, commands, and persistence infrastructure
+    └── Web/        # Web consumption (Builder, DTO, Hreflang, Indexing, JsonLd, Page, Render, Robots, Schema, SeoRender, Sitemap, Social, Validation)
 ```
 
 ## Schema Tables
@@ -177,7 +140,7 @@ The Admin layer provides dedicated admin-facing services, DTOs, and commands for
 
 
 ## Web Layer
-The Web layer provides website/frontend consumption services and DTOs. Following an approved exception, it uses `src/Web/` instead of the standard `src/Customer/` directory. These classes are strictly framework-agnostic and rely on Shared services via constructor injection. They do not access the database (no PDO), do not include controllers or routes, do not emit HTTP or PSR-7 responses, do not render templates, and do not output final HTML tags.
+The Web layer provides framework-neutral host-facing SEO consumption capabilities, services, DTOs, builders, renderers, and helpers. Following an approved exception, it uses `src/Web/` instead of the standard `src/Customer/` directory. These classes are strictly framework-agnostic. While components that require dependencies use explicit constructor injection (such as Shared services), many builders, renderers, and helpers are standalone. They do not access the database (no PDO), do not include controllers or routes, do not emit HTTP or PSR-7 responses, and do not render templates. While core consumption/orchestration classes do not emit HTML tags, optional rendering helpers in `src/Web/Render/` intentionally output pure HTML strings (but still do not emit HTTP responses themselves).
 - **`Web/SeoRender/Command/RenderSeoPageCommand`**: A final readonly command object containing data necessary to render an SEO page payload (such as entity details, defaults, robots, schemas, and breadcrumbs). It validates its input in the constructor.
 - **`Web/SeoRender/DTO/SeoPagePayloadDTO`**: A final readonly DTO (implementing `\JsonSerializable`) that wraps the computed meta tags, schemas, redirect decisions, and optional sitemap XML. It enforces that all inputs are valid.
 - **`Web/SeoRender/Service/SeoPageRenderService`**: Orchestrates the generation of the SEO page payload using Shared services (`MetaGeneratorService`, `SchemaGeneratorService`, etc.). It supports computing redirect decisions via `RedirectManagerService` and generating sitemap strings via `SitemapGeneratorService` if injected.
@@ -240,7 +203,7 @@ The Web layer includes builders for constructing Schema.org-oriented JSON-LD str
 - **`Web/JsonLd/Builder/ArticleJsonLdBuilder.php`**: A builder for the `Article`, `NewsArticle`, or `BlogPosting` JSON-LD schemas, supporting configuration of headlines, images, authors, publishers, and publication dates.
 - **`Web/JsonLd/Builder/BreadcrumbJsonLdBuilder.php`**: A builder for the `BreadcrumbList` JSON-LD schema, providing methods to add breadcrumb items (`addItem`, `addBreadcrumb`, `addItems`) and correctly sequencing them with `ListItem` and `position` properties.
 
-Typed composition is intentionally output-time behavior: builder objects remain stored as supplied until `toArray()` or `toJson()` is called. Root `@context` values remain on the root schema, while `@context` values initialized by nested typed builders are omitted from the nested node. Raw arrays are not normalized or type-injected by the composition foundation; their own values, including `@context`, remain under caller control.
+Typed composition is intentionally output-time behavior: builder objects remain stored as supplied until `toArray()` or `toJson()` is called. Root `@context` values remain on the root schema, while `@context` values initialized by nested typed builders are omitted from the nested node. Resolution is recursive: nested `JsonLdBuilderInterface` instances inside raw arrays are resolved and have their `@context` stripped. Raw associative arrays preserve their keys and explicit `@context` values (unless they are nested typed builders).
 
 ### Web Output DTOs
 - **`Web/DTO/SeoHeadHtmlDTO.php`**: A framework-neutral, final read-only DTO that implements `\JsonSerializable`. It separates rendered HTML into individual string sections (`metaHtml`, `openGraphHtml`, `twitterCardHtml`, `jsonLdHtml`) and provides a pre-combined `fullHtml` output, allowing host applications flexibility in rendering without requiring template engine coupling.

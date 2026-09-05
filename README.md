@@ -70,7 +70,7 @@ echo $renderer->render($metaTags);
 ## Features
 
 - **Metadata generation:** Easily construct standard HTML meta tags and canonical URLs.
-- **JSON-LD schemas:** Framework-agnostic structured data generation for SEO (e.g., Breadcrumbs, Products) via strictly typed DTOs.
+- **JSON-LD schemas:** Framework-agnostic structured data generation for SEO (e.g., Breadcrumbs, Products, ProductGroup, AggregateOffer) via fluent builders.
 - **Social metadata:** Generate Open Graph and Twitter Card tags seamlessly.
 - **Sitemap generation:** In-memory XML sitemap generation stream dynamically powered by strict DTOs.
 - **Hreflang support:** Multi-language indexing (`xhtml:link`) generation helpers.
@@ -95,6 +95,7 @@ To see how the library functions in real-world scenarios, you can run the follow
 - `php examples/seo-page-presets.php`: Generic, e-commerce, content, and local business SEO page presets.
 - `php examples/sitemap-output.php`: Native sitemap XML outputs using provided DTOs and renderers.
 - `php examples/social-builders.php`: OpenGraph and TwitterCard builders to generate social metadata.
+- `php examples/phase13o-product-advanced.php`: Demonstrates advanced product structured data using typed composition (Product, Offer, AggregateOffer, ProductGroup).
 - `php examples/phase7-output-showcase.php`: Showcases rendered SEO head output helpers and DTO output sections.
 - `php examples/phase13-jsonld-builders.php`: Demonstrates the JSON-LD builder suite across supported schema types.
 
@@ -117,6 +118,9 @@ The library follows a strict layered architecture to ensure clean separation of 
 
 Full documentation, including internal compliance checks, library references, and guides:
 
+- [docs/SEO/library/README.md](docs/SEO/library/README.md) - Current Engineering Handbook
+- [docs/guides/USAGE_GUIDE.md](docs/guides/USAGE_GUIDE.md) - Usage Guide
+- [docs/guides/INTEGRATION_GUIDE.md](docs/guides/INTEGRATION_GUIDE.md) - Integration Guide
 - [docs/](docs/) - Central repository for library documentation.
 - [Roadmap](docs/roadmap/) - Development and feature roadmap.
 - [Proposals](docs/proposals/) - Architectural design proposals.
