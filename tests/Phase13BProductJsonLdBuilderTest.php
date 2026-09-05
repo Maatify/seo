@@ -207,6 +207,24 @@ assertSameValue13B(
     ])->toArray()['offers']
 );
 
+$builder1 = (new OfferJsonLdBuilder())->setPrice('31.00');
+$builder2 = (new OfferJsonLdBuilder())->setPrice('32.00');
+assertTrueValue13B('numeric list regression uses OfferJsonLdBuilder instances', $builder1 instanceof OfferJsonLdBuilder && $builder2 instanceof OfferJsonLdBuilder);
+assertSameValue13B(
+    'setOffers resolves a numeric list of Offer builders in order',
+    [
+        [
+            '@type' => 'Offer',
+            'price' => '31.00',
+        ],
+        [
+            '@type' => 'Offer',
+            'price' => '32.00',
+        ],
+    ],
+    (new ProductJsonLdBuilder())->setOffers([$builder1, $builder2])->toArray()['offers']
+);
+
 $variadicOffers = (new ProductJsonLdBuilder())->setOffers(
     (new OfferJsonLdBuilder())->setPrice(10),
     (new OfferJsonLdBuilder())->setPrice(20),
