@@ -36,7 +36,39 @@ trait JsonLdBuilderTrait
     /** @return array<string, mixed> */
     public function toArray(): array
     {
-        return $this->schema;
+        $schema = $this->schema;
+
+        foreach ($schema as $key => $value) {
+            $schema[$key] = $this->resolveNode($value);
+        }
+
+        return $schema;
+    }
+
+    protected function resolveNode(mixed $node): mixed
+    {
+        if ($node instanceof JsonLdBuilderInterface) {
+            $resolved = $node->toArray();
+            unset($resolved['@context']);
+
+            foreach ($resolved as $key => $value) {
+                $resolved[$key] = $this->resolveNode($value);
+            }
+
+            return $resolved;
+        }
+
+        if (is_array($node)) {
+            $resolved = $node;
+
+            foreach ($resolved as $key => $value) {
+                $resolved[$key] = $this->resolveNode($value);
+            }
+
+            return $resolved;
+        }
+
+        return $node;
     }
 
     public function toJson(int $flags = 0): string
