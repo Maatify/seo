@@ -271,6 +271,28 @@ $productGroup = (new ProductGroupJsonLdBuilder())
     ->setHasVariant($redVariant, $blueVariant);
 ```
 
+### Linking Child to Parent (Variant Relationship)
+
+If you are rendering the child `Product` schema page, you can declare its relationship back to the parent `ProductGroup` using the `setIsVariantOf()` and `setInProductGroupWithID()` APIs:
+
+```php
+use Maatify\Seo\Web\JsonLd\Builder\ProductJsonLdBuilder;
+use Maatify\Seo\Web\JsonLd\Builder\ProductGroupJsonLdBuilder;
+
+// Using a typed ProductGroup Builder as the parent
+$parentGroup = (new ProductGroupJsonLdBuilder())
+    ->setProductGroupID('TSHIRT-BASE')
+    ->setName('T-Shirt Line');
+
+$childVariant = (new ProductJsonLdBuilder())
+    ->setName('Red T-Shirt')
+    ->setSku('TS-RED-L')
+    // Option A: Embed the typed parent node
+    ->setIsVariantOf($parentGroup)
+    // Option B: Provide the parent ID string directly
+    ->setInProductGroupWithID('TSHIRT-BASE');
+```
+
 *Note: The builders ensure that nested `@context` tags are automatically stripped from typed builders during output, while the root builder retains its context. Raw array contexts are not touched. The library builds valid JSON-LD structures but does not enforce semantic validation or guarantee Google Rich Results eligibility.*
 
 ---
