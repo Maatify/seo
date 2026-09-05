@@ -297,7 +297,7 @@ $childVariant2 = (new ProductJsonLdBuilder())
     ->setInProductGroupWithID('TSHIRT-BASE'); // Writes the string ID directly
 ```
 
-*Note: The builders ensure that nested `@context` tags are automatically stripped from typed builders during output, while the root builder retains its context. Raw array contexts are not touched. The library builds valid JSON-LD structures but does not enforce semantic validation or guarantee Google Rich Results eligibility.*
+*Note: The builders ensure that nested `@context` tags are automatically stripped from typed builders during output, while the root builder retains its context. Raw array contexts are not touched. The library builds Schema.org-oriented JSON-LD structures but does not enforce semantic validation or guarantee Google Rich Results eligibility.*
 
 ---
 
