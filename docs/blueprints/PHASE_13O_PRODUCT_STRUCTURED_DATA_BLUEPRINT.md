@@ -59,10 +59,15 @@ The behavior for variadic collection setters (`array|JsonLdBuilderInterface ...$
 *   **One item total:** Stored as an associative array/object (e.g., `"offers": { "@type": "Offer" }`).
 *   **Multiple items total:** Stored as a numeric list of objects (e.g., `"offers": [ { "@type": "Offer" }, { "@type": "Offer" } ]`).
 
-**Appending Lifecycle (`addOffer`, `addVariant`):**
+**Appending Lifecycle (`addOffer`, targeting `offers` property):**
 *   If `offers` is `null`: stores the new node as an object.
 *   If `offers` is an `object`: converts the property to a `list` containing the old object and the new node.
 *   If `offers` is a `list`: pushes the new node to the list.
+
+**Appending Lifecycle (`addVariant`, targeting `hasVariant` property):**
+*   If `hasVariant` is `null`: stores the new node as an object.
+*   If `hasVariant` is an `object`: converts the property to a `list` containing the old object and the new node.
+*   If `hasVariant` is a `list`: pushes the new node to the list.
 
 ### 2.3 Product BC & Implicit State Machine
 `ProductJsonLdBuilder` currently mixes scalar setters (`setPrice`) into a single implicit array using `setOfferField()`. To prevent generating an invalid Schema.org state, we implement a strict internal flag, separating legacy writes from explicit overrides.
@@ -81,15 +86,12 @@ The behavior for variadic collection setters (`array|JsonLdBuilderInterface ...$
     *   `ProductJsonLdBuilder` MUST override `remove(string $key): static`.
     *   If `$key === 'offers'`, it calls `parent::remove($key)` AND sets `$hasExplicitOffers = false`.
     *   If `$key !== 'offers'`, it simply calls `parent::remove($key)`.
-5.  **Generic Override (`set()`)**:
-    *   `ProductJsonLdBuilder` MUST override `set(string $key, mixed $value): static`.
-    *   If `$key === 'offers'`, it calls `parent::set($key, $value)` AND sets `$hasExplicitOffers = true` (treating generic manual overrides as explicit state, permanently locking out legacy scalar setters).
-    *   If `$key !== 'offers'`, it calls `parent::set($key, $value)`.
+5.  **Generic Setter (`set()`)**:
+    *   The generic `set('offers', ...)` method is NOT overridden. It retains existing legacy behavior, bypassing explicit state rules, meaning it does NOT set `$hasExplicitOffers = true`.
 6.  **Legacy Internal Writing (`setOfferField()`)**:
     *   Checks `$hasExplicitOffers`.
     *   If `true`: MUST throw `JsonLdBuildException` immediately.
     *   If `false`: Builds/updates the legacy Offer array.
-    *   **Crucial Implementation Rule:** When saving the array, it MUST bypass the explicit state override by calling `parent::set('offers', $offer)` instead of `$this->set('offers', $offer)`. This guarantees that legacy chaining (`setCurrency()->setPrice()`) does not trigger an exception.
 
 ---
 
@@ -243,12 +245,11 @@ To ensure all PRs are independently stable and verifiable without introducing br
     *   Test: `Phase13OCompositionTest.php`.
 2.  **Work Unit 2 (Fulfills Roadmap 13O-1 / Product Completeness):**
     *   Add GTIN/MPN/variant descriptors to `ProductJsonLdBuilder`.
-    *   Implement `setOffers` / `addOffer` and the generic `set()`/`remove()` explicit state flag overrides.
-    *   Implement internal `parent::set()` bypass inside `setOfferField()`.
+    *   Implement `setOffers` / `addOffer` and the generic `remove()` explicit state flag override.
     *   Test: Append to `Phase13BProductJsonLdBuilderTest.php`.
 3.  **Work Unit 3 (Fulfills Roadmap 13O-2 / ProductGroup):**
     *   Create `ProductGroupJsonLdBuilder`.
-    *   Implement `isVariantOf` in Product.
+    *   Implement `setIsVariantOf` and `setInProductGroupWithID` in Product.
     *   Test: `Phase13OProductGroupJsonLdBuilderTest.php`.
 4.  **Work Unit 4 (Fulfills Roadmap 13O-3 / AggregateOffer):**
     *   Create `AggregateOfferJsonLdBuilder`.
@@ -281,7 +282,7 @@ All edge cases below MUST be verified via PHP tests:
 17. `setCurrency()->setPrice()` -> `addOffer($offer)` -> explicit `$offer` entirely replaces legacy data.
 18. `setOffers($offer)` -> `setPrice(10)` -> THROWS `JsonLdBuildException`.
 19. `addOffer($offer)` -> `setPrice(10)` -> THROWS `JsonLdBuildException`.
-20. `set('offers', ['@type' => 'Offer'])` -> `setPrice(10)` -> THROWS `JsonLdBuildException`.
+20. **Generic Setter Regression:** `set('offers', ['@type' => 'Offer', 'priceCurrency' => 'USD'])` -> `setPrice('19.99')` -> succeeds (state remains legacy).
 21. `setOffers($offer)` -> `remove('offers')` -> `setPrice(10)` -> succeeds (state reset properly).
 22. Product + AggregateOffer -> AggregateOffer outputs without interference.
 23. AggregateOffer + nested Offer list -> AggregateOffer properties retain stability.
