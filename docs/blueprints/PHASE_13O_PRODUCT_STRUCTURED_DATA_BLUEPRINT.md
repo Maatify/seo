@@ -3,53 +3,84 @@
 ## 1. Current State Analysis
 
 ### 1.1 Existing Classes & Traits
-*   **`JsonLdBuilderInterface` & `JsonLdBuilderTrait`**: Provide foundational array manipulation.
-*   **`ProductJsonLdBuilder`**: Supports core fields, but implicitly forces a single unstructured `Offer` array via `setOfferField()`.
-*   **`OfferJsonLdBuilder`**: Supports basic properties but `setSeller` lacks typed composition.
+*   **`JsonLdBuilderInterface` & `JsonLdBuilderTrait`**: Provide foundational array manipulation (`set`, `get`, `remove`, `toArray`, `toJson`). Currently, `set()` simply stores values and `toArray()` returns `$this->schema` without resolving nested builders.
+*   **`ProductJsonLdBuilder`**: Supports core fields.
+    *   *Limitation:* Pricing and availability are handled implicitly via `setOfferField()`, generating a single unstructured `Offer` array.
+    *   *Gap:* Missing `GTIN`, `MPN`, variant properties (`color`, `size`, `material`, `pattern`), and relationship tracking (`isVariantOf`). Missing safe typed composition capabilities.
+*   **`OfferJsonLdBuilder`**: Supports `price`, `priceCurrency`, `availability`, `validFrom`, `priceValidUntil`, and `seller`.
+    *   *Limitation:* `setSeller` accepts only `string` or raw `array`. It requires an upgrade to support `JsonLdBuilderInterface`.
 
 ### 1.2 The Gaps
-1.  **Product Fields**: Missing `GTIN`, `MPN`, variant descriptors, and relationship tracking.
-2.  **ProductGroup**: Missing `ProductGroupJsonLdBuilder`.
+1.  **Product Fields**: Missing Global Trade Item Numbers (GTIN/MPN) and physical variant descriptors.
+2.  **ProductGroup**: Missing `ProductGroupJsonLdBuilder` entirely.
 3.  **AggregateOffer**: Missing `AggregateOfferJsonLdBuilder`.
-4.  **Composition**: Missing safe typed composition capabilities.
+4.  **Composition Foundation**: Typed builders cannot cleanly absorb other typed builders without destructive manual array manipulation.
 
 ---
 
 ## 2. Architectural Decisions & Contracts
 
 ### 2.1 Typed Composition Contract (`resolveNode`)
-*   **Signature:** `protected function resolveNode(mixed $node): mixed` inside `JsonLdBuilderTrait`.
-*   **Location:** Invoked *exclusively* inside `toArray()`, not inside `set()`. This preserves the builder reference until the tree is rendered.
-*   **Algorithm Rules:**
-    1.  **Base Context Preservation:** The root builder's `@context` is inherently preserved because `toArray()` returns the unmodified `$this->schema` before yielding to recursion.
-    2.  **Builder Resolution:** If `$node` is a `JsonLdBuilderInterface`, call its `toArray()`.
-    3.  **Context Stripping:** For the resolved array (or if the node was already an associative array), unset the `@context` key.
-    4.  **Nested Traversals:** Iterate through associative arrays and numeric lists, applying `resolveNode` to all values, unsetting `@context` at every depth layer (e.g. if a raw array contains `@context`, it gets stripped).
+To safely embed builders inside other builders without breaking existing implementations, the core `JsonLdBuilderTrait` will be updated.
+
+*   **Signature:** `protected function resolveNode(mixed $node): mixed`
+*   **Location:** Invoked *exclusively* inside `toArray()`. This ensures builders retain their object references until final rendering.
+*   **Backward Compatibility (BC) Rule:** Destructive normalization (context stripping) MUST apply ONLY to nodes originating from `JsonLdBuilderInterface`. Arbitrary raw arrays provided by the user MUST NOT be destructively modified. This ensures that legacy code explicitly setting nested `@context` arrays remains unaffected.
+
+**`toArray()` Algorithm:**
+1.  Create a shallow copy of `$this->schema` to serve as the root.
+2.  The root `@context` remains intact (if initialized by the builder).
+3.  Iterate over every value in the root schema and pass it to `resolveNode()`.
+
+**`resolveNode($node)` Algorithm (Pseudocode):**
+```php
+if ($node is JsonLdBuilderInterface) {
+    $array = $node->toArray();
+    unset($array['@context']); // Strip ONLY from injected builders
+    return map_recursive($array, resolveNode);
+} elseif (is_array($node)) {
+    // Preserve raw user arrays exactly as provided, but recurse
+    // to catch any builders deeply nested within user arrays.
+    return map_recursive($node, resolveNode);
+}
+return $node;
+```
 
 ### 2.2 Collection Composition Semantics (`setOffers`, `setHasVariant`)
-The behavior for variadic collection setters must follow strict deterministic flattening:
-*   **Input:** `(array|JsonLdBuilderInterface ...$nodes)`
-*   **Flattening Rule:** If a single array argument is passed, and that array is a numeric list (e.g. `setOffers([$offer1, $offer2])`), it MUST be flattened into the variadic arguments stack. If it is an associative array, it is treated as a single node.
-*   **Single Node Storage:** If, after flattening, exactly one node exists, it is stored as a direct associative array/object.
-*   **Multiple Node Storage:** If more than one node exists (mix of builders/arrays), they are stored as a numeric list of nodes.
-*   **Appending (`add*`):**
-    *   If no existing nodes exist, store the new node as a single object.
-    *   If a single object exists, convert the property to a list of two objects.
-    *   If a list already exists, push the new node to the list.
+The behavior for variadic collection setters (`array|JsonLdBuilderInterface ...$nodes`) MUST follow a deterministic state machine:
 
-### 2.3 Product Backward Compatibility & Implicit State
-To strictly prevent invalid mixed states (e.g., mixing legacy `setPrice` with typed `setOffers`), `ProductJsonLdBuilder` MUST implement a private state flag, independent of array shape detection.
+**Argument Flattening:**
+*   If a single argument is passed and it is a numeric list (e.g. `setOffers([$offer1, $offer2])`), the list MUST NOT be nested as `[[...]]`. It MUST be flattened to process the items individually.
+*   If a single argument is passed and it is an associative array or a single builder, it is treated as a single node.
+
+**Storage Shape Rules:**
+*   **One item total:** Stored as an associative array/object (e.g., `"offers": { "@type": "Offer" }`).
+*   **Multiple items total:** Stored as a numeric list of objects (e.g., `"offers": [ { "@type": "Offer" }, { "@type": "Offer" } ]`).
+
+**Appending Lifecycle (`addOffer`, `addVariant`):**
+*   If `offers` is `null`: stores the new node as an object.
+*   If `offers` is an `object`: converts the property to a `list` containing the old object and the new node.
+*   If `offers` is a `list`: pushes the new node to the list.
+
+### 2.3 Product BC & Implicit State Machine
+`ProductJsonLdBuilder` currently mixes scalar setters (`setPrice`) into a single implicit array. To prevent generating an invalid Schema.org state, we implement a strict internal flag:
 
 *   **State Flag:** `private bool $hasExplicitOffers = false;`
-*   **Rule 1 (`setOffers` / `addOffer` called):**
-    *   Clears any existing `offers` data (wiping legacy scalar offers).
+
+**State Transitions:**
+1.  **Initial State:** `$hasExplicitOffers = false`.
+2.  **Explicit Typed Setters (`setOffers()`)**:
+    *   Wipes out any existing `offers` data (replaces implicit state completely).
     *   Sets `$hasExplicitOffers = true`.
-    *   Injects the new explicit nodes.
-*   **Rule 2 (`setPrice`, `setCurrency`, `setAvailability`, `setCondition`, `setOfferUrl` called):**
+3.  **Explicit Appender (`addOffer()`)**:
+    *   If `$hasExplicitOffers == false` (meaning `offers` contains legacy implicit data): Wipe the existing legacy implicit offer, store the new explicit offer, and set `$hasExplicitOffers = true`. (We do not merge structured objects with implicit scalar arrays).
+    *   If `$hasExplicitOffers == true`: Append safely as defined in 2.2.
+4.  **Generic Remover (`remove('offers')`)**:
+    *   Wipes the data and resets `$hasExplicitOffers = false`.
+5.  **Legacy Scalar Setters (`setPrice`, `setCurrency`, etc.)**:
     *   Checks `$hasExplicitOffers`.
-    *   If `true`, MUST throw a `JsonLdBuildException` immediately.
-    *   If `false`, proceeds with legacy `setOfferField()` behavior.
-*   **Rule 3 (AggregateOffer Composition):** An `AggregateOffer` set via `setOffers()` flags the explicit state, protecting it from accidental `setPrice()` calls.
+    *   If `true`: MUST throw `JsonLdBuildException` immediately.
+    *   If `false`: Proceed with legacy `setOfferField()` behavior.
 
 ---
 
@@ -64,7 +95,7 @@ public function setSize(string $size): static
 public function setMaterial(string $material): static
 public function setPattern(string $pattern): static
 
-// String cast rule: string becomes ['@type' => 'ProductGroup', 'productGroupID' => $productGroup]
+// Casting: String becomes ['@type' => 'ProductGroup', 'productGroupID' => $productGroup]
 public function setIsVariantOf(string|array|JsonLdBuilderInterface $productGroup): static
 public function setInProductGroupWithID(string $productGroupID): static
 
@@ -74,16 +105,17 @@ public function addOffer(array|JsonLdBuilderInterface $offer): static
 
 ### 3.2 ProductGroup Builder (`ProductGroupJsonLdBuilder.php`)
 ```php
-public function __construct() // MUST initialize ['@context' => 'https://schema.org', '@type' => 'ProductGroup']
+// MUST explicitly initialize: ['@context' => 'https://schema.org', '@type' => 'ProductGroup']
+public function __construct()
 public function setName(string $name): static
 public function setDescription(string $description): static
 
-// String cast rule: string becomes ['@type' => 'Brand', 'name' => $brand]
+// Casting: String becomes ['@type' => 'Brand', 'name' => $brand]
 public function setBrand(string|array|JsonLdBuilderInterface $brand): static
 public function setUrl(string $url): static
 public function setProductGroupID(string $id): static
 
-// Shape: list of string property names/URLs (stored exactly as provided)
+// Shape: accepts an array of strings (e.g. ['color', 'size']), stored exactly as provided.
 public function setVariesBy(array $properties): static
 public function setHasVariant(array|JsonLdBuilderInterface ...$variants): static
 public function addVariant(array|JsonLdBuilderInterface $variant): static
@@ -91,7 +123,8 @@ public function addVariant(array|JsonLdBuilderInterface $variant): static
 
 ### 3.3 AggregateOffer Builder (`AggregateOfferJsonLdBuilder.php`)
 ```php
-public function __construct() // MUST initialize ['@context' => 'https://schema.org', '@type' => 'AggregateOffer']
+// MUST explicitly initialize: ['@context' => 'https://schema.org', '@type' => 'AggregateOffer']
+public function __construct()
 public function setLowPrice(int|float|string $price): static
 public function setHighPrice(int|float|string $price): static
 public function setPriceCurrency(string $currency): static
@@ -105,7 +138,6 @@ public function setAvailability(string $availability): static
 ```php
 public function setSeller(string|array|JsonLdBuilderInterface $seller): static
 ```
-*Note on Typed Setters: Allowing `JsonLdBuilderInterface` is a structural composition decision. Semantic correctness (e.g. ensuring it is an `Organization`) is intentionally deferred to Phase 13P runtime validation.*
 
 ---
 
@@ -141,7 +173,7 @@ public function setSeller(string|array|JsonLdBuilderInterface $seller): static
 ```
 
 ### Scenario 3: ProductGroup containing Product Variants
-*(Note: Using `https://schema.org/*` properties in `variesBy` is a Google-oriented representation required for Rich Result eligibility, though base Schema.org permits string literals.)*
+*Note: Using `https://schema.org/*` property URLs in `variesBy` is a Google-oriented representation required for Rich Result technical processing, though base Schema.org permits string literals. This representation does not guarantee Rich Results on its own, as eligibility depends on broader site factors.*
 ```json
 {
   "@context": "https://schema.org",
@@ -157,12 +189,6 @@ public function setSeller(string|array|JsonLdBuilderInterface $seller): static
       "@type": "Product",
       "sku": "TS-RED-L",
       "color": "Red",
-      "size": "L"
-    },
-    {
-      "@type": "Product",
-      "sku": "TS-BLU-L",
-      "color": "Blue",
       "size": "L"
     }
   ]
@@ -185,21 +211,50 @@ public function setSeller(string|array|JsonLdBuilderInterface $seller): static
 
 ---
 
-## 5. Execution Plan & Deterministic Test Matrix
+## 5. Execution Plan & Test Matrix
 
-All test additions must be contained within `tests/` matching their phase files (e.g., `tests/Phase13OProductGroupJsonLdBuilderTest.php`).
+### 5.1 Technical Implementation Mapping
+To ensure all PRs are independently stable and verifiable without introducing broken APIs, the foundation (`resolveNode`) MUST be built first. We technically map the roadmap requirements as follows:
 
-**Test Matrix Requirements:**
-*   **Composition Types:** Validate single builder, single associative array, flat numeric list argument, and variadic stack of builders.
-*   **Appending:** Verify `addOffer` transitions safely from `null` -> `object` -> `list`.
-*   **Backward Compatibility:**
-    *   Verify `setPrice(10)` -> `setOffers(Offer)` correctly outputs ONLY the typed Offer.
-    *   Verify `setOffers(Offer)` -> `setPrice(10)` strictly throws `JsonLdBuildException`.
-*   **Context Stripping:** Assert that injecting `Product` into `ProductGroup` results in exactly one root `@context`, even if raw nested arrays explicitly declare one.
+1.  **Work Unit 1 (Fulfills Roadmap 13O-4 / Typed Composition Foundation):**
+    *   Update `JsonLdBuilderTrait` with `resolveNode()`.
+    *   Update `OfferJsonLdBuilder` to accept `JsonLdBuilderInterface` in `setSeller`.
+    *   Test: `Phase13OCompositionTest.php`.
+2.  **Work Unit 2 (Fulfills Roadmap 13O-1 / Product Completeness):**
+    *   Add GTIN/MPN/variant descriptors to `ProductJsonLdBuilder`.
+    *   Implement `setOffers` / `addOffer` and the `$hasExplicitOffers` state logic.
+    *   Test: Append to `Phase13BProductJsonLdBuilderTest.php`.
+3.  **Work Unit 3 (Fulfills Roadmap 13O-2 / ProductGroup):**
+    *   Create `ProductGroupJsonLdBuilder`.
+    *   Implement `isVariantOf` in Product.
+    *   Test: `Phase13OProductGroupJsonLdBuilderTest.php`.
+4.  **Work Unit 4 (Fulfills Roadmap 13O-3 / AggregateOffer):**
+    *   Create `AggregateOfferJsonLdBuilder`.
+    *   Test: `Phase13OAggregateOfferJsonLdBuilderTest.php`.
+5.  **Work Unit 5 (Fulfills Roadmap 13O-5 / Documentation):**
+    *   Sync `SEO_LIBRARY_REFERENCE.md`.
+    *   Add `PHASE_13O_PRODUCT_STRUCTURED_DATA_VERIFICATION_REPORT.md`.
 
-**Execution Order:**
-1.  **Phase 13O-1: Product Builder Completeness** (GTIN/MPN, BC state logic, `setOffers`).
-2.  **Phase 13O-2: ProductGroup / Variants** (Builder creation, `setHasVariant`).
-3.  **Phase 13O-3: AggregateOffer** (Builder creation, composition rules).
-4.  **Phase 13O-4: Typed Composition Implementation** (`resolveNode` logic in Trait).
-5.  **Phase 13O-5: Tests / Examples / Docs** (Verification reports and Reference MD).
+### 5.2 Deterministic Test Matrix
+All edge cases below MUST be verified via PHP tests:
+
+*   **Flattening:**
+    *   `setOffers($offerBuilder)` -> single object.
+    *   `setOffers(['@type' => 'Offer'])` -> single object.
+    *   `setOffers([$offer1, $offer2])` -> numeric list.
+    *   `setOffers(['@type' => 'Offer'], ['@type' => 'Offer'])` -> numeric list.
+*   **Appending Lifecycle (`addOffer`, `addVariant`):**
+    *   Null -> `addOffer($offer1)` -> single object.
+    *   Object -> `addOffer($offer2)` -> numeric list (len: 2).
+    *   List -> `addOffer($offer3)` -> numeric list (len: 3).
+*   **Product State BC:**
+    *   `setPrice(10)` -> `setOffers($offer)` -> outputs explicit `$offer` only.
+    *   `setPrice(10)` -> `addOffer($offer)` -> outputs explicit `$offer` only.
+    *   `setOffers($offer)` -> `setPrice(10)` -> THROWS `JsonLdBuildException`.
+    *   `addOffer($offer)` -> `setPrice(10)` -> THROWS `JsonLdBuildException`.
+    *   `setOffers($offer)` -> `remove('offers')` -> `setPrice(10)` -> succeeds.
+*   **Context Stripping & Preservation:**
+    *   Injecting `Product` builder into `ProductGroup` builder strips the nested `@context`.
+    *   Injecting a RAW user array `['@context' => 'foo', '@type' => 'Offer']` preserves the nested `@context`.
+    *   The root builder always preserves its initialized `@context`.
+*   **Regression:** Existing unmodified tests utilizing raw array injections must pass without output alteration.
