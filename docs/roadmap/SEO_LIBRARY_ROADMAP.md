@@ -89,7 +89,7 @@ Following `MODULE_BUILDING_STANDARD.md`:
 ## 5. Proposed Public Services
 
 - **`MetaGeneratorService`**: Orchestrates the assembly of `<title>`, `<meta>`, canonical, and hreflang tags per the current language and provided entity data. Merges host data with any database SEO overrides.
-- **`SchemaGeneratorService`**: Outputs Schema.org-oriented JSON-LD structures for products, organizations, and breadcrumbs, preventing empty properties or invalid nested schemas (like `OutOfStock` translation).
+- **`SchemaGeneratorService`**: Accepts `JsonSerializable` inputs and outputs Schema.org-oriented JSON-LD structured DTOs. It rejects non-array or empty results, and `generateGraph()` rejects empty schema lists, but it does not perform deep semantic validation, check for empty individual properties, or guarantee Google Rich Results eligibility.
 - **`SitemapGeneratorService`**: Orchestrates valid XML output (index and language-specific sitemaps), fetching URL node arrays from the host.
 - **`RedirectManagerService`**: Checks a requested slug against `maa_seo_redirects` to see if a 301/410 response is required.
 - **`SlugHistoryService`**: Called by the host when an entity's slug changes to record the old slug and establish an automatic 301 redirect.
