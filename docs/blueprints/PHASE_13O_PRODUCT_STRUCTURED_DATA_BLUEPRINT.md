@@ -50,8 +50,8 @@ return $node;
 The behavior for variadic collection setters (`array|JsonLdBuilderInterface ...$nodes`) MUST follow a deterministic state machine:
 
 **Argument Flattening & Empty Checks:**
-*   If exactly zero arguments are passed (e.g. `setOffers()`), it MUST NOT alter the schema. It returns early.
-*   If exactly one argument is passed and it is an empty array `[]`, it MUST NOT alter the schema. It returns early.
+*   If exactly zero arguments are passed (e.g. `setOffers()`), it MUST NOT alter the schema AND MUST NOT alter the `$hasExplicitOffers` state flag. It returns early.
+*   If exactly one argument is passed and it is an empty array `[]`, it MUST NOT alter the schema AND MUST NOT alter the `$hasExplicitOffers` state flag. It returns early.
 *   If a single argument is passed and that array is a numeric list (e.g. `setOffers([$offer1, $offer2])`), the list MUST NOT be nested as `[[...]]`. It MUST be flattened to process the items individually.
 *   If a single argument is passed and it is an associative array or a single builder, it is treated as a single node.
 
@@ -65,7 +65,7 @@ The behavior for variadic collection setters (`array|JsonLdBuilderInterface ...$
 *   If `offers` is a `list`: pushes the new node to the list.
 
 ### 2.3 Product BC & Implicit State Machine
-`ProductJsonLdBuilder` currently mixes scalar setters (`setPrice`) into a single implicit array. To prevent generating an invalid Schema.org state, we implement a strict internal flag.
+`ProductJsonLdBuilder` currently mixes scalar setters (`setPrice`) into a single implicit array using `setOfferField()`. To prevent generating an invalid Schema.org state, we implement a strict internal flag, separating legacy writes from explicit overrides.
 
 *   **State Flag:** `private bool $hasExplicitOffers = false;`
 
@@ -85,10 +85,11 @@ The behavior for variadic collection setters (`array|JsonLdBuilderInterface ...$
     *   `ProductJsonLdBuilder` MUST override `set(string $key, mixed $value): static`.
     *   If `$key === 'offers'`, it calls `parent::set($key, $value)` AND sets `$hasExplicitOffers = true` (treating generic manual overrides as explicit state, permanently locking out legacy scalar setters).
     *   If `$key !== 'offers'`, it calls `parent::set($key, $value)`.
-6.  **Legacy Scalar Setters (`setPrice`, `setCurrency`, etc.)**:
+6.  **Legacy Internal Writing (`setOfferField()`)**:
     *   Checks `$hasExplicitOffers`.
     *   If `true`: MUST throw `JsonLdBuildException` immediately.
-    *   If `false`: Proceed with legacy `setOfferField()` behavior.
+    *   If `false`: Builds/updates the legacy Offer array.
+    *   **Crucial Implementation Rule:** When saving the array, it MUST bypass the explicit state override by calling `parent::set('offers', $offer)` instead of `$this->set('offers', $offer)`. This guarantees that legacy chaining (`setCurrency()->setPrice()`) does not trigger an exception.
 
 ---
 
@@ -243,6 +244,7 @@ To ensure all PRs are independently stable and verifiable without introducing br
 2.  **Work Unit 2 (Fulfills Roadmap 13O-1 / Product Completeness):**
     *   Add GTIN/MPN/variant descriptors to `ProductJsonLdBuilder`.
     *   Implement `setOffers` / `addOffer` and the generic `set()`/`remove()` explicit state flag overrides.
+    *   Implement internal `parent::set()` bypass inside `setOfferField()`.
     *   Test: Append to `Phase13BProductJsonLdBuilderTest.php`.
 3.  **Work Unit 3 (Fulfills Roadmap 13O-2 / ProductGroup):**
     *   Create `ProductGroupJsonLdBuilder`.
@@ -274,17 +276,18 @@ All edge cases below MUST be verified via PHP tests:
 12. `addVariant`: null -> object.
 13. `addVariant`: object -> list (len: 2).
 14. `addVariant`: list -> list appended (len: 3).
-15. `setPrice(10)` -> `setOffers($offer)` -> outputs explicit `$offer` only.
-16. `setPrice(10)` -> `addOffer($offer)` -> outputs explicit `$offer` only.
-17. `setOffers($offer)` -> `setPrice(10)` -> THROWS `JsonLdBuildException`.
-18. `addOffer($offer)` -> `setPrice(10)` -> THROWS `JsonLdBuildException`.
-19. `setOffers($offer)` -> `remove('offers')` -> `setPrice(10)` -> succeeds.
+15. **Full Legacy Chain Regression:** `setCurrency()->setPrice()->setAvailability()->setCondition()->setOfferUrl()` -> outputs implicit legacy offer array correctly without throwing exceptions.
+16. `setCurrency()->setPrice()` -> `setOffers($offer)` -> explicit `$offer` entirely replaces legacy data.
+17. `setCurrency()->setPrice()` -> `addOffer($offer)` -> explicit `$offer` entirely replaces legacy data.
+18. `setOffers($offer)` -> `setPrice(10)` -> THROWS `JsonLdBuildException`.
+19. `addOffer($offer)` -> `setPrice(10)` -> THROWS `JsonLdBuildException`.
 20. `set('offers', ['@type' => 'Offer'])` -> `setPrice(10)` -> THROWS `JsonLdBuildException`.
-21. Product + AggregateOffer -> AggregateOffer outputs without interference.
-22. AggregateOffer + nested Offer list -> AggregateOffer properties retain stability.
-23. Nested builder `@context` stripping -> Builder contexts removed correctly.
-24. Raw array nested `@context` preservation -> Explicit nested raw contexts are retained.
-25. Root `@context` preservation -> Main builder context is retained.
-26. Existing Product output regression -> All scalar tests pass unchanged.
-27. Existing Offer `setSeller` regression -> string/array tests pass unchanged.
-28. Exact JSON-LD output tests matching the 4 scenarios in Section 4.
+21. `setOffers($offer)` -> `remove('offers')` -> `setPrice(10)` -> succeeds (state reset properly).
+22. Product + AggregateOffer -> AggregateOffer outputs without interference.
+23. AggregateOffer + nested Offer list -> AggregateOffer properties retain stability.
+24. Nested builder `@context` stripping -> Builder contexts removed correctly.
+25. Raw array nested `@context` preservation -> Explicit nested raw contexts are retained.
+26. Root `@context` preservation -> Main builder context is retained.
+27. Existing Product output regression -> All scalar tests pass unchanged.
+28. Existing Offer `setSeller` regression -> string/array tests pass unchanged.
+29. Exact JSON-LD output tests matching the 4 scenarios in Section 4.
