@@ -49,12 +49,12 @@ final class OfferJsonLdBuilder extends AbstractJsonLdBuilder
         return $this->set('itemCondition', $itemCondition);
     }
 
-    /** @param string|array<string, mixed> $seller */
-    public function setSeller(string|array $seller): static
+    /** @param string|array<string, mixed>|JsonLdBuilderInterface $seller */
+    public function setSeller(string|array|JsonLdBuilderInterface $seller): static
     {
         if (is_string($seller)) {
             $seller = ['@type' => 'Organization', 'name' => $seller];
-        } elseif (!isset($seller['@type'])) {
+        } elseif (is_array($seller) && !isset($seller['@type'])) {
             $seller['@type'] = 'Organization';
         }
 
