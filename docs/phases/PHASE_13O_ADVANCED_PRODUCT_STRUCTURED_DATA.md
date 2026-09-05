@@ -14,7 +14,7 @@ Prior to Phase 13O, the `ProductJsonLdBuilder` supported single products with im
 ### Typed Nested Composition Foundation
 A core enabler of Phase 13O was the enhancement of `JsonLdBuilderTrait`. It now resolves nested nodes at render time via `toArray()` and `toJson()`.
 
-- **Nested `@context` behavior:** When a `JsonLdBuilderInterface` is injected into another builder, the root builder retains its own `@context`. However, the nested builder's `@context` is safely stripped during resolution to prevent invalid, redundant context tags in the final output.
+- **Nested `@context` behavior:** When a `JsonLdBuilderInterface` is injected into another builder, the root builder retains its own `@context`. However, the nested typed-builder root `@context` values are intentionally stripped during composition to avoid redundant nested context declarations in the library's composed builder output. (Raw-array explicit `@context` values are preserved).
 - **Raw Arrays vs. Builders:** Typed composition applies non-destructive normalization. Typed builder nodes (and arrays of them) are recursively resolved. If an arbitrary raw array is provided, its keys (including any raw `@context`) are preserved. However, resolution is recursive: if the raw array contains nested `JsonLdBuilderInterface` nodes, those nested builders will still be resolved and have their inner `@context` stripped according to the `resolveNode` contract.
 
 ### Product & Offer Composition
