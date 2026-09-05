@@ -192,7 +192,7 @@ Historically, you could set price and currency directly on the `ProductJsonLdBui
 
 However, if you need typed `Offer` objects, multiple offers, or an `AggregateOffer`, use the **Explicit Offers API**: `setOffers()` and `addOffer()`.
 
-*Warning: Once you use `setOffers()` or `addOffer()`, the builder enters explicit state. Calling legacy implicit methods (like `setPrice()`) afterward will throw a `JsonLdBuildException`.*
+*Warning: Passing a non-empty value to `setOffers()` or using `addOffer()` places the builder into explicit state. Once in explicit state, calling legacy implicit offer methods (like `setPrice()`) will immediately throw a `JsonLdBuildException`. (Note: `setOffers()` with no arguments or an empty array `[]` is a no-op and does not trigger explicit state).*
 
 ### Product with Explicit Offer
 
@@ -309,7 +309,7 @@ echo $builder->render();
 
 ---
 
-## 7. Sitemap XML String Example
+## 8. Sitemap XML String Example
 
 To easily render sitemap entries to XML strings without modifying core services, the library provides the `SitemapXmlStringRenderer`. It supports rendering basic URLs, alternate hreflang tags for multi-language indexing, Google image sitemap definitions, Google video sitemap definitions, and Google news sitemap definitions.
 
@@ -440,7 +440,7 @@ $xmlOutput = $renderer->renderUrlSet([$urlDto, $arrayEntry]);
 
 ---
 
-## 8. Sitemap Index XML String Example
+## 9. Sitemap Index XML String Example
 
 To render a sitemap index directly to an XML string, use the `SitemapIndexXmlStringRenderer`.
 
@@ -467,7 +467,7 @@ echo $renderer->renderIndex([$dto, $arrayEntry]);
 
 ---
 
-## 9. Robots.txt String Output Example
+## 10. Robots.txt String Output Example
 
 To quickly render a `robots.txt` string dynamically, you can use the `RobotsTxtRenderer`.
 
@@ -510,7 +510,7 @@ echo $renderer->render($txt);
 
 ---
 
-## 10. SEO Metadata Validation Example
+## 11. SEO Metadata Validation Example
 
 The `SeoMetaValidator` allows you to audit generated SEO metadata (arrays or objects) to verify that essential tags and formats are correctly configured. It does not output HTML or throw exceptions for bad SEO data; instead, it returns an aggregated `SeoValidationResultDTO`. This is extremely useful for pre-flight checks, automated tests, or admin dashboard warnings.
 
@@ -689,7 +689,7 @@ $customScoreDto = SeoValidationScoreCalculator::score($result, $scoreOptions);
 
 ---
 
-## 11. Existing SitemapGeneratorService Example
+## 12. Existing SitemapGeneratorService Example
 
 The core `SitemapGeneratorService` remains available. It is responsible for orchestrating sitemap generation logic and returning structured DTOs (`SitemapGenerationResultDTO`), which represents a structural abstraction over the XML data.
 
@@ -716,7 +716,7 @@ $xmlContent = $result->xml;
 
 ---
 
-## 12. Recommended Host Application Usage
+## 13. Recommended Host Application Usage
 
 The Maatify SEO library is designed to integrate cleanly into any PHP framework without introducing hard dependencies on the framework itself.
 
@@ -785,7 +785,7 @@ Always pass the pre-rendered HTML string (or the `SeoHeadHtmlDTO`) to your templ
 
 ---
 
-## 13. Common Mistakes
+## 14. Common Mistakes
 
 When implementing the Maatify SEO library, ensure you adhere strictly to the following guidelines:
 

@@ -10,7 +10,7 @@ These builders internally manage associative arrays, applying specific logic for
 **Key Architectural Principles:**
 1.  **Immutability of Legacy Contracts:** The library strongly preserves backward compatibility. Legacy scalar setters on builders are maintained.
 2.  **Output-Time Resolution:** Builders can be composed (nested inside each other). This composition is resolved *only* at the final output stage (`toArray()` or `toJson()`), ensuring the builder state remains completely mutable until rendering.
-3.  **Non-Destructive Normalization:** When typed builders are resolved, the root builder retains its `@context` tag, while nested typed builders have their `@context` tags automatically stripped to prevent redundant output. However, if a developer passes a raw associative array instead of a builder, the library assumes the developer knows best; it will *not* modify raw arrays (it preserves explicit `@context` if provided).
+3.  **Non-Destructive Normalization:** When typed builders are resolved, the root builder retains its `@context` tag, while nested typed builders have their `@context` tags automatically stripped to prevent redundant output. However, if a developer passes a raw associative array instead of a builder, the library will preserve the raw array keys (including any explicit `@context` provided at that level). However, resolution is recursive: if that raw array itself contains nested `JsonLdBuilderInterface` objects, those internal builder objects will still be resolved and have their `@context` tags removed according to the `resolveNode()` contract.
 
 ## 2. Product Structured Data
 
@@ -24,9 +24,12 @@ To support complex architectures (like `AggregateOffer` or multi-sellers), Phase
 -   **`addOffer(array|JsonLdBuilderInterface $offer)`**
 
 **The State Contract:**
-- If you call `setOffers()` or `addOffer()`, the builder enters "explicit state". It completely replaces any legacy implicit offer.
-- **Strict Boundary:** Once in explicit state, calling a legacy scalar method like `setPrice()` will immediately throw a `JsonLdBuildException`. You cannot mix states.
-- **Reversal:** Calling `remove('offers')` deletes the explicit data and resets the state, allowing you to use legacy methods again if desired.
+-   `setOffers()` with no arguments is a no-op and does NOT trigger explicit state.
+-   `setOffers([])` (an empty array) is a no-op and does NOT trigger explicit state.
+-   A non-empty explicit input to `setOffers(...)` activates explicit state and replaces existing legacy offer data.
+-   `addOffer(...)` always activates explicit state.
+-   **Strict Boundary:** Once explicit state is activated, calling a legacy scalar offer helper like `setPrice()` will immediately throw a `JsonLdBuildException`. You cannot mix states.
+-   **Reversal:** Calling `remove('offers')` deletes the explicit data and resets explicit state back to `false`.
 
 ## 3. Product Variants and ProductGroup
 

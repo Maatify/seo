@@ -15,7 +15,7 @@ Prior to Phase 13O, the `ProductJsonLdBuilder` supported single products with im
 A core enabler of Phase 13O was the enhancement of `JsonLdBuilderTrait`. It now resolves nested nodes at render time via `toArray()` and `toJson()`.
 
 - **Nested `@context` behavior:** When a `JsonLdBuilderInterface` is injected into another builder, the root builder retains its own `@context`. However, the nested builder's `@context` is safely stripped during resolution to prevent invalid, redundant context tags in the final output.
-- **Raw Arrays vs. Builders:** Typed composition applies non-destructive normalization. Typed builder nodes (and arrays of them) are recursively resolved, but arbitrary raw arrays provided by the user are preserved exactly as-is. Raw arrays do not have their internal `@context` stripped automatically, leaving full control to the caller when escaping the builder types.
+- **Raw Arrays vs. Builders:** Typed composition applies non-destructive normalization. Typed builder nodes (and arrays of them) are recursively resolved. If an arbitrary raw array is provided, its keys (including any raw `@context`) are preserved. However, resolution is recursive: if the raw array contains nested `JsonLdBuilderInterface` nodes, those nested builders will still be resolved and have their inner `@context` stripped according to the `resolveNode` contract.
 
 ### Product & Offer Composition
 
@@ -27,9 +27,10 @@ The core paradigm shift in `ProductJsonLdBuilder` is the introduction of **Expli
 - **`setOffers(array|JsonLdBuilderInterface ...$offers)`:** Allows injecting typed offers, a mix of typed builders and raw arrays, or flattening a numeric list.
 - **`addOffer(array|JsonLdBuilderInterface $offer)`:** Appends a single offer to the list.
 - **Lifecycle:**
-  - Once `setOffers()` or `addOffer()` is called, the builder enters "explicit state" (`$hasExplicitOffers = true`).
+  - `setOffers()` with no arguments or an empty array `[]` is a no-op and does NOT trigger explicit state.
+  - A non-empty explicit input to `setOffers(...)` or using `addOffer(...)` places the builder into "explicit state" (`$hasExplicitOffers = true`).
   - Single nodes are stored as objects; multiple nodes become numeric lists. Lists are flattened.
-  - Adding an explicit offer replaces any previously generated legacy implicit offer.
+  - Activating explicit state replaces any previously generated legacy implicit offer data.
 
 #### Backward Compatibility with Legacy Product Helpers
 Legacy scalar helpers (e.g., `setPrice()`, `setCurrency()`, `setAvailability()`) are fully maintained for backward compatibility.
@@ -79,6 +80,6 @@ For developers upgrading to Phase 13O:
 
 - **Blueprint:** [PHASE_13O_PRODUCT_STRUCTURED_DATA_BLUEPRINT.md](../blueprints/PHASE_13O_PRODUCT_STRUCTURED_DATA_BLUEPRINT.md)
 - **Verification Report:** [PHASE_13O_PRODUCT_STRUCTURED_DATA_VERIFICATION_REPORT.md](../verification/PHASE_13O_PRODUCT_STRUCTURED_DATA_VERIFICATION_REPORT.md)
-- **API Reference:** [SEO_LIBRARY_REFERENCE.md](../../SEO_LIBRARY_REFERENCE.md)
+- **API Reference:** [SEO_LIBRARY_REFERENCE.md](../SEO_LIBRARY_REFERENCE.md)
 - **Usage Guide:** [USAGE_GUIDE.md](../guides/USAGE_GUIDE.md)
 - **Examples:** `examples/phase13o-product-advanced.php` (Demonstrating composed scenarios).
