@@ -182,7 +182,99 @@ echo $renderer->render($schemaDto);
 
 ---
 
-## 6. Optional Spatie Schema Adapter Example
+## 6. Advanced Product Structured Data
+
+Phase 13O introduced advanced, typed nested composition for e-commerce schemas.
+
+### Legacy Implicit Offers vs. Explicit Offers API
+
+Historically, you could set price and currency directly on the `ProductJsonLdBuilder` (e.g., `setPrice('10.00')`), which implicitly created an underlying `Offer` array. This is still perfectly valid.
+
+However, if you need typed `Offer` objects, multiple offers, or an `AggregateOffer`, use the **Explicit Offers API**: `setOffers()` and `addOffer()`.
+
+*Warning: Once you use `setOffers()` or `addOffer()`, the builder enters explicit state. Calling legacy implicit methods (like `setPrice()`) afterward will throw a `JsonLdBuildException`.*
+
+### Product with Explicit Offer
+
+Using `setOffers()` allows you to inject fully typed builders:
+
+```php
+use Maatify\Seo\Web\JsonLd\Builder\ProductJsonLdBuilder;
+use Maatify\Seo\Web\JsonLd\Builder\OfferJsonLdBuilder;
+use Maatify\Seo\Web\JsonLd\Builder\OrganizationJsonLdBuilder;
+
+$seller = (new OrganizationJsonLdBuilder())->setName('My Store');
+$offer = (new OfferJsonLdBuilder())
+    ->setPrice('19.99')
+    ->setPriceCurrency('USD')
+    ->setSeller($seller);
+
+$product = (new ProductJsonLdBuilder())
+    ->setName('Widget')
+    ->setOffers($offer);
+```
+
+### Product with AggregateOffer
+
+To indicate a price range, use the `AggregateOfferJsonLdBuilder`:
+
+```php
+use Maatify\Seo\Web\JsonLd\Builder\ProductJsonLdBuilder;
+use Maatify\Seo\Web\JsonLd\Builder\AggregateOfferJsonLdBuilder;
+
+$aggregateOffer = (new AggregateOfferJsonLdBuilder())
+    ->setLowPrice('10.00')
+    ->setHighPrice('50.00')
+    ->setPriceCurrency('USD')
+    ->setOfferCount(5);
+
+$product = (new ProductJsonLdBuilder())
+    ->setName('Widget Collection')
+    ->setOffers($aggregateOffer);
+```
+
+### Multiple Offers
+
+You can use `addOffer()` to build a list, or pass variadic arguments/arrays to `setOffers()`:
+
+```php
+$product->setOffers($offer1, $offer2);
+// or
+$product->addOffer($offer1)->addOffer($offer2);
+// Raw arrays are also accepted and preserved:
+$product->addOffer(['@type' => 'Offer', 'price' => '5.00', 'priceCurrency' => 'USD']);
+```
+
+### ProductGroup and Product Variants
+
+To represent a parent product containing multiple variants, use `ProductGroupJsonLdBuilder` and link `ProductJsonLdBuilder` variants.
+
+```php
+use Maatify\Seo\Web\JsonLd\Builder\ProductGroupJsonLdBuilder;
+use Maatify\Seo\Web\JsonLd\Builder\ProductJsonLdBuilder;
+
+$redVariant = (new ProductJsonLdBuilder())
+    ->setSku('TS-RED-L')
+    ->setColor('Red')
+    ->setSize('L');
+
+$blueVariant = (new ProductJsonLdBuilder())
+    ->setSku('TS-BLU-M')
+    ->setColor('Blue')
+    ->setSize('M');
+
+$productGroup = (new ProductGroupJsonLdBuilder())
+    ->setName('T-Shirt Line')
+    ->setProductGroupID('TSHIRT-BASE')
+    ->setVariesBy(['https://schema.org/color', 'https://schema.org/size'])
+    ->setHasVariant($redVariant, $blueVariant);
+```
+
+*Note: The builders ensure that nested `@context` tags are automatically stripped from typed builders during output, while the root builder retains its context. Raw array contexts are not touched. The library builds valid JSON-LD structures but does not enforce semantic validation or guarantee Google Rich Results eligibility.*
+
+---
+
+## 7. Optional Spatie Schema Adapter Example
 
 If your project utilizes the popular `spatie/schema-org` package, the SEO library provides an optional adapter (`SpatieSchemaAdapter`) to convert Spatie schema objects into native `JsonLdSchemaDTO` objects.
 
