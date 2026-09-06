@@ -14,7 +14,7 @@ The Blueprint was prepared from the latest verified `main` baseline:
 
 Phase lifecycle:
 
-`Blueprint → Draft Integration PR → Work Units → Verification → Documentation Sweep → Final Review vs latest main → Ready → Merge`
+`Draft Integration PR → Blueprint → Work Units → Verification → Documentation Sweep → Final Review vs latest main → Ready → Merge`
 
 Verification and Documentation Sweep are gates after the last implementation Work
 Unit. They are not Work Units.
@@ -132,20 +132,22 @@ service.
 
 ### Optional external verification contract
 
-1. Google Rich Results, Search Console, Merchant, and similar external checks are
-   optional integration/tooling only. They are not part of runtime validation and
-   are not required for ordinary pull requests, package installation, or library
-   execution.
-2. Optional verification must be explicitly opt-in, independently runnable, and
-   safely skipped when its external tool, credentials, or configuration is absent.
-   Missing optional configuration must not fail the core CI job.
-3. Optional results must be reported separately from the library's
-   `SeoValidationResultDTO` and must not be described as Schema.org semantic
-   validation, Google eligibility, or Merchant eligibility guarantees.
-4. The integration boundary must accept the repository's generated/serialized
-   structured-data input and produce a documented pass, fail, skipped, or
-   unavailable outcome without introducing a mandatory provider SDK or framework
-   dependency.
+1. Phase 21 does not select, add, vendor, or invoke a Google, Rich Results,
+   Merchant, Search Console, or other external provider/API.
+2. WU3 is limited to documenting an optional external-verification boundary and
+   explicitly deferring any executable integration. WU3 must not create `tools/`,
+   add a provider SDK, make network calls, or add a workflow that invokes an
+   external service.
+3. The deferred boundary is not a missing core Phase 21 capability. It records the
+   separation between the library's validation and any future provider-specific
+   verification.
+4. Any actual Google/Rich Results/Merchant implementation requires a separate
+   maintainer decision and follow-up scope after Phase 21. It must not be inferred
+   from this Blueprint or implemented under WU3.
+5. Future external results, if separately approved, must remain outside the
+   library's `SeoValidationResultDTO`, scores, summaries, batches, and exporters,
+   and must not be described as Schema.org semantic validation or eligibility
+   guarantees.
 
 ### Release and package readiness contract
 
@@ -169,8 +171,9 @@ Phase 21 includes:
   validation pipeline and Phase 13P contracts.
 - Deterministic, CI-friendly structured-data pass/fail output using existing
   DTO/report/exporter contracts where applicable.
-- An optional, isolated integration/tooling path for Google Rich Results and
-  Merchant verification, with no mandatory external dependency.
+- Documentation of a deferred, optional external-verification boundary for Google
+  Rich Results and Merchant verification; no provider integration is implemented
+  in Phase 21.
 - Release, Git tag, and package-usage readiness checklists.
 - The tests and documentation necessary to prove these additions without changing
   runtime behavior.
@@ -275,41 +278,43 @@ validation API or changing runtime semantics.
 - The gate does not add Google/Merchant findings or change DTO, score, report,
   batch, exporter, alias, builder, or renderer contracts.
 
-### WU3 — Optional external verification/tooling boundary
+### WU3 — Deferred external-verification boundary documentation
 
 **Scope**
 
-Provide an isolated, opt-in path for external Rich Results/Merchant verification
-tooling. The core CI job and runtime remain independent of it.
+Document the boundary between core Phase 21 validation and any future optional
+Google/Rich Results/Merchant verification. This Work Unit is documentation-only.
+It explicitly defers provider selection and executable integration to a separate
+future decision.
 
 **Expected files**
 
-- A separately named optional workflow or tooling entry point under `.github/` or
-  `tools/`, chosen without changing runtime namespaces.
-- The applicable integration/usage documentation path only if the invocation or
-  configuration is user-facing.
+- `docs/phases/PHASE_21_QUALITY_CI_RELEASE_READINESS.md`.
+- Applicable user-facing documentation only when the Documentation Impact Review
+  proves that the deferred boundary changes integration guidance.
+- No `.github/**` workflow, `tools/**` entry point, provider SDK, Composer
+  dependency, runtime namespace, or network implementation.
 
 **Required tests**
 
-- Core CI passes when optional configuration and credentials are absent.
-- Explicit opt-in skip/unavailable behavior is deterministic.
-- Configured tool success and failure remain separate from
-  `SeoValidationResultDTO` and core Phase 13P scoring/reporting.
-- No external network call is required for ordinary local tests or the core CI
-  matrix.
+- Documentation review confirms that no provider, SDK, network call, or external
+  service workflow was added.
+- `git diff --check` and the repository's documentation review pass.
+- No external network call or provider credential is used by this Work Unit.
 
 **Dependencies**
 
-- Depends on WU2's serialized structured-data input and CI result contract.
-- External provider credentials/tooling are supplied by the invoking environment;
-  no provider SDK is added as a mandatory Composer dependency.
+- Depends only on the WU2 CI output contract as context for documenting the
+  boundary; it has no executable dependency.
 
 **Done Criteria**
 
-- Optional verification is independently runnable and explicitly opt-in.
-- Missing optional configuration cannot break core CI.
-- Documentation clearly separates external eligibility results from library
-  structural/semantic validation and makes no unsupported eligibility claims.
+- The Phase 21 documentation explicitly records external verification as deferred
+  optional integration, not as a core Phase 21 gap.
+- The documentation states that Phase 21 chooses no provider and adds no SDK,
+  `tools/` code, network implementation, or external-service workflow.
+- The documentation requires a separate maintainer decision before any actual
+  Google/Rich Results/Merchant implementation.
 
 ### WU4 — Release, tag, and package readiness checklists
 
@@ -320,8 +325,7 @@ tagging, or changing the package's versioning policy.
 
 **Expected files**
 
-- A Phase 21 release-readiness checklist under `docs/` (preferred location:
-  `docs/release/PHASE_21_RELEASE_READINESS_CHECKLIST.md`).
+- `docs/release/PHASE_21_RELEASE_READINESS_CHECKLIST.md`.
 - Applicable README, guide, reference, phase, verification, or roadmap files only
   when the Documentation Impact Review proves an update is needed.
 
@@ -361,7 +365,7 @@ declared Phase 21 gates:
 | Structured-data valid cases | Product, Offer, AggregateOffer, ProductGroup, graph, recursion, aliases | Pass with no unexpected issues |
 | Structured-data invalid cases | Existing structural/type/property/relationship failures | Non-zero gate with deterministic code and field path |
 | Output compatibility | Existing result/report/batch/exporter shapes and JSON/Markdown output | No public contract or scoring regression |
-| Optional external tooling | Absent, skipped, unavailable, success, and failure states | Core CI unaffected; results remain separate |
+| Deferred external-verification boundary | Documentation-only review; no provider, SDK, network call, or external-service workflow | Deferred explicitly; core CI and runtime remain unchanged |
 | Release readiness | Package metadata, requirements, docs, examples, tags, and rollback checklist | Evidence is complete and repository-grounded |
 
 The matrix is executed through the CI matrix where applicable and is supplemented
@@ -409,8 +413,9 @@ Phase 21 may be marked Complete only when all of the following are true:
 5. Structured-data CI validation covers the existing Phase 13P boundary and emits
    deterministic CI-friendly results without adding semantic scope or eligibility
    findings.
-6. Optional external verification is isolated, opt-in, and non-blocking when not
-   configured; it introduces no mandatory runtime or Composer dependency.
+6. WU3 documents the deferred optional external-verification boundary. No provider,
+   SDK, `tools/` implementation, network call, or external-service workflow is
+   introduced by Phase 21; any actual integration requires a separate decision.
 7. Release, tag, and package-usage readiness checklists are complete and match
    repository reality; no automatic publish/tag action is performed unintentionally.
 8. The Verification Gate passes and records the actual PHP matrix, syntax,
@@ -429,5 +434,5 @@ Phase 21 may be marked Complete only when all of the following are true:
 This Blueprint does not claim that the current repository already has the Phase 21
 gates. It does not claim Google Rich Results eligibility, Merchant eligibility,
 complete Schema.org validation, automatic package release, or a mandatory external
-verification service. Those statements remain outside the Phase 21 core library
-contract unless the optional tooling contract explicitly reports an external result.
+verification service. Any future provider-specific result requires a separate
+decision and remains outside the Phase 21 core library contract.
