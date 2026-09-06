@@ -122,6 +122,58 @@ $fullHtml = $builder->render();
 $dto = $builder->renderDto();
 ```
 
+### Homepage SEO Example
+
+The following end-to-end example uses the current public builders to prepare a
+homepage's metadata, social tags, and JSON-LD. Run it from the project root after
+installing dependencies; the host application remains responsible for placing the
+rendered string in the document `<head>` and returning the HTTP response.
+
+```php
+<?php
+
+declare(strict_types=1);
+
+require getcwd() . '/vendor/autoload.php';
+
+use Maatify\Seo\Web\Builder\FluentSeoBuilder;
+use Maatify\Seo\Web\JsonLd\Builder\OrganizationJsonLdBuilder;
+use Maatify\Seo\Web\JsonLd\Builder\WebSiteJsonLdBuilder;
+
+$organizationSchema = (new OrganizationJsonLdBuilder())
+    ->setName('Maatify SEO')
+    ->setUrl('https://example.com')
+    ->toArray();
+
+$websiteSchema = (new WebSiteJsonLdBuilder())
+    ->setName('Example Homepage')
+    ->setUrl('https://example.com')
+    ->setSearchAction('https://example.com/search?q={search_term_string}')
+    ->toArray();
+
+$homepageSeo = (new FluentSeoBuilder())
+    ->title('Example Homepage')
+    ->description('Discover the latest updates from Example.')
+    ->canonical('https://example.com')
+    ->robots('index,follow')
+    ->openGraphTitle('Example Homepage')
+    ->openGraphDescription('Discover the latest updates from Example.')
+    ->openGraphType('website')
+    ->openGraphUrl('https://example.com')
+    ->openGraphImage('https://example.com/images/homepage.jpg')
+    ->twitterCard('summary_large_image')
+    ->twitterTitle('Example Homepage')
+    ->twitterDescription('Discover the latest updates from Example.')
+    ->twitterImage('https://example.com/images/homepage.jpg')
+    ->schemas([$websiteSchema, $organizationSchema]);
+
+$headHtml = $homepageSeo->render();
+
+// The host template places $headHtml inside <head>.
+// The host controller/framework sends the final HTTP response.
+echo $headHtml;
+```
+
 ---
 
 ## 5. JSON-LD Examples
@@ -548,7 +600,16 @@ The validator natively covers:
 * **Robots Conflicts:** Checks if both `index` and `noindex` (or `follow` and `nofollow`) are concurrently set.
 * **OpenGraph Missing Fields:** Validates `og:title`, `og:description`, and `og:image` are provided when an OpenGraph context is requested.
 * **Twitter Missing Fields:** Validates `card`, `title`, and `description` are provided when a Twitter context is requested.
-* **JSON-LD Warnings:** Ensures schema structures are correctly formatted as non-empty arrays.
+* **JSON-LD structural validation:** Checks JSON-LD nodes and numeric node lists,
+  including `@graph` wrappers and recursive graph nodes, while preserving
+  deterministic issue fields.
+* **JSON-LD semantic validation:** Performs the current deep checks only for
+  `Product`, `Offer`, `AggregateOffer`, and `ProductGroup`. JSON-LD can be supplied
+  through the existing `jsonLd`, `json_ld`, `schema`, or `schemas` aliases.
+
+The validator does not provide complete Schema.org coverage, Google Rich Results
+eligibility, or Merchant eligibility validation. Those concerns remain outside the
+library's current validation contract.
 
 > **Note:** The validator expects data in an array or object format, typically generated before final HTML string rendering. Invalid `$options` configuration (such as passing a string where an integer is expected) will throw a `SeoInvalidArgumentException`. Normal SEO warnings and errors *do not* throw exceptions.
 
