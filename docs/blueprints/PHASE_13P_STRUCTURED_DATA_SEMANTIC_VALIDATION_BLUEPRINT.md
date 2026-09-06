@@ -171,10 +171,17 @@ The validator accepts either:
 * one non-empty associative node; or
 * a numeric list of non-empty associative nodes.
 
-Every node that is structurally validated must have an `@type` identifying the expected
-type. A string type is supported; a type list is acceptable only when the expected type
-is present. The validator must retain the node's location in the `field` value, for
-example `jsonLd.0.offers.1.price`.
+Every node that is structurally validated must have an `@type` value that satisfies this
+closed contract:
+
+* a non-empty string after trimming; or
+* a non-empty numeric list in which every item is a non-empty string after trimming.
+
+An absent `@type` produces `json_ld_missing_type`. An empty, non-string, associative,
+or otherwise malformed `@type` produces `json_ld_invalid_type`. A structurally valid
+type string or type list does not fail, warn, or emit info merely because none of its
+types belongs to the Phase 13P deep-validation set. The validator must retain the
+node's location in the `field` value, for example `jsonLd.0.offers.1.price`.
 
 New issue codes must use a stable `json_ld_` prefix and be asserted by tests. The
 initial code taxonomy is:
@@ -188,41 +195,125 @@ initial code taxonomy is:
 If implementation discovers a genuinely distinct case that needs another code, the
 Work Unit PR must document it and add its test before merging. The existing
 `invalid_json_ld` and `invalid_json_ld_schema` codes remain unchanged for their current
-foundation behavior.
+foundation behavior. `json_ld_invalid_type` is reserved for a malformed `@type`
+contract; it must never be emitted merely because a valid type is outside the Phase
+13P catalog.
 
 The severity contract is:
 
 * structural and semantic violations are errors and therefore affect `isValid`;
 * non-failing advisory information may be info or warning;
-* out-of-scope schema types are never semantic failures merely because they are outside
-  Phase 13P; they may be reported as non-failing information if useful;
+* out-of-scope schema types are never failures, warnings, or info merely because they
+  are outside Phase 13P;
+* relationship incompatibility is evaluated against the fixed canonical relationship
+  range in Section 3.5, not against the four-type deep-validation set;
 * Google eligibility findings are not emitted by Phase 13P.
 
 Unknown or extension properties must not be rejected solely because they are not in the
-initial rule catalog. Only explicitly supported in-scope properties and relationships
-are semantically checked, preventing an accidental closed-world validator.
+fixed Phase 13P property catalog in Section 3.5. Only the properties and relationships
+listed there are semantically checked, preventing an accidental closed-world validator.
 
-### 3.5 In-scope type contracts
+### 3.5 Schema.org canonical source and fixed property catalog
 
-The semantic rule catalog is limited to these four types:
+The canonical Schema.org type pages are the source of truth for the expected types and
+ranges of the properties in this catalog:
+
+* [`Product`](https://schema.org/Product)
+* [`Offer`](https://schema.org/Offer)
+* [`AggregateOffer`](https://schema.org/AggregateOffer)
+* [`ProductGroup`](https://schema.org/ProductGroup)
+
+The following catalog is fixed before implementation. Work Units must not add local
+property ranges, narrow a canonical range because of a PHP setter signature, or select
+semantic rules from builder output. `Text`, `URL`, `Number`, `Integer`, `Date`,
+`DateTime`, and node types below refer to the canonical Schema.org expected types.
+
+| Owner type | Property | Canonical expected type / range |
+| --- | --- | --- |
+| `Product` | `name` | `Text` |
+| `Product` | `description` | `Text` or `TextObject` |
+| `Product` | `sku` | `Text` |
+| `Product` | `gtin` | `Text` or `URL` |
+| `Product` | `mpn` | `Text` |
+| `Product` | `brand` | `Brand` or `Organization` |
+| `Product` | `image` | `ImageObject` or `URL` |
+| `Product` | `category` | `CategoryCode`, `PhysicalActivityCategory`, `Text`, `Thing`, or `URL` |
+| `Product` | `url` | `URL` |
+| `Product` | `color` | `Text` |
+| `Product` | `size` | `DefinedTerm`, `QuantitativeValue`, `SizeSpecification`, or `Text` |
+| `Product` | `material` | `Product`, `Text`, or `URL` |
+| `Product` | `pattern` | `DefinedTerm` or `Text` |
+| `Product` | `offers` | `Demand` or `Offer`, including canonical subtypes of `Offer` |
+| `Product` | `aggregateRating` | `AggregateRating` |
+| `Product` | `review` | `Review` |
+| `Product` | `isVariantOf` | `ProductGroup` or `ProductModel` |
+| `Product` | `inProductGroupWithID` | `Text` |
+| `Offer` | `price` | `Number` or `Text` |
+| `Offer` | `priceCurrency` | `Text` |
+| `Offer` | `availability` | `ItemAvailability` |
+| `Offer` | `url` | `URL` |
+| `Offer` | `validFrom` | `Date` or `DateTime` |
+| `Offer` | `priceValidUntil` | `Date` |
+| `Offer` | `itemCondition` | `OfferItemCondition` |
+| `Offer` | `seller` | `Organization` or `Person` |
+| `AggregateOffer` | `lowPrice` | `Number` or `Text` |
+| `AggregateOffer` | `highPrice` | `Number` or `Text` |
+| `AggregateOffer` | `priceCurrency` | `Text` |
+| `AggregateOffer` | `offerCount` | `Integer` |
+| `AggregateOffer` | `availability` | `ItemAvailability` |
+| `AggregateOffer` | `offers` | The same canonical Schema.org `offers` range: `Demand` or `Offer`, including canonical subtypes of `Offer` |
+| `ProductGroup` | `name` | `Text` |
+| `ProductGroup` | `description` | `Text` or `TextObject` |
+| `ProductGroup` | `brand` | `Brand` or `Organization` |
+| `ProductGroup` | `url` | `URL` |
+| `ProductGroup` | `productGroupID` | `Text` |
+| `ProductGroup` | `variesBy` | `DefinedTerm` or `Text` |
+| `ProductGroup` | `hasVariant` | `Product` |
+
+JSON-LD may encode a repeated property as a numeric list of values from the same
+canonical range. A node value must carry its own valid `@type` contract before its
+relationship target is evaluated.
+
+The relationship contracts are fixed as follows:
+
+* `Product.isVariantOf` accepts `ProductGroup` or `ProductModel`.
+* `Product.offers` accepts `Demand` or `Offer`, including canonical subtypes of
+  `Offer`.
+* `AggregateOffer.offers` uses the same Schema.org `offers` range as above. A `Demand`
+  target must not be rejected merely because `Demand` is outside the Phase 13P deep
+  validation set.
+* `Offer.seller` accepts `Organization` or `Person`.
+* `ProductGroup.hasVariant` accepts `Product`.
+* `brand` uses the canonical `Brand` or `Organization` range for both `Product` and
+  `ProductGroup`. It must not be narrowed because the current builders may emit a
+  string-derived Brand node, a raw array, or a typed builder node.
+
+Deep semantic validation is implemented only for `Product`, `Offer`, `AggregateOffer`,
+and `ProductGroup`. A valid relationship target outside those four types is allowed
+when it is permitted by the canonical relationship range, but the target's internal
+properties are not deeply validated. Examples include `ProductModel` for
+`Product.isVariantOf`, `Demand` for `offers`, `Organization` or `Person` for
+`Offer.seller`, and canonical `Offer` subtypes that are not one of the four deep
+validation types.
+
+### 3.6 In-scope type contracts
+
+The four deep-validation contracts are:
 
 | Type | In-scope checks | In-scope relationships |
 | --- | --- | --- |
-| `Product` | `@type`, supported scalar/property value shapes, supported collection shapes, and product-group identifiers | `offers` accepts `Offer` or `AggregateOffer` nodes or lists; `isVariantOf` accepts a `ProductGroup` node; `inProductGroupWithID` is a scalar identifier |
-| `Offer` | `@type`, price/currency/availability/URL/date/condition value shapes, and seller node shape | `seller` may reference a supported Organization/Person-shaped node without deep validation of that out-of-scope type |
-| `AggregateOffer` | `@type`, low/high price, currency, offer count, availability, and collection value shapes | `offers` accepts `Offer` nodes or lists |
+| `Product` | `@type`, the fixed Product catalog, canonical value shapes, repeated values, and product-group identifiers | `offers` accepts `Demand` or `Offer`/Offer subtypes; `isVariantOf` accepts `ProductGroup` or `ProductModel`; `inProductGroupWithID` is `Text` |
+| `Offer` | `@type`, the fixed Offer catalog, canonical value shapes, repeated values, and seller range | `seller` accepts `Organization` or `Person` without deep validation of those target types |
+| `AggregateOffer` | `@type`, the fixed AggregateOffer catalog, canonical value shapes, repeated values, and offer count | `offers` accepts the canonical `Demand` or `Offer`/Offer-subtype range, including `Demand` without deep validation |
 | `ProductGroup` | `@type`, name/description/URL/group ID, `variesBy` list shape, and brand node shape | `hasVariant` accepts `Product` nodes or lists |
 
-The initial property catalog must be based on the existing builders and the Phase 13O
-contracts before implementation. It must not silently expand to every Schema.org
-property. Other JSON-LD schema types, including their internal properties, remain
-outside Phase 13P semantic scope.
-
 Relationships to out-of-scope node types may be checked only for the minimum shape and
-allowed relationship target required by an in-scope rule; the out-of-scope node's own
-semantic properties are not validated.
+allowed relationship target required by the fixed catalog; the out-of-scope node's own
+semantic properties are not validated. Relationship incompatibility is determined by
+the canonical relationship range, not by whether the target type is included in the
+four-type deep-validation set.
 
-### 3.6 No Google eligibility contract
+### 3.7 No Google eligibility contract
 
 Phase 13P must not implement or imply:
 
@@ -273,9 +364,10 @@ The following are explicitly excluded:
 
 ## 5. Work Units
 
-Each Work Unit is expected to be a separate PR targeting `codex/phase-13p-draft`. No
-Work Unit may merge directly into `main`. The Integration PR remains Draft until all
-Work Units, verification, documentation sweep, and final review are complete.
+Work Units 1–4 are the only implementation Work Units in Phase 13P. Each Work Unit is
+expected to be a separate PR targeting `codex/phase-13p-draft`. No Work Unit may merge
+directly into `main`. Verification, Documentation Sweep, and Final Review are
+post-implementation gates, not Work Units and not Work Unit PRs.
 
 ### Work Unit 1 — Generic JSON-LD Validation Foundation
 
@@ -298,7 +390,8 @@ Section 3.2 and are documented in the Work Unit PR.
 
 * associative root and numeric-list input;
 * empty/non-array input regression;
-* missing or incompatible `@type` diagnostics;
+* missing and malformed `@type` diagnostics;
+* out-of-scope but structurally valid types produce no warning or info;
 * nested nodes and field paths;
 * root versus nested `@context` handling;
 * raw input remains unchanged;
@@ -333,13 +426,17 @@ value shapes, nested node traversal, and Product `offers` / `isVariantOf` relati
 **Required tests**
 
 * valid Product and Offer nodes;
-* missing/wrong Product and Offer types;
+* Product and Offer nodes with their expected types and malformed `@type` values;
 * supported Product fields and invalid value shapes;
 * Offer price, currency, availability, URL/date/condition, and seller shapes;
-* Product `offers` with Offer and AggregateOffer nodes/lists;
-* Product `isVariantOf` with ProductGroup;
+* Product `offers` with `Demand`, `Offer`, and canonical Offer-subtype nodes/lists;
+* Product `isVariantOf` with ProductGroup and ProductModel;
+* Offer `seller` with Organization and Person;
+* Product and ProductGroup `brand` values are checked against the canonical range, not
+  narrowed to the current builder representation;
 * invalid relationship targets and nested field paths;
-* out-of-scope nested Organization/Person internals are not deeply validated.
+* valid out-of-scope relationship targets are not deeply validated and produce no
+  scope-only warning or info.
 
 **Dependencies**
 
@@ -370,7 +467,7 @@ AggregateOffer `offers` and ProductGroup `hasVariant` relationship traversal.
 
 * valid AggregateOffer and ProductGroup nodes;
 * price range, currency, count, availability, group ID, and `variesBy` shapes;
-* AggregateOffer `offers` with Offer nodes/lists;
+* AggregateOffer `offers` with `Demand`, `Offer`, and canonical Offer-subtype nodes/lists;
 * ProductGroup `hasVariant` with Product nodes/lists;
 * invalid relationship targets, empty collection nodes, and order-preserving paths;
 * exact Product → AggregateOffer and Product → ProductGroup scenarios from Phase 13O.
@@ -421,43 +518,24 @@ The new semantic validation is reachable through the existing validation workflo
 backward-compatible DTO contracts are preserved, and the full existing test suite
 passes.
 
-### Work Unit 5 — Documentation, Examples, and Verification
+## 6. Post-Implementation Gates (Not Work Units)
 
-**Scope**
+After Work Unit 4 is accepted and merged into `codex/phase-13p-draft`, Phase 13P must
+pass these independent gates in this order:
 
-Document the shipped behavior and limitations, add a minimal usage example if the
-public entry point requires one, complete the verification report, and perform the
-mandatory documentation sweep and final review.
+1. **Verification:** run the complete standalone test suite and
+   `vendor/bin/phpstan analyse`, then record the evidence and any limitations.
+2. **Documentation Sweep:** review every applicable path in Section 8 and record one of
+   `updated`, `reviewed-no-change`, or `deferred-with-reason` for each path.
+3. **Final Review vs latest `main`:** update the integration branch from the latest
+   `main`, review the complete Phase diff and contracts, and confirm that no Work Unit
+   or documentation scope was bypassed.
 
-**Expected files**
+These gates are not Work Units, do not receive Work Unit PRs, and must not be merged or
+marked complete independently of the Integration PR. Only after all three gates pass
+may the Integration PR become Ready and proceed to merge.
 
-* `docs/SEO_LIBRARY_REFERENCE.md`;
-* `docs/guides/USAGE_GUIDE.md` when the public usage path changes or gains a new example;
-* `docs/phases/PHASE_13P_STRUCTURED_DATA_SEMANTIC_VALIDATION.md`;
-* `docs/verification/PHASE_13P_STRUCTURED_DATA_SEMANTIC_VALIDATION_VERIFICATION_REPORT.md`;
-* `examples/phase-13p-structured-data-validation.php` when an example is required by
-  the final API;
-* `docs/roadmap/SEO_LIBRARY_ROADMAP.md`;
-* `docs/roadmap/SEO_LIBRARY_ENHANCEMENT_ROADMAP.md`.
-
-**Required tests and checks**
-
-* run all standalone tests under `tests/`;
-* run `vendor/bin/phpstan analyse`;
-* verify the documented scope excludes other JSON-LD types and Google eligibility;
-* review documentation impact decisions for every applicable path.
-
-**Dependencies**
-
-Work Unit 4.
-
-**Done Criteria**
-
-Documentation matches the actual runtime behavior, limitations and deferred work are
-explicit, verification evidence is recorded, and the Integration PR is eligible to
-move from Draft to Ready only after the final review against the latest `main`.
-
-## 6. Test Matrix
+## 7. Test Matrix
 
 The tests must remain standalone PHP scripts following the repository convention. The
 matrix below is the minimum required coverage:
@@ -465,15 +543,15 @@ matrix below is the minimum required coverage:
 | Area | Required coverage | Expected outcome |
 | --- | --- | --- |
 | Existing foundation | `null`, empty, non-array, associative node, numeric list, and empty list entries | Existing warnings remain compatible; new structural errors are deterministic |
-| Generic structure | missing `@type`, wrong `@type`, supported type list, empty node, nested node, invalid collection shape | Errors include stable codes and precise `field` paths |
+| Generic structure | missing `@type`, malformed `@type`, supported type list, out-of-scope type, empty node, nested node, invalid collection shape | Only malformed/missing type contracts fail; an out-of-scope type produces no scope-only warning or info |
 | Context | root context, nested builder-style omission, raw nested context | Validation is read-only and does not remove or inject context |
 | Product | supported fields, `offers`, `isVariantOf`, `inProductGroupWithID`, invalid values | Product rules apply only to the declared catalog |
 | Offer | price, currency, availability, URL/date/condition, seller | Offer rules and seller relationship shape are covered |
-| AggregateOffer | low/high price, currency, offer count, availability, nested offers | Only Offer nodes are accepted in `offers` |
+| AggregateOffer | low/high price, currency, offer count, availability, nested offers | `offers` accepts `Demand`, `Offer`, and canonical Offer subtypes; Demand is not rejected for being out of deep scope |
 | ProductGroup | group ID, `variesBy`, brand, `hasVariant` | Only Product nodes are accepted in `hasVariant` |
-| Cross-type composition | Product→Offer, Product→AggregateOffer, Product→ProductGroup, ProductGroup→Product | Valid Phase 13O scenarios pass; invalid targets fail |
+| Cross-type composition | Product→Offer, Product→AggregateOffer, Product→ProductGroup, Product→ProductModel, Product→Demand, Offer→Organization/Person, ProductGroup→Product | Valid canonical targets pass; only relationship-incompatible targets fail |
 | Out-of-scope types | Article, Organization, WebSite, and at least one other existing builder output | No deep semantic validation or Google claim is produced |
-| Extension properties | unknown/custom properties on an in-scope node | Not rejected solely for being outside the initial catalog |
+| Extension properties | unknown/custom properties on an in-scope node | Not rejected solely for being outside the fixed Phase 13P catalog |
 | Result pipeline | result DTO, score, report, batch, array/JSON/Markdown exporters | Existing DTO shapes and summaries remain compatible |
 | Regression | all existing `tests/` scripts, including Phase 11 and Phase 13A–O | No unrelated regression |
 | Static analysis | `vendor/bin/phpstan analyse` | No new static-analysis errors |
@@ -481,7 +559,7 @@ matrix below is the minimum required coverage:
 Exact rule-level cases, issue codes, and expected field paths must be added to the
 Work Unit tests before the corresponding implementation is merged.
 
-## 7. Documentation Impact
+## 8. Documentation Impact
 
 The following review is mandatory before Phase 13P can be marked complete. Each path
 must receive one final status: `updated`, `reviewed-no-change`, or
@@ -504,7 +582,7 @@ must receive one final status: `updated`, `reviewed-no-change`, or
 No documentation layer may claim Google eligibility, Merchant eligibility, or semantic
 coverage for JSON-LD types outside Product, Offer, AggregateOffer, and ProductGroup.
 
-## 8. Definition of Done
+## 9. Definition of Done
 
 Phase 13P is complete only when all of the following are true:
 
@@ -532,7 +610,7 @@ Phase 13P is complete only when all of the following are true:
 The roadmap status must not be changed to `Complete` before every criterion above is
 met.
 
-## 9. Explicit Limitations and Deferred Work
+## 10. Explicit Limitations and Deferred Work
 
 Phase 13P intentionally does not provide:
 
