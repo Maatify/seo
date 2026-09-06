@@ -116,7 +116,7 @@ Execution Standard: `updated`, `reviewed-no-change`, or `deferred-with-reason`.
 | `docs/verification/**` | `updated` | The accepted Phase 8 Verification report records the PASS gate and actual counts. |
 | `examples/**` | `reviewed-no-change` | All 14 examples, including the five Phase 8 examples, execute successfully; no mismatch was found. |
 | `docs/roadmap/SEO_LIBRARY_ROADMAP.md` | `reviewed-no-change` | No claim in the main roadmap required synchronization for this documentation-only Phase. |
-| `docs/roadmap/SEO_LIBRARY_ENHANCEMENT_ROADMAP.md` | `deferred-with-reason` | Phase 8 remains pending Final Review, so its roadmap status was intentionally not changed to Complete. |
+| `docs/roadmap/SEO_LIBRARY_ENHANCEMENT_ROADMAP.md` | `updated` | The Phase Execution Standard was synchronized with the actual Stack lifecycle; Phase 8 completion status itself remains deferred pending Final Review. |
 | `docs/blueprints/**` | `updated` | The accepted Phase 8 Blueprint is present and is the source for this scope and gate record. |
 
 No other documentation path was changed during this sweep.
