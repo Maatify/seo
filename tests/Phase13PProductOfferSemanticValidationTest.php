@@ -207,6 +207,26 @@ assertNoIssues13PProductOffer('allowed type in a relationship list is sufficient
     ],
 ])));
 
+$malformedProductType = SeoMetaValidator::validate(validMeta13PProductOffer([
+    '@type' => ['Product', ''],
+    'name' => 123,
+    'offers' => [
+        '@type' => 'Thing',
+    ],
+]));
+assertFalseValue13PProductOffer('malformed Product @type fails validation', $malformedProductType->isValid);
+assertIssue13PProductOffer('malformed Product @type reports invalid type at the root path', $malformedProductType, 'json_ld_invalid_type', 'jsonLd.@type');
+assertSameValue13PProductOffer('malformed Product @type does not emit semantic issues', 1, count($malformedProductType->issues));
+
+$malformedOfferType = SeoMetaValidator::validate(validMeta13PProductOffer([
+    '@type' => ['Offer', 123],
+    'price' => [],
+    'seller' => 'Seller name',
+]));
+assertFalseValue13PProductOffer('malformed Offer @type fails validation', $malformedOfferType->isValid);
+assertIssue13PProductOffer('malformed Offer @type reports invalid type at the root path', $malformedOfferType, 'json_ld_invalid_type', 'jsonLd.@type');
+assertSameValue13PProductOffer('malformed Offer @type does not emit semantic issues', 1, count($malformedOfferType->issues));
+
 $productInvalidCases = [
     'name' => 123,
     'description' => ['@type' => 'Thing'],
