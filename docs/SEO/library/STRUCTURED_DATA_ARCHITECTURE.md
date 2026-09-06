@@ -1,6 +1,6 @@
 # Structured Data Architecture
 
-This document explains the technical architecture, responsibilities, and practical implementation guidance for Structured Data (JSON-LD) within the Maatify SEO library. It reflects the modern capabilities established up to Phase 13O.
+This document explains the technical architecture, responsibilities, and practical implementation guidance for Structured Data (JSON-LD) within the Maatify SEO library. It reflects the modern capabilities established through Phase 13P.
 
 ## 1. Core Architecture
 
@@ -61,10 +61,13 @@ It is crucial to understand what the library *does* and *does not* do.
 -   Manages the complex rules of nesting builders and stripping redundant `@context` tags.
 -   Ensures type safety in builder arguments and handles list flattening (e.g., converting a variadic input into a standard list).
 -   Outputs raw JSON strings via `toJson()`, or HTML `<script type="application/ld+json">...</script>` strings containing the encoded payloads via `JsonLdScriptRenderer::render()`.
+-   Provides read-only JSON-LD validation through `SeoMetaValidator::validate(...)`, including generic node/list/`@graph` structure checks and deep semantic checks for `Product`, `Offer`, `AggregateOffer`, and `ProductGroup`.
+-   Preserves the existing validation result, report, score, batch, and exporter contracts while carrying JSON-LD issues into the normal validation pipeline.
 
 ### What the Library Does NOT Do
--   **No Semantic Validation:** The library does not check if your GTIN is mathematically valid, if your URL is reachable, or if you missed a "required" Schema.org property.
+-   **No Complete Schema.org Validation:** Deep semantic validation is intentionally limited to the fixed Phase 13P catalog for `Product`, `Offer`, `AggregateOffer`, and `ProductGroup`. The validator does not provide complete coverage for every Schema.org type, check whether a URL is reachable, or enforce missing required properties outside its declared contracts.
 -   **No Google Eligibility Guarantees:** Generating a `ProductGroup` using the library does not mean Google will grant your site Rich Results. You must still comply with Google's specific technical guidelines, content policies, and required property constraints.
+-   **No Merchant Eligibility Validation:** Phase 13P does not implement Merchant eligibility checks; that remains separate Future Work.
 -   **No HTTP/Framework Coupling:** The library does not touch `$_SERVER`, does not emit HTTP headers, and does not require a specific framework DI container.
 
 ## 6. Practical Implementation Guidance
