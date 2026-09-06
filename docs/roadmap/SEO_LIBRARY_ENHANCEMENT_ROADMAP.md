@@ -21,6 +21,101 @@ Completed:
 
 The next work should be treated as optional enhancement phases, not required core completion.
 
+## Phase Execution Standard (Mandatory for Future Phases)
+
+Every future Phase must follow the lifecycle below. A Phase must not move directly from
+an idea to implementation, and an existing Phase status is not changed by this standard
+unless that Phase is explicitly reviewed and updated.
+
+`Blueprint → Draft Integration PR → Work Units → Verification → Documentation Sweep → Final Review vs main → Ready → Merge`
+
+### Blueprint / Draft Gate
+
+Before any implementation begins, the Phase must have a Blueprint / Draft that records:
+
+* Current State
+* Gaps
+* Decisions / Contracts
+* Scope and Out of Scope
+* Work Units
+* Test Matrix
+* Documentation Impact
+* Definition of Done
+
+The Blueprint for each Phase must be stored under `docs/blueprints/**`.
+
+### Integration Workflow
+
+At the beginning of the Phase, create an Integration branch and an Integration PR as a
+Draft. Each Work Unit PR must target that Phase's Integration branch, never `main`.
+After a Work Unit is accepted, merge it into the Integration branch. A Work Unit must
+not be merged directly into `main`.
+
+The Integration PR is the only final path for merging the complete Phase into `main`.
+It must remain Draft until Verification, the Documentation Sweep, and the Final Review
+against the latest `main` are complete. Only then may it be converted to Ready and
+merged into `main`.
+
+### Work Unit Contract
+
+Each Work Unit must define all of the following before implementation:
+
+* Clear Scope
+* Expected Files
+* Required Tests
+* Dependencies, if any
+* Done Criteria
+
+Work Units must remain within their declared Scope and must not silently expand the
+Phase's contracts or Out of Scope items.
+
+### Documentation Impact Review
+
+Before a Phase can be completed, a Documentation Impact Review is mandatory. The review
+must explicitly classify each applicable documentation layer as either requiring an
+update, reviewed with no update required, or deferred with a documented reason:
+
+* `README.md`
+* `docs/SEO_LIBRARY_REFERENCE.md`
+* `docs/guides/USAGE_GUIDE.md`
+* `docs/guides/INTEGRATION_GUIDE.md`, when integration or usage changes
+* `docs/SEO/**`
+* `docs/phases/**`
+* `docs/verification/**`
+* `examples/**`
+* `docs/roadmap/SEO_LIBRARY_ROADMAP.md`
+* `docs/roadmap/SEO_LIBRARY_ENHANCEMENT_ROADMAP.md`
+
+Not every path must change for every Phase, but every applicable path must be reviewed
+and recorded as `updated`, `reviewed-no-change`, or `deferred-with-reason`.
+
+### Verification and Readiness Gates
+
+After implementation is complete, the Phase must proceed through these gates in order:
+
+1. Verification
+2. Documentation Sweep
+3. Final Review of the complete result against the latest `main`
+4. Convert the Integration PR from Draft to Ready
+5. Merge only after the Ready review is complete
+
+The Integration PR must not be marked Ready before Verification, the Documentation
+Sweep, and the final review against the latest `main` are complete.
+
+### Phase Completion Criteria
+
+A Phase may be marked `Complete` in this roadmap only after all of the following are
+true:
+
+* Implementation is complete.
+* Tests are complete and passing for the declared Test Matrix.
+* Verification is complete.
+* Documentation is synchronized with the actual behavior.
+* Required examples are added or updated.
+* The roadmap status is updated.
+* Limitations and deferred work are documented.
+* The complete result has passed final review against the latest `main`.
+
 ---
 
 # Phase 8: Developer Experience & Usage Documentation
