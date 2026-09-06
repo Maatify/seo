@@ -42,9 +42,19 @@ Before any implementation begins, the Phase must have a Blueprint / Draft that r
 * Documentation Impact
 * Definition of Done
 
-An Integration PR must be created as a Draft at the start of the Phase. Work Units are
-added to that Integration PR progressively as they are completed; the Integration PR
-remains Draft until the Phase completion gates below have passed.
+The Blueprint for each Phase must be stored under `docs/blueprints/**`.
+
+### Integration Workflow
+
+At the beginning of the Phase, create an Integration branch and an Integration PR as a
+Draft. Each Work Unit PR must target that Phase's Integration branch, never `main`.
+After a Work Unit is accepted, merge it into the Integration branch. A Work Unit must
+not be merged directly into `main`.
+
+The Integration PR is the only final path for merging the complete Phase into `main`.
+It must remain Draft until Verification, the Documentation Sweep, and the Final Review
+against the latest `main` are complete. Only then may it be converted to Ready and
+merged into `main`.
 
 ### Work Unit Contract
 
@@ -65,18 +75,19 @@ Before a Phase can be completed, a Documentation Impact Review is mandatory. The
 must explicitly classify each applicable documentation layer as either requiring an
 update, reviewed with no update required, or deferred with a documented reason:
 
-* README
-* API Reference
-* Usage Guide
-* Integration Guide, when integration or usage changes
-* Engineering / SEO documentation
-* Phase documentation
-* Verification report
-* Examples
-* Roadmaps
+* `README.md`
+* `docs/SEO_LIBRARY_REFERENCE.md`
+* `docs/guides/USAGE_GUIDE.md`
+* `docs/guides/INTEGRATION_GUIDE.md`, when integration or usage changes
+* `docs/SEO/**`
+* `docs/phases/**`
+* `docs/verification/**`
+* `examples/**`
+* `docs/roadmap/SEO_LIBRARY_ROADMAP.md`
+* `docs/roadmap/SEO_LIBRARY_ENHANCEMENT_ROADMAP.md`
 
-Not every layer must change for every Phase, but every layer relevant to the Phase must
-have an explicit decision.
+Not every path must change for every Phase, but every applicable path must be reviewed
+and recorded as `updated`, `reviewed-no-change`, or `deferred-with-reason`.
 
 ### Verification and Readiness Gates
 
