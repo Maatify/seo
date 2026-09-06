@@ -122,6 +122,22 @@ $nodeList = SeoMetaValidator::validate(validMeta13P([
 ]));
 assertNoStructuralIssues13P('numeric list of nodes', $nodeList);
 
+$nestedTopLevelList = SeoMetaValidator::validate(validMeta13P([
+    [
+        [
+            '@type' => 'Product',
+        ],
+    ],
+]));
+assertFalseValue13P('non-empty nested top-level list is invalid', $nestedTopLevelList->isValid);
+assertIssue13P('nested top-level list keeps deterministic field path', $nestedTopLevelList, 'json_ld_invalid_node', 'jsonLd.0');
+
+$idReferenceWithoutType = SeoMetaValidator::validate(validMeta13P([
+    '@id' => 'https://example.com/products/1',
+]));
+assertFalseValue13P('@id node reference without type is invalid', $idReferenceWithoutType->isValid);
+assertIssue13P('@id node reference requires type', $idReferenceWithoutType, 'json_ld_missing_type', 'jsonLd.@type');
+
 $nestedList = SeoMetaValidator::validate(validMeta13P([
     '@type' => 'Product',
     'offers' => [

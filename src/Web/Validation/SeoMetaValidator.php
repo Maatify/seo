@@ -258,9 +258,12 @@ final class SeoMetaValidator
                 continue;
             }
 
-            if (!array_is_list($schema)) {
-                self::validateJsonLdNode($issues, $schema, 'jsonLd.' . $key);
+            if (array_is_list($schema)) {
+                $issues[] = self::issue('json_ld_invalid_node', 'error', 'Top-level JSON-LD list entries should be non-empty associative nodes.', 'jsonLd.' . $key);
+                continue;
             }
+
+            self::validateJsonLdNode($issues, $schema, 'jsonLd.' . $key);
         }
     }
 
@@ -327,10 +330,6 @@ final class SeoMetaValidator
             return;
         }
 
-        if (self::isJsonLdKeywordObject($value)) {
-            return;
-        }
-
         if (array_key_exists('@graph', $value)) {
             self::validateJsonLdGraph($issues, $value, $field);
             return;
@@ -351,28 +350,6 @@ final class SeoMetaValidator
 
         foreach ($type as $typeValue) {
             if (!is_string($typeValue) || trim($typeValue) === '') {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /** @param array<array-key, mixed> $value */
-    private static function isJsonLdKeywordObject(array $value): bool
-    {
-        $hasValueKeyword = array_key_exists('@id', $value)
-            || array_key_exists('@value', $value)
-            || array_key_exists('@list', $value)
-            || array_key_exists('@set', $value)
-            || array_key_exists('@reverse', $value);
-
-        if (!$hasValueKeyword) {
-            return false;
-        }
-
-        foreach (array_keys($value) as $key) {
-            if (!is_string($key) || !str_starts_with($key, '@')) {
                 return false;
             }
         }
