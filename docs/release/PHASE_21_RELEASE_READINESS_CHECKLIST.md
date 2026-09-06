@@ -8,10 +8,13 @@ package, change versioning policy, or replace the Verification, Documentation
 Sweep, or Final Review gates.
 
 Git tags are the release source of truth. The repository must not introduce a
-second version file, infer a release version from generated metadata, or move an
-existing published tag. No item below authorizes creating a tag, GitHub Release,
-package publication, release automation, provider integration, or external
-network verification.
+second version file or infer a release version from generated metadata. No item
+below authorizes creating a tag, GitHub Release, package publication, release
+automation, provider integration, or external network verification.
+
+Any creation, reuse, movement, correction, or replacement of Git tags must follow
+the repository's separately approved tagging/release policy. Phase 21 does not
+define that policy.
 
 Record the commit, command, tool version, date, and result for every executed
 item. An unchecked or failed required item blocks tagging and publication until
@@ -161,8 +164,9 @@ scope.
 - [ ] Confirm all implementation, Verification, Documentation Sweep, and Final
   Review approvals are complete on the intended integration commit.
 - [ ] Confirm the working tree is clean and `git diff --check` passes.
-- [ ] Confirm the intended tag name follows the existing versioning policy and
-  does not reuse or move an existing tag.
+- [ ] Confirm any creation, reuse, movement, correction, or replacement of Git
+  tags follows the repository's separately approved tagging/release policy.
+  Phase 21 does not define that policy.
 - [ ] Confirm `composer validate --strict`, clean installation, the PHP matrix,
   syntax gates, PHPStan, standalone tests, structured-data gate, examples review,
   and documentation synchronization are all recorded as passing or explicitly
@@ -194,9 +198,9 @@ scope.
   CI run URLs, and verification evidence.
 - [ ] If a pre-publication check fails, stop the release action and restore the
   workspace to the last known-good commit without rewriting shared history.
-- [ ] After a tag has been published, never move or force-update that tag. Use
-  the repository's separately approved corrective release policy and a new tag
-  when correction is required.
+- [ ] If a published tag needs correction or replacement, follow the repository's
+  separately approved tagging/release policy. Phase 21 does not define whether
+  or how such a correction is performed.
 - [ ] For a failed package or external release action, record the provider-side
   recovery result separately; do not represent it as a core `SeoValidationResultDTO`
   finding or alter library scoring to model it.

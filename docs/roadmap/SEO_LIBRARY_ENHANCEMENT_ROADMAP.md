@@ -776,8 +776,8 @@ No actual CLI package is required unless needed later.
 WU1–WU4 implementation, Verification, Documentation Sweep, and Final Review are
 complete on the Phase 21 integration stack. Final Review passed against `main`
 SHA `228ad2cdc026e0148e934526cc35068b50bf5948` using Draft SHA
-`726c84ce8cf30e26f87f2bc125bd278b26b9092a`. The Integration PR remains Draft
-pending the maintainer's Ready/merge decision; no other Phase status is changed.
+`726c84ce8cf30e26f87f2bc125bd278b26b9092a`. Ready and merge actions remain
+separate maintainer decisions; no other Phase status is changed.
 
 ## Goal
 

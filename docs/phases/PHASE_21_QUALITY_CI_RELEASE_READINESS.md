@@ -131,6 +131,6 @@ The complete Phase 21 diff was reviewed against the latest approved `main`:
   annotated tags. No version file, tag, release, package publish, or automation
   was added.
 
-No unintended scope or behavior mismatch was found. The integration PR remains
-Draft as required for the current review step; no Ready transition or merge into
-`main` was performed by this Final Review branch.
+No unintended scope or behavior mismatch was found. Ready and merge actions are
+separate maintainer decisions; this Final Review branch itself did not merge into
+`main`.
