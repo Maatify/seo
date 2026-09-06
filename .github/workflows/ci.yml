@@ -34,6 +34,15 @@ jobs:
       - name: Install Dependencies
         run: composer install --prefer-dist --no-progress --no-interaction
 
+      - name: Run PHP syntax checks
+        run: |
+          while IFS= read -r -d '' file; do
+            if ! php -l "$file"; then
+              echo "PHP syntax check failed: $file" >&2
+              exit 1
+            fi
+          done < <(find src tests examples -type f -name '*.php' -print0 | sort -z)
+
       - name: Run PHPStan
         run: vendor/bin/phpstan analyse
 
