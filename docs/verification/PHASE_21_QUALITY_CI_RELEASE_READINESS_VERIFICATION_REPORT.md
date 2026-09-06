@@ -158,8 +158,8 @@ structured-data gate, conditional PHPUnit step, and standalone tests.
 
 | Workflow run | PHP 8.2 | PHP 8.3 | PHP 8.4 | Result |
 | --- | --- | --- | --- | --- |
-| Push run `34047859000` | [pass](https://github.com/Maatify/seo/actions/runs/34047859000/job/101526040437) | [pass](https://github.com/Maatify/seo/actions/runs/34047859000/job/101526040590) | [pass](https://github.com/Maatify/seo/actions/runs/34047859000/job/101526040599) | **PASS** |
-| Pull request run `34047867638` | [pass](https://github.com/Maatify/seo/actions/runs/34047867638/job/101526063045) | [pass](https://github.com/Maatify/seo/actions/runs/34047867638/job/101526063232) | [pass](https://github.com/Maatify/seo/actions/runs/34047867638/job/101526063199) | **PASS** |
+| Push run `34047934742` | [pass](https://github.com/Maatify/seo/actions/runs/34047934742/job/101526245104) | [pass](https://github.com/Maatify/seo/actions/runs/34047934742/job/101526245219) | [pass](https://github.com/Maatify/seo/actions/runs/34047934742/job/101526245298) | **PASS** |
+| Pull request run `34047936975` | [pass](https://github.com/Maatify/seo/actions/runs/34047936975/job/101526251840) | [pass](https://github.com/Maatify/seo/actions/runs/34047936975/job/101526251705) | [pass](https://github.com/Maatify/seo/actions/runs/34047936975/job/101526251859) | **PASS** |
 
 The six observed matrix jobs passed; no GitHub Actions failure or contract
 mismatch was observed.
