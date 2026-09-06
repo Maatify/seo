@@ -125,11 +125,22 @@ true:
 
 ---
 
-# Phase 8: Developer Experience & Usage Documentation
+# Phase 8: Developer Experience & Usage Documentation (Complete)
 
 ## Goal
 
 Make the library easier to understand, test manually, and integrate into real projects.
+
+## Completion Status
+
+Phase 8 is **Complete** after implementation, Verification, Documentation Sweep, and
+Final Review passed against latest `main`:
+
+`2989683e3609bcc843d0ec25ead3799a3b5d2d39`
+
+The Integration PR remains the final integration path to `main`; Ready and merge
+actions remain under maintainer decision. This roadmap entry does not claim that the
+Integration PR has been merged.
 
 ## 8A: Usage Guide
 
