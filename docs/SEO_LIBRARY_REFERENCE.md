@@ -188,6 +188,50 @@ The Web layer includes framework-neutral helpers for auditing and validating gen
 - **`Web/Validation/DTO/SeoValidationBatchReportDTO.php`**: An aggregate DTO that stores the final batch results, including `isValid`, `isHealthy`, `totalCount`, `validCount`, `invalidCount`, `healthyCount`, `unhealthyCount`, `errorCount`, `warningCount`, `infoCount`, `averageScore`, `minScore`, `maxScore`, a list of `reports` (`SeoValidationReportDTO`), and a `summary` (rules: fail if invalid, warning if all valid but unhealthy or with warnings, pass if all valid, healthy, and warning-free). It implements `toArray()` and `jsonSerialize()` for easy exporting.
 - **`Web/Validation/SeoValidationBatchReportExporter.php`**: A framework-neutral exporter useful for exporting batch validation reports into arrays, JSON, summary arrays, and Markdown. It does not mutate the batch DTO, does not call validator/score/report/batch builder internally, and emits no HTTP output.
 
+#### Phase 13P Structured Data Semantic Validation
+
+`SeoMetaValidator::validate(array|object $meta, array $options = [])` remains the
+public entry point and continues to return the existing `SeoValidationResultDTO`.
+JSON-LD can be supplied through the existing `jsonLd`, `json_ld`, `schema`, or
+`schemas` metadata aliases. The validator is read-only and preserves the existing
+result, report, score, batch, and exporter contracts.
+
+Phase 13P keeps four validation layers separate:
+
+1. The existing validation foundation for non-empty JSON-LD arrays and schema entries.
+2. Generic structural validation for node/list placement, `@graph`, and well-formed
+   `@type` values.
+3. Deep Schema.org-oriented semantic validation for `Product`, `Offer`,
+   `AggregateOffer`, and `ProductGroup` only.
+4. Google Rich Results and Merchant eligibility, which are outside this Phase and
+   remain Future Work.
+
+An ordinary root or graph node requires a non-empty string `@type`, or a non-empty
+numeric list of non-empty strings. A graph wrapper may contain `@context` and a
+non-empty numeric `@graph` list without requiring its own `@type`; each graph node is
+validated recursively. Schema.org short names and `http`/`https` Schema.org IRIs are
+matched by their canonical local type identity without rewriting input data.
+
+The stable JSON-LD issue taxonomy is `json_ld_invalid_node`,
+`json_ld_missing_type`, `json_ld_invalid_type`, `json_ld_invalid_property`, and
+`json_ld_invalid_relationship`. Existing `invalid_json_ld` and
+`invalid_json_ld_schema` foundation issues remain unchanged. Structural and semantic
+issues are errors and affect `isValid`; an out-of-scope type is not an issue merely
+because it is outside the Phase 13P deep-validation set.
+
+The fixed deep-validation relationships are canonical Schema.org ranges: Product
+`offers` accepts `Demand`, `Offer`, `AggregateOffer`, `OfferForLease`, or
+`OfferForPurchase`; Product `isVariantOf` accepts `ProductGroup` or `ProductModel`;
+AggregateOffer `offers` accepts the same offer family including `Demand`;
+Offer `seller` accepts `Organization` or `Person`; ProductGroup `hasVariant` accepts
+`Product`; and `brand` accepts `Brand` or `Organization` where catalogued. Valid
+out-of-scope relationship targets are allowed without deep validation of their
+internals. Unknown extension properties are not rejected solely for being outside the
+fixed catalog.
+
+Phase 13P does not claim complete Schema.org coverage, required-property completeness,
+Google Rich Results eligibility, or Merchant eligibility.
+
 ### JSON-LD Builders
 The Web layer includes builders for constructing Schema.org-oriented JSON-LD structures. These builders encapsulate the logic for creating complex schemas and provide a fluent interface for setting properties and composing nodes; they do not perform semantic Schema.org validation or establish Google Rich Results eligibility.
 - **`Web/JsonLd/Builder/AbstractJsonLdBuilder.php`**: Base class implementing `JsonLdBuilderInterface` and using `JsonLdBuilderTrait`.
