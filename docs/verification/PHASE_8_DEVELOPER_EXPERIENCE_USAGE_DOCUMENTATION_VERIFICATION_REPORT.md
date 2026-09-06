@@ -2,7 +2,7 @@
 
 ## Verification result
 
-`PENDING — local verification passed; GitHub Actions is pending`
+`PASS`
 
 This report records the Phase 8 Verification Gate for the exact Draft HEAD below.
 No runtime, test, example, guide, roadmap, CI, Composer, or public-contract change
@@ -137,25 +137,24 @@ was found, so the file was not changed.
 
 ## GitHub Actions
 
-GitHub Actions for the Verification PR were not yet available when this report
-commit was created. The report will be updated on this same Verification branch
-after the matrix completes; no final gate judgment is made before that result.
+GitHub Actions completed successfully for the Verification PR. The two workflow
+runs triggered for the PR both passed all three PHP matrix jobs.
 
 | Matrix / gate | Result |
 | --- | --- |
-| PHP 8.2 | Pending |
-| PHP 8.3 | Pending |
-| PHP 8.4 | Pending |
-| Explicit syntax gate | Pending |
-| PHPStan | Pending |
-| Structured-data gate | Pending |
-| Conditional PHPUnit behavior | Pending |
-| Standalone tests | Pending |
+| PHP 8.2 | PASS |
+| PHP 8.3 | PASS |
+| PHP 8.4 | PASS |
+| Explicit syntax gate | PASS |
+| PHPStan | PASS |
+| Structured-data gate | PASS |
+| Conditional PHPUnit behavior | PASS — existing conditional workflow behavior retained |
+| Standalone tests | PASS |
 
 ## Final gate judgment
 
-`PENDING`
+`PASS`
 
-The local Verification Gate passed. Final PASS/FAIL remains pending until the
-Verification PR's GitHub Actions matrix completes. This report does not perform the
-Documentation Sweep or change roadmap status.
+All requested local checks, API/documentation reviews, example executions, and the
+Verification PR CI matrix passed. Phase 8 may proceed to Documentation Sweep; this
+report does not perform that sweep or change roadmap status.
