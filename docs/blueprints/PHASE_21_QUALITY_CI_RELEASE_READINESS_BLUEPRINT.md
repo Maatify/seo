@@ -82,9 +82,10 @@ Phase 21 addresses only the following evidence-based gaps:
 3. Structured-data validation output is available through library DTOs/exporters,
    but CI has no stable, documented machine-readable success/failure presentation
    for that gate.
-4. There is no repository-owned optional integration/tooling path for Google Rich
-   Results or Merchant verification that is clearly separated from library
-   validation.
+4. Phase 21 requires documentation of a clear boundary between core structured-data
+   validation and any future external Google Rich Results or Merchant verification.
+   The current absence of provider integration is intentional and is not a gap in
+   the Phase 21 core scope.
 5. Release, Git tag, and package-usage readiness checks are documented in audits
    and historical reports but are not consolidated into a Phase 21 checklist.
 
@@ -418,8 +419,9 @@ Phase 21 may be marked Complete only when all of the following are true:
    introduced by Phase 21; any actual integration requires a separate decision.
 7. Release, tag, and package-usage readiness checklists are complete and match
    repository reality; no automatic publish/tag action is performed unintentionally.
-8. The Verification Gate passes and records the actual PHP matrix, syntax,
-   structured-data, PHPStan, standalone-test, and optional-tooling results.
+8. The Verification Gate passes and records the actual PHP matrix, syntax gates,
+   structured-data CI gate, PHPStan, standalone tests, and any documentation
+   verification required for WU3.
 9. The Documentation Sweep reviews every required path with
    `updated`, `reviewed-no-change`, or `deferred-with-reason` and synchronizes any
    affected docs and examples.
