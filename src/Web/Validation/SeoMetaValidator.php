@@ -241,15 +241,120 @@ final class SeoMetaValidator
             $issues[] = self::issue('invalid_json_ld', 'warning', 'JSON-LD schema data should be a non-empty array.', 'jsonLd');
             return;
         }
+
         if (!array_is_list($jsonLd)) {
+            if (array_key_exists('@graph', $jsonLd)) {
+                self::validateJsonLdGraph($issues, $jsonLd, 'jsonLd');
+                return;
+            }
+
+            self::validateJsonLdNode($issues, $jsonLd, 'jsonLd');
             return;
         }
 
         foreach ($jsonLd as $key => $schema) {
             if (!is_array($schema) || $schema === []) {
                 $issues[] = self::issue('invalid_json_ld_schema', 'warning', 'JSON-LD schema entries should be non-empty arrays.', 'jsonLd.' . $key);
+                continue;
+            }
+
+            if (array_is_list($schema)) {
+                $issues[] = self::issue('json_ld_invalid_node', 'error', 'Top-level JSON-LD list entries should be non-empty associative nodes.', 'jsonLd.' . $key);
+                continue;
+            }
+
+            self::validateJsonLdNode($issues, $schema, 'jsonLd.' . $key);
+        }
+    }
+
+    /**
+     * @param list<SeoValidationIssueDTO> $issues
+     * @param array<array-key, mixed> $document
+     */
+    private static function validateJsonLdGraph(array &$issues, array $document, string $field): void
+    {
+        $graph = $document['@graph'] ?? null;
+        if (!is_array($graph) || $graph === [] || !array_is_list($graph)) {
+            $issues[] = self::issue('json_ld_invalid_node', 'error', 'JSON-LD @graph should be a non-empty numeric list of associative nodes.', $field . '.@graph');
+            return;
+        }
+
+        foreach ($graph as $key => $node) {
+            $nodeField = $field . '.@graph.' . $key;
+            if (!is_array($node) || $node === [] || array_is_list($node)) {
+                $issues[] = self::issue('json_ld_invalid_node', 'error', 'JSON-LD graph entries should be non-empty associative nodes.', $nodeField);
+                continue;
+            }
+
+            self::validateJsonLdNode($issues, $node, $nodeField);
+        }
+    }
+
+    /**
+     * @param list<SeoValidationIssueDTO> $issues
+     * @param array<array-key, mixed> $node
+     */
+    private static function validateJsonLdNode(array &$issues, array $node, string $field): void
+    {
+        if (!array_key_exists('@type', $node)) {
+            $issues[] = self::issue('json_ld_missing_type', 'error', 'JSON-LD nodes should include a non-empty @type.', $field . '.@type');
+        } elseif (!self::isValidJsonLdType($node['@type'])) {
+            $issues[] = self::issue('json_ld_invalid_type', 'error', 'JSON-LD @type should be a non-empty string or a non-empty numeric list of non-empty strings.', $field . '.@type');
+        }
+
+        foreach ($node as $key => $value) {
+            if ($key === '@context' || $key === '@type') {
+                continue;
+            }
+
+            self::validateJsonLdNestedValue($issues, $value, $field . '.' . $key);
+        }
+    }
+
+    /**
+     * @param list<SeoValidationIssueDTO> $issues
+     */
+    private static function validateJsonLdNestedValue(array &$issues, mixed $value, string $field): void
+    {
+        if (!is_array($value) || $value === []) {
+            return;
+        }
+
+        if (array_is_list($value)) {
+            foreach ($value as $key => $item) {
+                if (is_array($item) && $item !== []) {
+                    self::validateJsonLdNestedValue($issues, $item, $field . '.' . $key);
+                }
+            }
+
+            return;
+        }
+
+        if (array_key_exists('@graph', $value)) {
+            self::validateJsonLdGraph($issues, $value, $field);
+            return;
+        }
+
+        self::validateJsonLdNode($issues, $value, $field);
+    }
+
+    private static function isValidJsonLdType(mixed $type): bool
+    {
+        if (is_string($type)) {
+            return trim($type) !== '';
+        }
+
+        if (!is_array($type) || $type === [] || !array_is_list($type)) {
+            return false;
+        }
+
+        foreach ($type as $typeValue) {
+            if (!is_string($typeValue) || trim($typeValue) === '') {
+                return false;
             }
         }
+
+        return true;
     }
 
     private static function issue(string $code, string $severity, string $message, ?string $field): SeoValidationIssueDTO
