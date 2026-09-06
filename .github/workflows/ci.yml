@@ -46,6 +46,9 @@ jobs:
       - name: Run PHPStan
         run: vendor/bin/phpstan analyse
 
+      - name: Run structured-data validation gate
+        run: php tests/Phase21StructuredDataCiValidationTest.php
+
       - name: Run PHPUnit if available
         run: |
           if [ -x "vendor/bin/phpunit" ]; then
