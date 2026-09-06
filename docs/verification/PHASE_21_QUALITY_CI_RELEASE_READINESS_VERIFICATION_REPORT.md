@@ -151,9 +151,15 @@ lightweight or annotated tags — **PASS**.
 
 ## GitHub Actions verification
 
-This section is completed after the Verification PR is opened and its workflow
-checks finish. It must record the actual workflow run URLs and results for PHP
-`8.2`, `8.3`, and `8.4`, including the syntax gate, PHPStan, structured-data
-gate, conditional PHPUnit behavior, and standalone tests.
+The Verification PR workflow completed successfully on both the push and pull
+request runs. Each run executed the existing `build-and-test` job for PHP
+`8.2`, `8.3`, and `8.4`. Every matrix job passed the syntax gate, PHPStan,
+structured-data gate, conditional PHPUnit step, and standalone tests.
 
-**Pending at initial report creation.**
+| Workflow run | PHP 8.2 | PHP 8.3 | PHP 8.4 | Result |
+| --- | --- | --- | --- | --- |
+| Push run `34047859000` | [pass](https://github.com/Maatify/seo/actions/runs/34047859000/job/101526040437) | [pass](https://github.com/Maatify/seo/actions/runs/34047859000/job/101526040590) | [pass](https://github.com/Maatify/seo/actions/runs/34047859000/job/101526040599) | **PASS** |
+| Pull request run `34047867638` | [pass](https://github.com/Maatify/seo/actions/runs/34047867638/job/101526063045) | [pass](https://github.com/Maatify/seo/actions/runs/34047867638/job/101526063232) | [pass](https://github.com/Maatify/seo/actions/runs/34047867638/job/101526063199) | **PASS** |
+
+The six observed matrix jobs passed; no GitHub Actions failure or contract
+mismatch was observed.
