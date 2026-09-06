@@ -60,6 +60,10 @@ The JSON-LD builders are construction helpers, not validators:
   four in-scope node types, but do not check Schema.org semantics.
 * `src/Shared/DTO/Schema/JsonLdSchemaDTO.php` wraps a schema array without semantic
   validation.
+* `src/Shared/Service/SchemaGeneratorService.php::generateGraph()` currently builds a
+  graph document with an `@context` wrapper and a non-empty `@graph` list. It serializes
+  each supplied schema and removes that schema's `@context` before adding the node to
+  the graph.
 * `src/Shared/DTO/Schema/GenericSchemaDTO.php` checks basic property input shape, not
   Schema.org type/property compatibility.
 * `src/Web/Render/JsonLdScriptRenderer.php` normalizes and renders JSON-LD output; it
@@ -92,18 +96,20 @@ Phase 13P addresses the following gaps without claiming complete Schema.org or G
 coverage:
 
 1. There is no explicit generic JSON-LD node contract requiring a usable `@type`.
-2. There is no distinction in code between generic structural checks and semantic checks
+2. There is no explicit graph-document contract for `@graph` wrappers, graph-node
+   traversal, or deterministic graph field paths.
+3. There is no distinction in code between generic structural checks and semantic checks
    for a known Schema.org type.
-3. There are no semantic validators for Product, Offer, AggregateOffer, or
+4. There are no semantic validators for Product, Offer, AggregateOffer, or
    ProductGroup.
-4. Known relationships such as Product `offers`, Product `isVariantOf`, ProductGroup
+5. Known relationships such as Product `offers`, Product `isVariantOf`, ProductGroup
    `hasVariant`, and AggregateOffer `offers` are not checked for compatible node types.
-5. Known property value shapes, cardinality, and invalid in-scope relationships are not
+6. Known property value shapes, cardinality, and invalid in-scope relationships are not
    reported with stable field paths.
-6. Nested nodes and numeric lists do not receive semantic validation diagnostics.
-7. The existing report, score, batch, and exporter pipeline has no documented contract
+7. Nested nodes and numeric lists do not receive semantic validation diagnostics.
+8. The existing report, score, batch, and exporter pipeline has no documented contract
    for JSON-LD semantic issues.
-8. The current documentation must distinguish Schema.org-oriented semantic validation
+9. The current documentation must distinguish Schema.org-oriented semantic validation
    from Google eligibility and must state the Phase 13P type boundary.
 
 ## 3. Decisions / Contracts
@@ -144,10 +150,10 @@ The implementation may introduce a focused JSON-LD validation facade under
 design. If introduced, its contract must return the existing
 `SeoValidationResultDTO`; it must not create a competing result model.
 
-Direct validation input is materialized JSON-LD data: an associative node or a numeric
-list of nodes. Builders and DTOs are not implicitly mutated or normalized by the
-validator. Callers that start with a builder or `JsonLdSchemaDTO` materialize it first
-using its existing output contract.
+Direct validation input is materialized JSON-LD data: an associative node, a numeric
+list of nodes, or a graph document with an `@graph` list. Builders and DTOs are not
+implicitly mutated or normalized by the validator. Callers that start with a builder or
+`JsonLdSchemaDTO` materialize it first using its existing output contract.
 
 ### 3.3 Read-only validation and context handling
 
@@ -158,21 +164,26 @@ Validation is read-only:
 * No missing property, `@type`, `@context`, or relationship is injected.
 * No remote context is fetched or expanded.
 
-`@context` is not a Google eligibility decision. Root and nested nodes must be handled
-without rejecting a valid nested composition solely because a nested builder has no
-`@context`; the existing builder foundation intentionally strips nested builder
-contexts. An explicitly supplied raw-array `@context` remains input data and must not
-be removed by validation.
+`@context` is not a Google eligibility decision. Root, graph-wrapper, and nested nodes
+must be handled without rejecting a valid nested composition solely because a nested
+builder has no `@context`; the existing builder foundation intentionally strips nested
+builder contexts. An explicitly supplied raw-array `@context`, including the
+`@context` on a graph wrapper produced by `SchemaGeneratorService::generateGraph()`,
+remains input data and must not be removed by validation.
 
 ### 3.4 Node and issue contract
 
-The validator accepts either:
+The validator accepts the following materialized JSON-LD forms:
 
-* one non-empty associative node; or
+* one non-empty associative root node that requires a valid `@type`;
 * a numeric list of non-empty associative nodes.
+* one associative graph document containing `@graph`. The graph wrapper itself does
+  not require `@type`; its `@graph` value must be a non-empty numeric list of
+  associative nodes, and every node in that list requires the same valid `@type`
+  contract as any other structurally validated node.
 
-Every node that is structurally validated must have an `@type` value that satisfies this
-closed contract:
+Every structurally validated node, other than the graph wrapper described above, must
+have an `@type` value that satisfies this closed contract:
 
 * a non-empty string after trimming; or
 * a non-empty numeric list in which every item is a non-empty string after trimming.
@@ -182,6 +193,13 @@ or otherwise malformed `@type` produces `json_ld_invalid_type`. A structurally v
 type string or type list does not fail, warn, or emit info merely because none of its
 types belongs to the Phase 13P deep-validation set. The validator must retain the
 node's location in the `field` value, for example `jsonLd.0.offers.1.price`.
+
+Graph documents are validated recursively. A malformed, empty, non-numeric, or
+non-associative `@graph` value is a structural error using the existing
+`json_ld_invalid_node` issue code, with the graph location retained in the field path.
+The graph wrapper's `@context` is allowed and remains unchanged. Nodes inside the graph
+use deterministic paths rooted at `jsonLd.@graph`, for example
+`jsonLd.@graph.0.offers.price`.
 
 #### Well-formed type identity and matching
 
@@ -374,7 +392,8 @@ as deferred.
 
 Phase 13P includes:
 
-* completing generic JSON-LD structural validation needed to safely inspect nodes;
+* completing generic JSON-LD structural validation needed to safely inspect root nodes,
+  numeric lists, and `@graph` documents;
 * semantic validation for `Product`, `Offer`, `AggregateOffer`, and `ProductGroup`;
 * supported property value shapes and collection cardinality for those types;
 * the in-scope relationships listed in Section 3.5;
@@ -415,8 +434,8 @@ post-implementation gates, not Work Units and not Work Unit PRs.
 
 **Scope**
 
-Implement the read-only root/list traversal and generic node checks required by the
-semantic validators, while preserving current non-JSON-LD validation behavior.
+Implement the read-only root/list/graph traversal and generic node checks required by
+the semantic validators, while preserving current non-JSON-LD validation behavior.
 
 **Expected files**
 
@@ -431,6 +450,13 @@ Section 3.2 and are documented in the Work Unit PR.
 **Required tests**
 
 * associative root and numeric-list input;
+* `SchemaGeneratorService::generateGraph()` output is accepted as a graph document:
+  the wrapper may have `@context` without `@type`, and every generated `@graph` node is
+  validated recursively;
+* graph nodes preserve deterministic field paths such as
+  `jsonLd.@graph.0.offers.price` while nested structural and semantic rules run;
+* malformed or empty `@graph` values produce the fixed structural issue code
+  `json_ld_invalid_node`;
 * empty/non-array input regression;
 * missing and malformed `@type` diagnostics;
 * out-of-scope but structurally valid types produce no warning or info;
@@ -590,7 +616,8 @@ matrix below is the minimum required coverage:
 | --- | --- | --- |
 | Existing foundation | `null`, empty, non-array, associative node, numeric list, and empty list entries | Existing warnings remain compatible; new structural errors are deterministic |
 | Generic structure | missing `@type`, malformed `@type`, short/`http`/`https` Schema.org type aliases, lists containing an allowed type, out-of-scope type, empty node, nested node, invalid collection shape | Only malformed/missing type contracts fail; a well-formed out-of-scope type produces no scope-only warning or info |
-| Context | root context, nested builder-style omission, raw nested context | Validation is read-only and does not remove or inject context |
+| Context | root context, graph-wrapper context, nested builder-style omission, raw nested context | Validation is read-only and does not remove or inject context |
+| Graph document | `SchemaGeneratorService::generateGraph()` output, wrapper without `@type`, non-empty numeric `@graph`, recursive graph-node validation, malformed/empty `@graph` | Generated graph output is valid when its nodes are valid; graph nodes are checked recursively with deterministic `jsonLd.@graph.*` paths; malformed/empty graphs use `json_ld_invalid_node` |
 | Product | supported fields, `offers`, `isVariantOf`, `inProductGroupWithID`, invalid values | Product rules apply only to the declared catalog |
 | Offer | price, currency, availability, URL/date/condition, seller | Offer rules and seller relationship shape are covered |
 | AggregateOffer | low/high price, currency, offer count, availability, nested offers | `offers` accepts `Demand`, `Offer`, `AggregateOffer`, `OfferForLease`, and `OfferForPurchase`; Demand is not rejected for being out of deep scope |
