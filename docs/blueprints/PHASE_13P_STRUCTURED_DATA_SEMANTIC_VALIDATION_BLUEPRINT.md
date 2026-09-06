@@ -115,7 +115,7 @@ Phase 13P must keep these layers separate:
 1. **Current validation foundation:** existing non-empty JSON-LD array and list-entry
    checks already performed by `SeoMetaValidator`.
 2. **Generic structural validation:** node shape, root/list traversal, `@type`
-   presence, recognized type identity, and valid node/list placement. This layer is not
+   presence, well-formed type identity, and valid node/list placement. This layer is not
    a Google eligibility check.
 3. **In-scope semantic validation:** Schema.org-oriented property, value-shape,
    cardinality, and relationship checks for Product, Offer, AggregateOffer, and
@@ -183,6 +183,27 @@ type string or type list does not fail, warn, or emit info merely because none o
 types belongs to the Phase 13P deep-validation set. The validator must retain the
 node's location in the `field` value, for example `jsonLd.0.offers.1.price`.
 
+#### Well-formed type identity and matching
+
+Type matching is based on the canonical local Schema.org type identity. The following
+forms are equivalent for relationship and deep-validation matching, without rewriting
+the input node:
+
+| Input `@type` token | Matched identity |
+| --- | --- |
+| `Product` | `Product` |
+| `https://schema.org/Product` | `Product` |
+| `http://schema.org/Product` | `Product` |
+
+The same short-name and `http`/`https` Schema.org IRI equivalence applies to the other
+catalog types. Any non-empty string that is not in the Phase 13P catalog can still be a
+well-formed type identity; being outside the catalog is not, by itself, an error,
+warning, or info condition. A numeric `@type` list matches a relationship when at least
+one normalized item is in that relationship's allowed range. Deep validation runs when
+the list contains at least one of `Product`, `Offer`, `AggregateOffer`, or
+`ProductGroup` after normalization. A list may therefore contain additional valid
+out-of-scope types without becoming invalid solely because they are out of scope.
+
 New issue codes must use a stable `json_ld_` prefix and be asserted by tests. The
 initial code taxonomy is:
 
@@ -243,7 +264,7 @@ semantic rules from builder output. `Text`, `URL`, `Number`, `Integer`, `Date`,
 | `Product` | `size` | `DefinedTerm`, `QuantitativeValue`, `SizeSpecification`, or `Text` |
 | `Product` | `material` | `Product`, `Text`, or `URL` |
 | `Product` | `pattern` | `DefinedTerm` or `Text` |
-| `Product` | `offers` | `Demand` or `Offer`, including canonical subtypes of `Offer` |
+| `Product` | `offers` | `Demand`, `Offer`, `AggregateOffer`, `OfferForLease`, or `OfferForPurchase` |
 | `Product` | `aggregateRating` | `AggregateRating` |
 | `Product` | `review` | `Review` |
 | `Product` | `isVariantOf` | `ProductGroup` or `ProductModel` |
@@ -261,7 +282,7 @@ semantic rules from builder output. `Text`, `URL`, `Number`, `Integer`, `Date`,
 | `AggregateOffer` | `priceCurrency` | `Text` |
 | `AggregateOffer` | `offerCount` | `Integer` |
 | `AggregateOffer` | `availability` | `ItemAvailability` |
-| `AggregateOffer` | `offers` | The same canonical Schema.org `offers` range: `Demand` or `Offer`, including canonical subtypes of `Offer` |
+| `AggregateOffer` | `offers` | `Demand`, `Offer`, `AggregateOffer`, `OfferForLease`, or `OfferForPurchase` |
 | `ProductGroup` | `name` | `Text` |
 | `ProductGroup` | `description` | `Text` or `TextObject` |
 | `ProductGroup` | `brand` | `Brand` or `Organization` |
@@ -277,11 +298,11 @@ relationship target is evaluated.
 The relationship contracts are fixed as follows:
 
 * `Product.isVariantOf` accepts `ProductGroup` or `ProductModel`.
-* `Product.offers` accepts `Demand` or `Offer`, including canonical subtypes of
-  `Offer`.
-* `AggregateOffer.offers` uses the same Schema.org `offers` range as above. A `Demand`
-  target must not be rejected merely because `Demand` is outside the Phase 13P deep
-  validation set.
+* `Product.offers` accepts `Demand`, `Offer`, `AggregateOffer`, `OfferForLease`, or
+  `OfferForPurchase`.
+* `AggregateOffer.offers` accepts the same range: `Demand`, `Offer`,
+  `AggregateOffer`, `OfferForLease`, or `OfferForPurchase`. A `Demand` target must not
+  be rejected merely because `Demand` is outside the Phase 13P deep-validation set.
 * `Offer.seller` accepts `Organization` or `Person`.
 * `ProductGroup.hasVariant` accepts `Product`.
 * `brand` uses the canonical `Brand` or `Organization` range for both `Product` and
@@ -293,18 +314,39 @@ and `ProductGroup`. A valid relationship target outside those four types is allo
 when it is permitted by the canonical relationship range, but the target's internal
 properties are not deeply validated. Examples include `ProductModel` for
 `Product.isVariantOf`, `Demand` for `offers`, `Organization` or `Person` for
-`Offer.seller`, and canonical `Offer` subtypes that are not one of the four deep
-validation types.
+`Offer.seller`, and `OfferForLease` or `OfferForPurchase` for `offers`.
 
-### 3.6 In-scope type contracts
+### 3.6 JSON value representation contract
+
+The following materialized JSON-LD value representations are fixed for the Phase 13P
+catalog. These are representation contracts, not lexical, enum-membership, or Google
+eligibility checks:
+
+* `Text` is a PHP `string`.
+* `Number` is a PHP `int` or `float`.
+* `Integer` is a PHP `int`.
+* `URL`, `Date`, `DateTime`, `ItemAvailability`, and `OfferItemCondition` are
+  non-empty PHP strings. Phase 13P does not perform lexical-format or enum-membership
+  validation for these values.
+* A node type is an associative PHP array with a valid `@type` matching the permitted
+  relationship range. Its internals receive deep validation only when its normalized
+  type includes `Product`, `Offer`, `AggregateOffer`, or `ProductGroup`.
+* A repeated property is a non-empty numeric list, and every item is checked using the
+  same value contract as the property in its singular form.
+* `variesBy` is either one `Text` value or one `DefinedTerm` node, or a non-empty
+  numeric list whose items are each a `Text` value or a `DefinedTerm` node.
+* Internals of an out-of-scope node are not deeply validated after the node passes its
+  relationship and `@type` checks.
+
+### 3.7 In-scope type contracts
 
 The four deep-validation contracts are:
 
 | Type | In-scope checks | In-scope relationships |
 | --- | --- | --- |
-| `Product` | `@type`, the fixed Product catalog, canonical value shapes, repeated values, and product-group identifiers | `offers` accepts `Demand` or `Offer`/Offer subtypes; `isVariantOf` accepts `ProductGroup` or `ProductModel`; `inProductGroupWithID` is `Text` |
+| `Product` | `@type`, the fixed Product catalog, canonical value shapes, repeated values, and product-group identifiers | `offers` accepts `Demand`, `Offer`, `AggregateOffer`, `OfferForLease`, or `OfferForPurchase`; `isVariantOf` accepts `ProductGroup` or `ProductModel`; `inProductGroupWithID` is `Text` |
 | `Offer` | `@type`, the fixed Offer catalog, canonical value shapes, repeated values, and seller range | `seller` accepts `Organization` or `Person` without deep validation of those target types |
-| `AggregateOffer` | `@type`, the fixed AggregateOffer catalog, canonical value shapes, repeated values, and offer count | `offers` accepts the canonical `Demand` or `Offer`/Offer-subtype range, including `Demand` without deep validation |
+| `AggregateOffer` | `@type`, the fixed AggregateOffer catalog, canonical value shapes, repeated values, and offer count | `offers` accepts `Demand`, `Offer`, `AggregateOffer`, `OfferForLease`, or `OfferForPurchase`, including `Demand` without deep validation |
 | `ProductGroup` | `@type`, name/description/URL/group ID, `variesBy` list shape, and brand node shape | `hasVariant` accepts `Product` nodes or lists |
 
 Relationships to out-of-scope node types may be checked only for the minimum shape and
@@ -313,7 +355,7 @@ semantic properties are not validated. Relationship incompatibility is determine
 the canonical relationship range, not by whether the target type is included in the
 four-type deep-validation set.
 
-### 3.7 No Google eligibility contract
+### 3.8 No Google eligibility contract
 
 Phase 13P must not implement or imply:
 
@@ -429,11 +471,12 @@ value shapes, nested node traversal, and Product `offers` / `isVariantOf` relati
 * Product and Offer nodes with their expected types and malformed `@type` values;
 * supported Product fields and invalid value shapes;
 * Offer price, currency, availability, URL/date/condition, and seller shapes;
-* Product `offers` with `Demand`, `Offer`, and canonical Offer-subtype nodes/lists;
+* Product `offers` with `Demand`, `Offer`, `AggregateOffer`, `OfferForLease`, and
+  `OfferForPurchase` nodes/lists;
 * Product `isVariantOf` with ProductGroup and ProductModel;
 * Offer `seller` with Organization and Person;
-* Product and ProductGroup `brand` values are checked against the canonical range, not
-  narrowed to the current builder representation;
+* Product `brand` values are checked against the canonical range, not narrowed to the
+  current builder representation;
 * invalid relationship targets and nested field paths;
 * valid out-of-scope relationship targets are not deeply validated and produce no
   scope-only warning or info.
@@ -467,8 +510,11 @@ AggregateOffer `offers` and ProductGroup `hasVariant` relationship traversal.
 
 * valid AggregateOffer and ProductGroup nodes;
 * price range, currency, count, availability, group ID, and `variesBy` shapes;
-* AggregateOffer `offers` with `Demand`, `Offer`, and canonical Offer-subtype nodes/lists;
+* AggregateOffer `offers` with `Demand`, `Offer`, `AggregateOffer`, `OfferForLease`,
+  and `OfferForPurchase` nodes/lists;
 * ProductGroup `hasVariant` with Product nodes/lists;
+* ProductGroup `brand` values are checked against the canonical `Brand` or
+  `Organization` range, not narrowed to the current builder representation;
 * invalid relationship targets, empty collection nodes, and order-preserving paths;
 * exact Product → AggregateOffer and Product → ProductGroup scenarios from Phase 13O.
 
@@ -543,11 +589,11 @@ matrix below is the minimum required coverage:
 | Area | Required coverage | Expected outcome |
 | --- | --- | --- |
 | Existing foundation | `null`, empty, non-array, associative node, numeric list, and empty list entries | Existing warnings remain compatible; new structural errors are deterministic |
-| Generic structure | missing `@type`, malformed `@type`, supported type list, out-of-scope type, empty node, nested node, invalid collection shape | Only malformed/missing type contracts fail; an out-of-scope type produces no scope-only warning or info |
+| Generic structure | missing `@type`, malformed `@type`, short/`http`/`https` Schema.org type aliases, lists containing an allowed type, out-of-scope type, empty node, nested node, invalid collection shape | Only malformed/missing type contracts fail; a well-formed out-of-scope type produces no scope-only warning or info |
 | Context | root context, nested builder-style omission, raw nested context | Validation is read-only and does not remove or inject context |
 | Product | supported fields, `offers`, `isVariantOf`, `inProductGroupWithID`, invalid values | Product rules apply only to the declared catalog |
 | Offer | price, currency, availability, URL/date/condition, seller | Offer rules and seller relationship shape are covered |
-| AggregateOffer | low/high price, currency, offer count, availability, nested offers | `offers` accepts `Demand`, `Offer`, and canonical Offer subtypes; Demand is not rejected for being out of deep scope |
+| AggregateOffer | low/high price, currency, offer count, availability, nested offers | `offers` accepts `Demand`, `Offer`, `AggregateOffer`, `OfferForLease`, and `OfferForPurchase`; Demand is not rejected for being out of deep scope |
 | ProductGroup | group ID, `variesBy`, brand, `hasVariant` | Only Product nodes are accepted in `hasVariant` |
 | Cross-type composition | Product→Offer, Product→AggregateOffer, Product→ProductGroup, Product→ProductModel, Product→Demand, Offer→Organization/Person, ProductGroup→Product | Valid canonical targets pass; only relationship-incompatible targets fail |
 | Out-of-scope types | Article, Organization, WebSite, and at least one other existing builder output | No deep semantic validation or Google claim is produced |
