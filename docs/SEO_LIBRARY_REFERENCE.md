@@ -232,6 +232,29 @@ fixed catalog.
 Phase 13P does not claim complete Schema.org coverage, required-property completeness,
 Google Rich Results eligibility, or Merchant eligibility.
 
+#### Phase 21 Quality / CI / Release Readiness
+
+Phase 21 adds repository-level quality and release-readiness gates without changing
+runtime validation semantics or public DTO, scoring, issue, exporter, builder, or
+renderer contracts. The current `.github/workflows/ci.yml` runs on PHP `8.2`,
+`8.3`, and `8.4` and retains `composer validate --strict`, clean dependency
+installation, the explicit `php -l` gate for `src/`, `tests/`, and `examples/`,
+PHPStan, the conditional PHPUnit step, and the standalone PHP test suite.
+
+The focused structured-data CI gate runs through the existing
+`SeoMetaValidator::validate()` entry point and existing report/exporter contracts.
+It covers the current structural JSON-LD rules and the deep semantic scope of
+`Product`, `Offer`, `AggregateOffer`, and `ProductGroup`, including the supported
+metadata aliases `jsonLd`, `json_ld`, `schema`, and `schemas`. It does not add
+Google Rich Results eligibility, Merchant eligibility, provider SDKs, network
+calls, or mandatory external-service dependencies. Any external verification is a
+separately approved future integration boundary.
+
+Release-readiness procedures are collected in
+`docs/release/PHASE_21_RELEASE_READINESS_CHECKLIST.md`. Git tags remain the release
+source of truth; Phase 21 does not add a version file or automatic tag, release, or
+package-publish behavior.
+
 ### JSON-LD Builders
 The Web layer includes builders for constructing Schema.org-oriented JSON-LD structures. These builders encapsulate the logic for creating complex schemas and provide a fluent interface for setting properties and composing nodes; they do not perform semantic Schema.org validation or establish Google Rich Results eligibility.
 - **`Web/JsonLd/Builder/AbstractJsonLdBuilder.php`**: Base class implementing `JsonLdBuilderInterface` and using `JsonLdBuilderTrait`.
