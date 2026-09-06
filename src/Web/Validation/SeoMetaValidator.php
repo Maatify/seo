@@ -7,6 +7,7 @@ namespace Maatify\Seo\Web\Validation;
 use Maatify\Seo\Exception\SeoInvalidArgumentException;
 use Maatify\Seo\Web\Validation\DTO\SeoValidationIssueDTO;
 use Maatify\Seo\Web\Validation\DTO\SeoValidationResultDTO;
+use Maatify\Seo\Web\Validation\JsonLd\JsonLdSemanticValidator;
 
 final class SeoMetaValidator
 {
@@ -296,10 +297,15 @@ final class SeoMetaValidator
      */
     private static function validateJsonLdNode(array &$issues, array $node, string $field): void
     {
+        $hasValidType = array_key_exists('@type', $node) && self::isValidJsonLdType($node['@type']);
         if (!array_key_exists('@type', $node)) {
             $issues[] = self::issue('json_ld_missing_type', 'error', 'JSON-LD nodes should include a non-empty @type.', $field . '.@type');
         } elseif (!self::isValidJsonLdType($node['@type'])) {
             $issues[] = self::issue('json_ld_invalid_type', 'error', 'JSON-LD @type should be a non-empty string or a non-empty numeric list of non-empty strings.', $field . '.@type');
+        }
+
+        if ($hasValidType) {
+            JsonLdSemanticValidator::validate($node, $field, $issues);
         }
 
         foreach ($node as $key => $value) {
