@@ -170,8 +170,8 @@ scope.
 - [ ] Confirm no tag, GitHub Release, package publication, or release automation
   is created by WU4 itself.
 - [ ] When a separately authorized release action is performed, create the
-  annotated Git tag on the approved commit. The tag, not a new version file, is
-  the release source of truth.
+  intended Git tag on the approved commit according to the repository's approved
+  tagging policy. The tag, not a new version file, is the release source of truth.
 
 ## 9. Post-tag verification (separate authorized release action)
 
