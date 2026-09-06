@@ -521,11 +521,17 @@ Fully reflect the structured-data gaps that previously existed in the library. T
 
 ## Goal
 
-Provide deep schema-type semantic validation, distinguishing between Schema.org correctness and Google eligibility. The structured-data validation foundation / generic structural validation is partially implemented and requires completion, while deep Schema.org semantic validation itself remains outstanding (including Product, Offer, AggregateOffer, ProductGroup, and schema-type relationship/property validation).
+Provide deep semantic validation for the in-scope Schema.org types, distinguishing
+Schema.org correctness from Google eligibility. The structured-data validation
+foundation / generic structural validation is partially implemented and requires
+completion, while deep Schema.org semantic validation itself remains outstanding for
+Product, Offer, AggregateOffer, and ProductGroup. All other JSON-LD schema types are
+outside the scope of Phase 13P. Google Rich Results / Merchant eligibility remains a
+separate layer and Future Work.
 
 ## Checks
 
-This phase must clearly distinguish three validation layers:
+This phase must clearly distinguish four validation layers:
 
 1. **Current / partially implemented validation foundation**
    * basic JSON-LD array shape
@@ -541,12 +547,13 @@ This phase must clearly distinguish three validation layers:
    * Offer
    * AggregateOffer
    * ProductGroup
-   * schema-type relationships/properties
+   * schema-type relationships/properties within the in-scope types
    * specific validators (Product, Offer, AggregateOffer, ProductGroup)
    * reusable structured validation DTOs/results
    * batch validation compatibility
+   * all other JSON-LD schema types are outside the scope of Phase 13P
 
-4. **Google-specific eligibility / Rich Results / Merchant validation (Future Work)**
+4. **Google-specific eligibility / Rich Results / Merchant validation (separate Future Work)**
    * Google eligibility rules are not identical to Schema.org validity
    * the library must not claim to perfectly reproduce Google's validators
    * CI-friendly output
