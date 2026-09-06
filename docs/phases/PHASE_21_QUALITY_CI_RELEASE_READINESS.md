@@ -79,3 +79,35 @@ The documented core boundary is therefore:
 Any work beyond this boundary is deferred until a separate decision confirms the
 provider, authorization, scope, input/output contract, security handling, and
 verification lifecycle.
+
+## Documentation Sweep
+
+This Documentation Sweep reviewed the required documentation layers against the
+Phase 21 implementation and Verification report. Each path has exactly one status
+from the Phase Execution Standard.
+
+| Path | Status | Reason / synchronization result |
+| --- | --- | --- |
+| `README.md` | `reviewed-no-change` | The README's package requirements, examples, and public feature summary remain accurate; Phase 21 adds no public usage API. |
+| `docs/SEO_LIBRARY_REFERENCE.md` | `updated` | Added the current PHP matrix, syntax and structured-data CI gates, existing validation entry point and aliases, scope limitations, external-verification boundary, and release checklist reference. |
+| `docs/guides/USAGE_GUIDE.md` | `reviewed-no-change` | No usage or runtime contract changed; existing JSON-LD and validation guidance remains applicable. |
+| `docs/guides/INTEGRATION_GUIDE.md` | `reviewed-no-change` | Phase 21 adds no framework or host integration requirement and no external-service dependency. |
+| `docs/SEO/**` | `reviewed-no-change` | The structured-data architecture guidance already describes the four-type semantic boundary and the absence of Google/Merchant eligibility guarantees; no CI-specific user workflow requires insertion there. |
+| `docs/phases/**` | `updated` | This Phase 21 record now includes the completed sweep and its path-by-path decisions; other phase records were not changed. |
+| `docs/verification/**` | `updated` | Added the Phase 21 Verification Gate report recording PASS, commands, versions, counts, and CI evidence; existing verification reports remain historical records. |
+| `examples/**` | `reviewed-no-change` | Existing examples were syntax-checked and executed during verification; no new example or API usage is required by Phase 21. |
+| `docs/roadmap/SEO_LIBRARY_ROADMAP.md` | `reviewed-no-change` | This roadmap has no Phase 21-specific status or claim requiring synchronization. |
+| `docs/roadmap/SEO_LIBRARY_ENHANCEMENT_ROADMAP.md` | `updated` | Corrected the Phase 21 wording to describe the implemented CI/release scope, documented external verification as separately approved Future Work, and recorded Final Review as pending without marking the Phase Complete. |
+| `docs/blueprints/**` | `reviewed-no-change` | The merged Phase 21 Blueprint matches the implemented WU1–WU4 scope; no Blueprint defect was found. |
+
+The Phase 21 release checklist remains at
+`docs/release/PHASE_21_RELEASE_READINESS_CHECKLIST.md`. It was reviewed as part
+of this sweep and still preserves Git tags as the release source of truth without
+requiring lightweight or annotated tags, adding a version file, or creating
+automatic tag/release/publish behavior.
+
+## Phase status after Documentation Sweep
+
+Implementation and Verification are complete, and this Documentation Sweep is
+complete. Final Review against the latest `main` is pending; the integration PR
+must remain Draft and Phase 21 must not be marked Complete until that gate passes.

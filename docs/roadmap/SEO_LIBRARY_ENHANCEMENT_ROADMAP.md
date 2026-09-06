@@ -769,11 +769,20 @@ No actual CLI package is required unless needed later.
 
 ---
 
-# Phase 21: Quality / CI / Release Readiness (Extended)
+# Phase 21: Quality / CI / Release Readiness (Extended — Final Review Pending)
+
+## Current Status
+
+WU1–WU4 implementation, Verification, and Documentation Sweep are complete on the
+Phase 21 integration stack. Final Review against the latest `main` is still pending;
+the Integration PR remains Draft, so Phase 21 is not marked Complete.
 
 ## Goal
 
-Protect the library from regressions and expand CI/CD pipelines to include structured-data and Rich Results validation.
+Protect the library from regressions with additive CI gates, deterministic
+structured-data validation output, and release/package readiness procedures. The
+library's core validation remains separate from any future external eligibility
+verification.
 
 ## Add GitHub Actions
 
@@ -786,30 +795,39 @@ Run:
 * all manual PHP tests
 * examples syntax check
 
-## Optional Release-Readiness Items
+The current workflow keeps the PHP matrix at `8.2`, `8.3`, and `8.4` and runs the
+focused structured-data gate through the existing validation pipeline.
 
-Add:
+## Release-Readiness Items
 
-* release checklist
-* tag checklist
-* package usage checklist
+Delivered in the Phase 21 WU4 checklist at
+`docs/release/PHASE_21_RELEASE_READINESS_CHECKLIST.md`:
 
-## Google / CI Validation Enhancements
+* release readiness checklist
+* Git tag preparation, post-tag, and recovery checks
+* Composer package usage and installability checks
 
-Extend Phase 21 with structured-data verification:
+## Structured-data CI and external-verification boundary
 
-* CI/CD schema validation
+Phase 21 includes structured-data verification using the existing contracts:
+
+* CI/CD structured-data validation
 * CI-friendly structured-data validation output
-* optional Google Rich Results verification workflow
-* Rich Results monitoring direction
-* Merchant/Product eligibility verification where applicable
+* deep semantic validation limited to `Product`, `Offer`, `AggregateOffer`, and
+  `ProductGroup`
+* documentation of a boundary for separately approved future external verification
+
+Google Rich Results eligibility, Merchant eligibility, provider selection, SDKs,
+network calls, and external-service workflows are outside Phase 21. Any actual
+external integration is separately approved Future Work, not a core Phase 21 gap.
 
 ## Constraints
 
 * framework-neutral
 * host-agnostic
 * no mandatory Google/Search Console/external-service runtime dependency
-* external verification/monitoring belongs in optional tooling/integration workflows
+* external verification belongs to a separately approved future integration and is
+  not implemented by Phase 21
 
 ---
 
@@ -818,7 +836,7 @@ Extend Phase 21 with structured-data verification:
 ## Best practical order
 
 1. Phase 13P: Structured-data semantic validation
-2. Phase 21: Optional CI / Rich Results verification enhancements
+2. Phase 21: Quality / CI / Release Readiness
 3. Phase 8: Developer Experience & Docs
 
 ## Later / optional
@@ -840,4 +858,4 @@ The strongest next real-world enhancement is:
 
 After that:
 
-1. CI / Rich Results verification enhancements (Phase 21)
+1. Quality / CI / Release Readiness (Phase 21)
