@@ -517,40 +517,39 @@ Fully reflect the structured-data gaps that previously existed in the library. T
 
 ---
 
-# Phase 13P — Structured Data Semantic Validation
+# Phase 13P — Structured Data Semantic Validation (Complete)
 
 ## Goal
 
 Provide deep semantic validation for the in-scope Schema.org types, distinguishing
-Schema.org correctness from Google eligibility. The structured-data validation
-foundation / generic structural validation is partially implemented and requires
-completion, while deep Schema.org semantic validation itself remains outstanding for
-Product, Offer, AggregateOffer, and ProductGroup. All other JSON-LD schema types are
-outside the scope of Phase 13P. Google Rich Results / Merchant eligibility remains a
-separate layer and Future Work.
+Schema.org correctness from Google eligibility. Phase 13P now includes the completed
+validation foundation, generic structural and graph validation, scoped semantic
+validation for Product, Offer, AggregateOffer, and ProductGroup, validation-pipeline
+compatibility, Verification, Documentation Sweep, and Final Review against the latest
+`main`. All other JSON-LD schema types remain outside the scope of Phase 13P. Google
+Rich Results / Merchant eligibility remains a separate layer and Future Work.
 
 ## Checks
 
 This phase must clearly distinguish four validation layers:
 
-1. **Current / partially implemented validation foundation**
+1. **Current validation foundation (Complete)**
    * basic JSON-LD array shape
    * non-empty schema entries
    * existing generic/meta validation
 
-2. **Outstanding generic structural validation**
+2. **Generic structural validation (Complete)**
    * `@type` presence
-   * other generic schema structural checks that are not actually implemented yet
+   * root, list, nested, and `@graph` traversal
+   * deterministic field paths and well-formed type identity
 
-3. **Outstanding semantic validation**
+3. **In-scope semantic validation (Complete)**
    * Product
    * Offer
    * AggregateOffer
    * ProductGroup
    * schema-type relationships/properties within the in-scope types
    * specific validators (Product, Offer, AggregateOffer, ProductGroup)
-   * reusable structured validation DTOs/results
-   * batch validation compatibility
    * all other JSON-LD schema types are outside the scope of Phase 13P
 
 4. **Google-specific eligibility / Rich Results / Merchant validation (separate Future Work)**
@@ -558,7 +557,15 @@ This phase must clearly distinguish four validation layers:
    * the library must not claim to perfectly reproduce Google's validators
    * CI-friendly output
 
-Structured-data validation foundation is partially implemented; deep semantic validation remains outstanding.
+## Completion Status
+
+Phase 13P is **Complete**. Work Units 1–4, the Verification Gate, the Documentation
+Sweep, and Final Review against the latest `main` all passed.
+
+Final Review compared Draft SHA `2692f66e12a62da0c8e4579c4796dcb94942af78` against
+`main` SHA `ce087cf6682f411b8884ee4e3a1c0f56f9fb5f9b`. The Phase remains limited to
+Product, Offer, AggregateOffer, and ProductGroup deep semantic validation; Google Rich
+Results and Merchant eligibility remain Future Work.
 ---
 
 # Phase 14: SEO Factories / Page Presets (Complete via Batch 1B & 1C)
