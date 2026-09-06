@@ -23,6 +23,14 @@ final class JsonLdSemanticValidator
         if (in_array('Offer', $types, true)) {
             self::validateOffer($node, $field, $issues);
         }
+
+        if (in_array('AggregateOffer', $types, true)) {
+            self::validateAggregateOffer($node, $field, $issues);
+        }
+
+        if (in_array('ProductGroup', $types, true)) {
+            self::validateProductGroup($node, $field, $issues);
+        }
     }
 
     /**
@@ -122,6 +130,69 @@ final class JsonLdSemanticValidator
                     break;
                 case 'seller':
                     self::validateProperty($issues, $value, $field . '.seller', ['Organization', 'Person']);
+                    break;
+            }
+        }
+    }
+
+    /**
+     * @param array<array-key, mixed> $node
+     * @param list<SeoValidationIssueDTO> $issues
+     */
+    private static function validateAggregateOffer(array $node, string $field, array &$issues): void
+    {
+        foreach ($node as $property => $value) {
+            switch ($property) {
+                case 'lowPrice':
+                    self::validateProperty($issues, $value, $field . '.lowPrice', ['Number', 'Text']);
+                    break;
+                case 'highPrice':
+                    self::validateProperty($issues, $value, $field . '.highPrice', ['Number', 'Text']);
+                    break;
+                case 'priceCurrency':
+                    self::validateProperty($issues, $value, $field . '.priceCurrency', ['Text']);
+                    break;
+                case 'offerCount':
+                    self::validateProperty($issues, $value, $field . '.offerCount', ['Integer']);
+                    break;
+                case 'availability':
+                    self::validateProperty($issues, $value, $field . '.availability', ['ItemAvailability']);
+                    break;
+                case 'offers':
+                    self::validateProperty($issues, $value, $field . '.offers', ['Demand', 'Offer', 'AggregateOffer', 'OfferForLease', 'OfferForPurchase']);
+                    break;
+            }
+        }
+    }
+
+    /**
+     * @param array<array-key, mixed> $node
+     * @param list<SeoValidationIssueDTO> $issues
+     */
+    private static function validateProductGroup(array $node, string $field, array &$issues): void
+    {
+        foreach ($node as $property => $value) {
+            switch ($property) {
+                case 'name':
+                    self::validateProperty($issues, $value, $field . '.name', ['Text']);
+                    break;
+                case 'description':
+                    self::validateProperty($issues, $value, $field . '.description', ['Text', 'TextObject']);
+                    break;
+                case 'brand':
+                    self::validateProperty($issues, $value, $field . '.brand', ['Brand', 'Organization']);
+                    break;
+                case 'url':
+                    self::validateProperty($issues, $value, $field . '.url', ['URL']);
+                    break;
+                case 'productGroupID':
+                    self::validateProperty($issues, $value, $field . '.productGroupID', ['Text']);
+                    break;
+                case 'variesBy':
+                    self::validateProperty($issues, $value, $field . '.variesBy', ['DefinedTerm', 'Text']);
+                    break;
+                case 'hasVariant':
+                    self::validateProperty($issues, $value, $field . '.hasVariant', ['Product']);
                     break;
             }
         }
