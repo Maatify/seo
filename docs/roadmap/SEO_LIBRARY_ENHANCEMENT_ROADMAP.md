@@ -23,15 +23,20 @@ The next work should be treated as optional enhancement phases, not required cor
 
 ## Phase Execution Standard (Mandatory for Future Phases)
 
-Every future Phase must follow the lifecycle below. A Phase must not move directly from
-an idea to implementation, and an existing Phase status is not changed by this standard
-unless that Phase is explicitly reviewed and updated.
+Every future Phase starts from the latest `main` by creating its Integration branch and
+Draft Integration PR first. The Blueprint child is then created from the exact latest
+Draft HEAD before any Work Unit implementation begins. A Phase must not move directly
+from an idea to implementation, and an existing Phase status is not changed by this
+standard unless that Phase is explicitly reviewed and updated.
 
-`Blueprint → Draft Integration PR → Work Units → Verification → Documentation Sweep → Final Review vs main → Ready → Merge`
+`Draft Integration PR → Blueprint → Work Units → Verification → Documentation Sweep → Final Review vs latest main → Ready → Merge`
 
 ### Blueprint / Draft Gate
 
-Before any implementation begins, the Phase must have a Blueprint / Draft that records:
+At the beginning of a Phase, first create the Integration branch and its Draft PR from
+the latest `main`. Then create the Blueprint child from the exact latest Draft HEAD and
+target the Phase Integration branch. Before any implementation begins, that Blueprint
+must record:
 
 * Current State
 * Gaps
@@ -46,10 +51,12 @@ The Blueprint for each Phase must be stored under `docs/blueprints/**`.
 
 ### Integration Workflow
 
-At the beginning of the Phase, create an Integration branch and an Integration PR as a
-Draft. Each Work Unit PR must target that Phase's Integration branch, never `main`.
-After a Work Unit is accepted, merge it into the Integration branch. A Work Unit must
-not be merged directly into `main`.
+At the beginning of the Phase, create the Integration branch and Integration PR as a
+Draft from the latest `main`. Create the Blueprint child from the exact latest Draft
+HEAD and target the Integration branch. Each Work Unit PR and each subsequent gate PR
+must target that Phase's Integration branch, never `main`. After a Work Unit is
+accepted, merge it into the Integration branch. A Work Unit must not be merged directly
+into `main`.
 
 The Integration PR is the only final path for merging the complete Phase into `main`.
 It must remain Draft until Verification, the Documentation Sweep, and the Final Review
@@ -118,11 +125,22 @@ true:
 
 ---
 
-# Phase 8: Developer Experience & Usage Documentation
+# Phase 8: Developer Experience & Usage Documentation (Complete)
 
 ## Goal
 
 Make the library easier to understand, test manually, and integrate into real projects.
+
+## Completion Status
+
+Phase 8 is **Complete** after implementation, Verification, Documentation Sweep, and
+Final Review passed against latest `main`:
+
+`2989683e3609bcc843d0ec25ead3799a3b5d2d39`
+
+The Integration PR remains the final integration path to `main`; Ready and merge
+actions remain under maintainer decision. This roadmap entry does not claim that the
+Integration PR has been merged.
 
 ## 8A: Usage Guide
 
