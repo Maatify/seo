@@ -110,7 +110,11 @@ final readonly class SitemapUrlDTO implements \JsonSerializable
             return checkdate((int) $parts[1], (int) $parts[2], (int) $parts[0]);
         }
 
-        return \DateTimeImmutable::createFromFormat(\DateTimeInterface::ATOM, $value) instanceof \DateTimeImmutable;
+        $parsed = \DateTimeImmutable::createFromFormat(\DateTimeInterface::ATOM, $value);
+        $errors = \DateTimeImmutable::getLastErrors();
+
+        return $parsed instanceof \DateTimeImmutable
+            && ($errors === false || ($errors['warning_count'] === 0 && $errors['error_count'] === 0));
     }
 
     /**
