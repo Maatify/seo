@@ -12,20 +12,23 @@ mark Phase 10 Complete: Documentation Sweep and Final Review remain pending.
 
 - Repository: `Maatify/seo`
 - Latest accepted `main`: `c4b0a60adf29fa104f8911e253d02fa35bb19e83`
-- Exact remote Draft baseline and exact runtime Verification HEAD:
+- Runtime Draft baseline (exact implementation/runtime head verified before
+  this report was added):
   `2ce18d266bba03bf4a4a9abfe01b217f5a239058`
+- Exact Verification branch HEAD before this correction:
+  `aed2729f437e25b0ed37015ebfd017de09803d50`
 - Verification branch: `codex/phase-10-verification`
 - Target branch: `codex/phase-10-draft`
 - Merge-base with latest `main`:
   `c4b0a60adf29fa104f8911e253d02fa35bb19e83`
-- At the exact runtime Verification HEAD, `main...Draft` was `0/4`
-  ahead/behind (`main` ahead / Draft ahead). This report adds one
-  documentation-only commit, so the final Verification branch is expected to
-  be `0/5` against the same `main`.
+- Topology against latest `main`: merge-base is
+  `c4b0a60adf29fa104f8911e253d02fa35bb19e83`; the Verification branch is
+  **5 commits ahead and 0 commits behind**.
 
 The branch was created from the exact remote Draft baseline without merge or
-rebase. The report commit is documentation-only and does not change the
-runtime head verified above.
+rebase. The Verification branch HEAD above is the report commit; the runtime
+evidence was collected before that documentation-only commit, against the
+separately identified Runtime Draft baseline above.
 
 ## 3. Accumulated changes from `main` to the Verification branch
 
@@ -155,15 +158,24 @@ above.
 
 ## 10. CI verification
 
-GitHub Actions CI run `34139299064` completed successfully on the exact
-runtime Verification HEAD `2ce18d266bba03bf4a4a9abfe01b217f5a239058`:
+### Current Verification HEAD CI
+
+GitHub Actions CI run `34142906808` completed successfully on the exact
+Verification HEAD `aed2729f437e25b0ed37015ebfd017de09803d50`:
+
+- PHP 8.2: **success**;
+- PHP 8.3: **success**;
+- PHP 8.4: **success**.
+
+### Runtime Draft baseline CI (additional evidence)
+
+The earlier CI run `34139299064` completed successfully on the Runtime Draft
+baseline `2ce18d266bba03bf4a4a9abfe01b217f5a239058`. It is retained as
+baseline evidence only and is not the current Verification HEAD CI:
 
 - PHP 8.2: **success** — job `101797416491`;
 - PHP 8.3: **success** — job `101797416168`;
 - PHP 8.4: **success** — job `101797416547`.
-
-The Verification branch adds only this report after that runtime head, so it
-introduces no implementation delta to the CI-tested code.
 
 ## 11. Architecture and compatibility verification
 
