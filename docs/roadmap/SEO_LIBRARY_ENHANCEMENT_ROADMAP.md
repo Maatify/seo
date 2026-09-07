@@ -182,7 +182,21 @@ Add:
 
 ---
 
-# Phase 9: Robots.txt Output Helpers
+# Phase 9: Robots.txt Output Helpers (Complete)
+
+## Completion Status
+
+Phase 9 is **Complete**. The Robots.txt implementation was already present before
+the current Stack execution and was confirmed by the Blueprint audit, with
+implementation Work Units: `0` and runtime gap count: `0`.
+
+The current Stack Verification Gate passed, the Documentation Sweep is complete, and
+Final Review passed against exact latest `main`:
+
+`3f3018bfa3656c8c7706a9fe9e4e9ae5c662c7c0`
+
+Integration PR #184 remains the final path to `main`. It has not been merged; Ready
+and squash-merge actions remain separate maintainer decisions.
 
 ## Goal
 
