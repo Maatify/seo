@@ -103,11 +103,31 @@ final readonly class SitemapXmlStringRenderer
             throw SeoInvalidArgumentException::emptyField('loc');
         }
 
+        $normalizedLoc = trim((string) $loc);
+        if (filter_var($normalizedLoc, FILTER_VALIDATE_URL) === false) {
+            throw SeoInvalidArgumentException::invalidUrl($normalizedLoc);
+        }
+
+        $lastmod = $this->nullableArrayString($url, 'lastmod');
+        if ($lastmod !== null && !SitemapUrlDTO::isValidLastmod($lastmod)) {
+            throw SeoInvalidArgumentException::emptyField('lastmod');
+        }
+
+        $changefreq = $this->nullableArrayString($url, 'changefreq');
+        if ($changefreq !== null && !in_array($changefreq, SitemapUrlDTO::allowedChangefreqValues(), true)) {
+            throw SeoInvalidArgumentException::emptyField('changefreq');
+        }
+
+        $priority = $this->nullableArrayFloat($url, 'priority');
+        if ($priority !== null && ($priority < 0.0 || $priority > 1.0)) {
+            throw SeoInvalidArgumentException::emptyField('priority');
+        }
+
         return [
-            'loc' => trim((string) $loc),
-            'lastmod' => $this->nullableArrayString($url, 'lastmod'),
-            'changefreq' => $this->nullableArrayString($url, 'changefreq'),
-            'priority' => $this->nullableArrayFloat($url, 'priority'),
+            'loc' => $normalizedLoc,
+            'lastmod' => $lastmod,
+            'changefreq' => $changefreq,
+            'priority' => $priority,
             'alternates' => $this->normalizeArrayAlternates($url),
             'images' => $this->normalizeArrayImages($url),
             'videos' => $this->normalizeArrayVideos($url),

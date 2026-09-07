@@ -106,13 +106,13 @@ assertSameValue(
 );
 
 assertSameValue(
-    'XML special characters are escaped safely',
+    'XML special characters in a valid URL are escaped safely',
     $xmlHeader
-    . '<url><loc>https://example.com/search?q=seo&amp;name=&lt;tag&gt;&quot;quote&quot;</loc><lastmod>2026-07-01&amp;draft</lastmod><changefreq>daily&amp;weekly</changefreq><priority>0.7</priority></url>' . "\n",
+    . '<url><loc>https://example.com/search?q=seo&amp;name=tag</loc><lastmod>2026-07-01T10:00:00+00:00</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>' . "\n",
     $renderer->renderUrlEntry([
-        'loc' => 'https://example.com/search?q=seo&name=<tag>"quote"',
-        'lastmod' => '2026-07-01&draft',
-        'changefreq' => 'daily&weekly',
+        'loc' => 'https://example.com/search?q=seo&name=tag',
+        'lastmod' => '2026-07-01T10:00:00+00:00',
+        'changefreq' => 'daily',
         'priority' => 0.7,
     ]),
 );
@@ -130,6 +130,71 @@ assertSameValue(
 );
 
 assertSameValue(
+    'raw array priority lower boundary remains valid',
+    $xmlHeader
+    . '<url><loc>https://example.com/priority-zero</loc><priority>0.0</priority></url>' . "\n",
+    $renderer->renderUrlEntry([
+        'loc' => 'https://example.com/priority-zero',
+        'priority' => 0.0,
+    ]),
+);
+
+assertSameValue(
+    'raw array priority upper boundary remains valid',
+    $xmlHeader
+    . '<url><loc>https://example.com/priority-one</loc><priority>1.0</priority></url>' . "\n",
+    $renderer->renderUrlEntry([
+        'loc' => 'https://example.com/priority-one',
+        'priority' => 1.0,
+    ]),
+);
+
+foreach (SitemapUrlDTO::allowedChangefreqValues() as $changefreq) {
+    assertTrueValue(
+        'raw array allowed changefreq remains valid: ' . $changefreq,
+        str_contains(
+            $renderer->renderUrlEntry([
+                'loc' => 'https://example.com/changefreq-' . $changefreq,
+                'changefreq' => $changefreq,
+            ]),
+            '<changefreq>' . $changefreq . '</changefreq>',
+        ),
+    );
+}
+
+assertTrueValue(
+    'raw array entry with all child collections remains compatible',
+    (static function () use ($renderer): bool {
+        $xml = $renderer->renderUrlEntry([
+            'loc' => 'https://example.com/extended',
+            'alternates' => [['hreflang' => 'en', 'url' => 'https://example.com/en/extended']],
+            'images' => [['loc' => 'https://cdn.example.com/extended.jpg']],
+            'videos' => [[
+                'thumbnailLoc' => 'https://cdn.example.com/extended-thumb.jpg',
+                'title' => 'Extended video',
+                'description' => 'Extended video description',
+                'contentLoc' => 'https://cdn.example.com/extended.mp4',
+            ]],
+            'news' => [[
+                'publicationName' => 'Example Daily',
+                'publicationLanguage' => 'en',
+                'publicationDate' => '2026-07-01',
+                'title' => 'Extended news',
+            ]],
+        ]);
+
+        return str_contains($xml, 'xmlns:xhtml="http://www.w3.org/1999/xhtml"')
+            && str_contains($xml, 'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"')
+            && str_contains($xml, 'xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"')
+            && str_contains($xml, 'xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"')
+            && str_contains($xml, '<xhtml:link')
+            && str_contains($xml, '<image:image>')
+            && str_contains($xml, '<video:video>')
+            && str_contains($xml, '<news:news>');
+    })(),
+);
+
+assertSameValue(
     'empty URL set renders safely',
     $xmlHeader
     . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"/>' . "\n",
@@ -138,6 +203,59 @@ assertSameValue(
 
 assertThrowsSeoException('invalid URL entry throws existing module exception style', static function () use ($renderer): void {
     $renderer->renderUrlEntry(['lastmod' => '2026-07-01']);
+});
+
+assertThrowsSeoException('invalid raw array loc throws existing module exception style', static function () use ($renderer): void {
+    $renderer->renderUrlEntry(['loc' => 'not-a-url']);
+});
+
+assertThrowsSeoException('invalid raw array date-only lastmod throws module exception', static function () use ($renderer): void {
+    $renderer->renderUrlEntry([
+        'loc' => 'https://example.com/invalid-date',
+        'lastmod' => '2026-02-31',
+    ]);
+});
+
+assertThrowsSeoException('invalid raw array calendar ATOM lastmod throws module exception', static function () use ($renderer): void {
+    $renderer->renderUrlEntry([
+        'loc' => 'https://example.com/invalid-atom-date',
+        'lastmod' => '2026-02-31T10:00:00+00:00',
+    ]);
+});
+
+assertThrowsSeoException('invalid raw array changefreq throws module exception', static function () use ($renderer): void {
+    $renderer->renderUrlEntry([
+        'loc' => 'https://example.com/invalid-changefreq',
+        'changefreq' => 'invalid',
+    ]);
+});
+
+assertThrowsSeoException('negative raw array priority throws module exception', static function () use ($renderer): void {
+    $renderer->renderUrlEntry([
+        'loc' => 'https://example.com/negative-priority',
+        'priority' => -0.1,
+    ]);
+});
+
+assertThrowsSeoException('raw array priority above one throws module exception', static function () use ($renderer): void {
+    $renderer->renderUrlEntry([
+        'loc' => 'https://example.com/high-priority',
+        'priority' => 1.1,
+    ]);
+});
+
+assertThrowsSeoException('raw array priority above one integer throws module exception', static function () use ($renderer): void {
+    $renderer->renderUrlEntry([
+        'loc' => 'https://example.com/high-integer-priority',
+        'priority' => 2,
+    ]);
+});
+
+assertThrowsSeoException('non-numeric raw array priority throws module exception', static function () use ($renderer): void {
+    $renderer->renderUrlEntry([
+        'loc' => 'https://example.com/non-numeric-priority',
+        'priority' => 'not-a-number',
+    ]);
 });
 
 assertThrowsSeoException('non-array non-DTO URL entry throws existing module exception style', static function () use ($renderer): void {
