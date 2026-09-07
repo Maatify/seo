@@ -66,7 +66,7 @@ Execution Standard.
 | `docs/SEO_LIBRARY_REFERENCE.md` | `updated` | The Web renderers, raw validation parity, strict date behavior, News date contract, and separate Shared/Web index DTO roles are explicit. |
 | `docs/guides/USAGE_GUIDE.md` | `updated` | The sitemap usage section now states strict URL/date/frequency/priority validation and the intentional News date behavior. |
 | `docs/guides/INTEGRATION_GUIDE.md` | `updated` | Host-owned HTTP behavior and the typed/raw sitemap validation contract are synchronized. |
-| `docs/SEO/**` | `reviewed-no-change` | These files are historical handbook/specification material; no current public Phase 10 claim required rewriting in this sweep. |
+| `docs/SEO/**` | `reviewed-no-change` | `docs/SEO/library/**` is the active engineering handbook and currently contains structured-data-specific material with no Phase 10 sitemap claim requiring synchronization; `docs/SEO/v1/**` is historical and remains preserved. |
 | `docs/phases/**` | `updated` | This current Phase 10 lifecycle record was added following the repository convention. |
 | `docs/verification/**` | `reviewed-no-change` | The accepted Verification report remains the current evidence record and was not rewritten during this sweep. |
 | `examples/**` | `updated` | `examples/sitemap-output.php` now demonstrates extended typed URL data, `x-default`, and sitemap-index rendering. |
