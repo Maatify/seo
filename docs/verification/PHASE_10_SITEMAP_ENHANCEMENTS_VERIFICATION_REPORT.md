@@ -15,20 +15,20 @@ mark Phase 10 Complete: Documentation Sweep and Final Review remain pending.
 - Runtime Draft baseline (exact implementation/runtime head verified before
   this report was added):
   `2ce18d266bba03bf4a4a9abfe01b217f5a239058`
-- Exact Verification branch HEAD before this correction:
+- Verification evidence HEAD before the documentation correction:
   `aed2729f437e25b0ed37015ebfd017de09803d50`
 - Verification branch: `codex/phase-10-verification`
 - Target branch: `codex/phase-10-draft`
 - Merge-base with latest `main`:
   `c4b0a60adf29fa104f8911e253d02fa35bb19e83`
-- Topology against latest `main`: merge-base is
-  `c4b0a60adf29fa104f8911e253d02fa35bb19e83`; the Verification branch is
-  **5 commits ahead and 0 commits behind**.
+- At the Verification evidence HEAD `aed2729f437e25b0ed37015ebfd017de09803d50`,
+  topology against latest `main` was **5 commits ahead and 0 commits behind**.
 
 The branch was created from the exact remote Draft baseline without merge or
-rebase. The Verification branch HEAD above is the report commit; the runtime
-evidence was collected before that documentation-only commit, against the
-separately identified Runtime Draft baseline above.
+rebase. Documentation-only correction commits after the evidence HEAD do not
+change the verified runtime evidence. Final live PR topology and exact final
+PR HEAD are verified externally during the review gate rather than self-recorded
+inside the same commit.
 
 ## 3. Accumulated changes from `main` to the Verification branch
 
@@ -158,20 +158,24 @@ above.
 
 ## 10. CI verification
 
-### Current Verification HEAD CI
+### Verification evidence HEAD CI
 
-GitHub Actions CI run `34142906808` completed successfully on the exact
-Verification HEAD `aed2729f437e25b0ed37015ebfd017de09803d50`:
+GitHub Actions CI run `34142906808` completed successfully on the Verification
+evidence HEAD `aed2729f437e25b0ed37015ebfd017de09803d50`:
 
 - PHP 8.2: **success**;
 - PHP 8.3: **success**;
 - PHP 8.4: **success**.
 
+This run is durable evidence for the documentation-only Verification branch at
+that evidence point; exact final PR HEAD CI is verified externally during the
+review gate rather than self-recorded in this report.
+
 ### Runtime Draft baseline CI (additional evidence)
 
 The earlier CI run `34139299064` completed successfully on the Runtime Draft
 baseline `2ce18d266bba03bf4a4a9abfe01b217f5a239058`. It is retained as
-baseline evidence only and is not the current Verification HEAD CI:
+baseline evidence only:
 
 - PHP 8.2: **success** — job `101797416491`;
 - PHP 8.3: **success** — job `101797416168`;
