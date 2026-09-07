@@ -69,6 +69,19 @@ $dtoUrl = new SitemapUrlDTO(
     ],
 );
 
+$validAtomVideo = new SitemapVideoDTO(
+    thumbnailLoc: 'https://cdn.example.com/videos/valid-atom-thumb.jpg',
+    title: 'Valid ATOM video',
+    description: 'Valid ATOM publication date',
+    contentLoc: 'https://cdn.example.com/videos/valid-atom.mp4',
+    publicationDate: '2026-07-02T10:00:00+00:00',
+);
+assertSameValue10D(
+    'valid ATOM video publication date remains accepted',
+    '2026-07-02T10:00:00+00:00',
+    $validAtomVideo->publicationDate,
+);
+
 $arrayUrl = [
     'loc' => 'https://example.com/video-page-2',
     'videos' => [[
@@ -155,6 +168,7 @@ assertThrowsSeoException10D('invalid contentLoc throws module exception', static
 assertThrowsSeoException10D('invalid playerLoc throws module exception', static fn() => new SitemapVideoDTO('https://cdn.example.com/thumb.jpg', 'Title', 'Description', null, 'not-a-url'));
 assertThrowsSeoException10D('invalid duration throws module exception', static fn() => new SitemapVideoDTO('https://cdn.example.com/thumb.jpg', 'Title', 'Description', 'https://cdn.example.com/video.mp4', duration: 0));
 assertThrowsSeoException10D('invalid publication date throws module exception', static fn() => new SitemapVideoDTO('https://cdn.example.com/thumb.jpg', 'Title', 'Description', 'https://cdn.example.com/video.mp4', publicationDate: '2026-02-31'));
+assertThrowsSeoException10D('invalid calendar ATOM publication date throws module exception', static fn() => new SitemapVideoDTO('https://cdn.example.com/thumb.jpg', 'Title', 'Description', 'https://cdn.example.com/video.mp4', publicationDate: '2026-02-31T10:00:00+00:00'));
 assertThrowsSeoException10D('non-list videos throws module exception', static fn() => $renderer->renderUrlEntry([
     'loc' => 'https://example.com/video',
     'videos' => ['first' => ['thumbnailLoc' => 'https://cdn.example.com/thumb.jpg']],
