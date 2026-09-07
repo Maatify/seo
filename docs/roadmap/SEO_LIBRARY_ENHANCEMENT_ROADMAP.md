@@ -195,8 +195,9 @@ Final Review passed against exact latest `main`:
 
 `3f3018bfa3656c8c7706a9fe9e4e9ae5c662c7c0`
 
-Integration PR #184 remains the final path to `main`. It has not been merged; Ready
-and squash-merge actions remain separate maintainer decisions.
+Integration PR #184 is the final path to `main`. Ready and squash-merge actions
+remain separate maintainer integration decisions and are not part of the technical
+completion state recorded here.
 
 ## Goal
 
