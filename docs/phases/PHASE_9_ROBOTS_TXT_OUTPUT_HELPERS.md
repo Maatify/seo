@@ -13,8 +13,9 @@ The current Stack gates completed so far are:
 - Documentation Sweep: complete through this record.
 - Final Review against latest `main`: `PASS`.
 
-Phase 9 is **Complete** according to the Phase DoD. PR #184 remains Draft, and no
-Ready or merge action has been performed.
+Phase 9 is **Complete** according to the Phase DoD. PR #184 is the Phase 9
+Integration PR. Ready and squash-merge are maintainer integration actions and are
+not recorded here as part of the technical completion state.
 
 Lifecycle:
 
@@ -129,5 +130,6 @@ Final Review Result: `PASS`.
 - Verification counts remain: `229` PHP files, `49/49` standalone tests, `14/14`
   examples, Phase9A PASS, Phase21 gate PASS, direct Robots smoke PASS, PHPStan PASS,
   and CI PASS on PHP `8.2`, `8.3`, and `8.4`.
-- PR #184 remains Draft. Ready and squash-merge actions are separate maintainer
-  decisions; no merge to `main` is claimed.
+- PR #184 is the Phase 9 Integration PR. Ready and squash-merge actions are
+  separate maintainer integration decisions and are not part of the technical
+  completion state recorded here.
