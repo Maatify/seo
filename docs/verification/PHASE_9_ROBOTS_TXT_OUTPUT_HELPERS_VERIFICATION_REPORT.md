@@ -114,10 +114,27 @@ Gate record.
 
 ## 6. GitHub Actions
 
-GitHub Actions for the Verification PR will be recorded here after the PR is opened
-and its checks complete. The required matrix is PHP `8.2`, `8.3`, and `8.4`, including
-Composer validation, syntax gates, PHPStan, the structured-data gate, conditional
-PHPUnit behavior, and standalone tests.
+The Verification PR CI matrix completed successfully. The required PHP matrix and
+all existing CI gates were green:
+
+- PHP `8.2`: PASS
+- PHP `8.3`: PASS
+- PHP `8.4`: PASS
+- Composer validation: PASS
+- PHP syntax gates: PASS
+- PHPStan: PASS
+- Structured-data gate: PASS
+- Conditional PHPUnit behavior: PASS
+- Standalone tests: PASS
+
+The observed CI workflow runs were:
+
+- [CI run 34089563804](https://github.com/Maatify/seo/actions/runs/34089563804)
+- [CI run 34089573712](https://github.com/Maatify/seo/actions/runs/34089573712)
+
+All six PHP-matrix job results across those runs completed with `pass`. The
+follow-up change that records this CI result is documentation-only and does not
+change runtime, tests, dependencies, or CI configuration.
 
 ## 7. Verdict
 
