@@ -413,8 +413,11 @@ Expected later documentation sweep, intentionally not performed here:
 Blueprint acceptance is complete when:
 
 - this document is the only changed file in the Blueprint PR;
-- the Blueprint PR targets `codex/phase-10-draft`, remains separate from
-  `main`, and is not squash-merged by this workflow;
+- the Blueprint PR targets `codex/phase-10-draft` and must not be merged before
+  Blueprint review acceptance; after acceptance, it is squash-merged into the
+  integration Draft as the next Stack lifecycle action, the child branch is
+  deleted, and implementation continues from the exact latest remote Draft
+  HEAD;
 - all current feature classifications, five runtime gaps, six coverage groups,
   and two Work Units are reviewed and either accepted or explicitly revised;
 - the implementation decision is made after review: implement WU-10-1 and
