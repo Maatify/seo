@@ -517,6 +517,8 @@ $xmlOutput = $renderer->renderUrlSet([$urlDto, $arrayEntry]);
 >
 > **News Fields Handling:** When using `SitemapNewsDTO`, the `publicationDate` is accepted as-is and rendered exactly as provided. Required fields are trimmed, and providing empty required values throws a `SeoInvalidArgumentException`. Optional empty strings are normalized to `null` and are entirely omitted from the XML output. All XML values are safely escaped by `XMLWriter`.
 
+> **URL validation:** `SitemapUrlDTO::isValidLastmod()` accepts valid `YYYY-MM-DD` and valid ATOM timestamps, while rejecting invalid calendar dates and ATOM parser warnings/errors. The Web renderer applies the same contract to raw-array `lastmod` values and also validates raw top-level `loc`, the allowed `changefreq` values, and the inclusive `0.0..1.0` priority range. This strict date behavior applies to URL/index/video contracts; News `publicationDate` intentionally remains an emitted-as-provided, non-empty string.
+
 ---
 
 ## 9. Sitemap Index XML String Example

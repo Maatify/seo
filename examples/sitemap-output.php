@@ -19,8 +19,14 @@ if (is_file($autoload)) {
     });
 }
 
+use Maatify\Seo\Shared\DTO\Sitemap\SitemapAlternateUrlDTO;
+use Maatify\Seo\Shared\DTO\Sitemap\SitemapImageDTO;
+use Maatify\Seo\Shared\DTO\Sitemap\SitemapNewsDTO;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapUrlDTO;
+use Maatify\Seo\Shared\DTO\Sitemap\SitemapVideoDTO;
 use Maatify\Seo\Shared\Service\SitemapGeneratorService;
+use Maatify\Seo\Web\Sitemap\DTO\SitemapIndexEntryDTO;
+use Maatify\Seo\Web\Sitemap\SitemapIndexXmlStringRenderer;
 use Maatify\Seo\Web\Sitemap\SitemapXmlStringRenderer;
 
 function printSection(string $title, mixed $output): void
@@ -44,11 +50,56 @@ $arrayEntry = [
     'priority' => '0.8',
 ];
 
+$extendedDto = new SitemapUrlDTO(
+    loc: 'https://example.com/en/article',
+    lastmod: '2026-07-01T10:00:00+00:00',
+    changefreq: 'weekly',
+    priority: 0.7,
+    alternates: [
+        new SitemapAlternateUrlDTO('en', 'https://example.com/en/article'),
+        new SitemapAlternateUrlDTO('x-default', 'https://example.com/article'),
+    ],
+    images: [
+        new SitemapImageDTO(
+            loc: 'https://cdn.example.com/article.jpg',
+            title: 'Article image',
+            caption: 'A representative article image',
+        ),
+    ],
+    videos: [
+        new SitemapVideoDTO(
+            thumbnailLoc: 'https://cdn.example.com/article-video.jpg',
+            title: 'Article video',
+            description: 'A representative article video',
+            contentLoc: 'https://cdn.example.com/article-video.mp4',
+            duration: 120,
+            publicationDate: '2026-07-01',
+        ),
+    ],
+    news: [
+        new SitemapNewsDTO(
+            publicationName: 'Example Daily',
+            publicationLanguage: 'en',
+            publicationDate: 'as-provided',
+            title: 'Example article',
+        ),
+    ],
+);
+
 $renderer = new SitemapXmlStringRenderer();
 
 printSection('Render Single URL Entry (DTO)', $renderer->renderUrlEntry($urlDto));
 printSection('Render Single URL Entry (Array)', $renderer->renderUrlEntry($arrayEntry));
+printSection('Render Extended URL Entry (DTO)', $renderer->renderUrlEntry($extendedDto));
 printSection('Render Full URL Set', $renderer->renderUrlSet([$urlDto, $arrayEntry]));
+
+$indexRenderer = new SitemapIndexXmlStringRenderer();
+$indexEntries = [
+    new SitemapIndexEntryDTO('https://example.com/sitemap-pages.xml', '2026-07-01'),
+    ['loc' => 'https://example.com/sitemap-news.xml', 'lastmod' => '2026-07-02'],
+];
+
+printSection('Render Sitemap Index', $indexRenderer->renderIndex($indexEntries));
 
 
 $generator = new SitemapGeneratorService();
