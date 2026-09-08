@@ -35,8 +35,6 @@ inside the same commit.
 
 The implementation baseline contains the accepted Phase 10 stack changes. The
 only additional file introduced by this Verification Gate is this report.
-accumulated changed files = `18`
-
 The total accumulated changed files count is **18**.
 
 
@@ -150,14 +148,6 @@ namespaces together.
 
 ## 10. CI verification
 
-### PR HEAD CI (current evidence)
-
-GitHub Actions CI run `34219807333` completed successfully on the current PR HEAD `7fe2a47205e124d777b28ba5c794a2461a9623d5`:
-
-- PHP 8.2: **success**;
-- PHP 8.3: **success**;
-- PHP 8.4: **success**.
-
 ### Verification evidence HEAD CI
 
 GitHub Actions CI run `34213978579` completed successfully on the Verification
@@ -171,15 +161,7 @@ This run is durable evidence for the documentation-only Verification branch at
 that evidence point; exact final PR HEAD CI is verified externally during the
 review gate rather than self-recorded in this report.
 
-### Runtime Draft baseline CI (additional evidence)
 
-The earlier CI run `34213978579` completed successfully on the Runtime Draft
-  baseline `5f15df88a2a9c79b7f44c9c37a316f24fa6db818`. It is retained as
-baseline evidence only:
-
-- PHP 8.2: **success**;
-- PHP 8.3: **success**;
-- PHP 8.4: **success**.
 
 ## 11. Architecture and compatibility verification
 
@@ -202,17 +184,7 @@ Compatibility checks passed:
 Historical Phase 10 reports were used as context only. This report is based on
 the exact current Draft runtime head and fresh command results.
 
-Known documentation gaps are deferred to the later Documentation Sweep:
-
-- roadmap documents need synchronization around 10C/10D wording and optional
-  later image/video work;
-- README and the sitemap example are less comprehensive than the reference
-  and guide documents for extended child collections;
-- the public reference should explicitly explain the deliberate Core/Shared
-  versus Web sitemap-index DTO split;
-
-These are documentation findings, not runtime or compatibility blockers for
-this gate.
+There are no current documentation findings from this post-correction Verification.
 
 ## 13. Lifecycle boundary
 
