@@ -487,7 +487,7 @@ Useful for logging, dashboards, CI output, and PR issue comments.
 
 ---
 
-# Phase 13: JSON-LD Schema Builders
+# Phase 13: JSON-LD Schema Builders (Complete)
 
 ## Goal
 
@@ -776,7 +776,7 @@ No UI should be implemented inside the library.
 
 ---
 
-# Phase 19: Import / Export Helpers
+# Phase 19: Import / Export Helpers (Complete)
 
 ## Goal
 

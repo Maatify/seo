@@ -208,7 +208,7 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   - **Phase 11F: SEO Validation Batch Report Helpers (Complete):** Provide a framework-neutral builder to batch validate multiple items at once and compute aggregate scores and stats.
   - **Phase 11G: SEO Validation Batch Report Exporter (Complete):** Provide a framework-neutral helper to export batch validation reports into arrays, JSON, summary arrays, and Markdown.
 
-- **Phase 13: JSON-LD Builders**
+- **Phase 13: JSON-LD Builders (Complete)**
   - **Phase 13A: JSON-LD Builder Foundation (Complete):** Core interfaces, traits, and abstract classes for builders.
   - **Phase 13B: Product JSON-LD Builder (Complete):** Builder for generating Product schemas.
   - **Phase 13C: Article JSON-LD Builder (Complete):** Builder for generating Article/NewsArticle/BlogPosting schemas.
@@ -224,6 +224,7 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   - **Phase 13M: Extra Specialized JSON-LD Builders Batch (Complete):** Builder for generating Book/Movie/MusicAlbum/Dataset schemas.
   - **Phase 13N: Final JSON-LD Builders Audit (Complete):** Final verification and compliance audit of the Phase 13 Builder System.
   - **Phase 13O: Advanced Product Structured Data (Complete):** Builders for generating ProductGroup and AggregateOffer schemas, and typed structured-data composition.
+  - **Phase 13P: Structured Data Semantic Validation (Complete):** Deep semantic validation for the in-scope Schema.org types, including its Verification, Documentation Sweep, and Final Review gates.
 
 - **Phase 14: Social Meta Builders**
   - **Phase 14A: Social Meta Foundation (Complete):** Core interfaces, generic tags, collections, and render output DTOs.
@@ -242,7 +243,7 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   - **Batch 1C: High-Level Domain SEO Preset Factories (Complete):** Domain-specific factories (Ecommerce, Content, LocalBusiness).
 
 - **Batch 2: Admin Previews & Migrations**
-  - **Batch 2: Admin Previews & Migrations (Complete):** Admin preview DTOs/factories (`SerpPreviewDTO`, `SocialPreviewDTO`, `SerpPreviewFactory`, `SocialPreviewFactory`) plus metadata import/export helpers (`SeoMetadataExportDTO`, `SeoMetadataImportResultDTO`, `SeoMetadataExporter`, `SeoMetadataImporter`).
+  - **Batch 2: Admin Previews & Migrations / Phase 19 Import / Export Helpers (Complete):** Admin preview DTOs/factories (`SerpPreviewDTO`, `SocialPreviewDTO`, `SerpPreviewFactory`, `SocialPreviewFactory`) plus metadata import/export helpers (`SeoMetadataExportDTO`, `SeoMetadataImportResultDTO`, `SeoMetadataExporter`, `SeoMetadataImporter`).
 
 - **Batch 3: Hreflang Head Link Builder**
   - **Batch 3: Hreflang Head Link Builder (Complete):** HTML head `<link rel="alternate" hreflang="..." href="...">` generation (`HreflangLinkBuilder`, `HreflangLinkDTO`, `HreflangLinkRenderer`).
