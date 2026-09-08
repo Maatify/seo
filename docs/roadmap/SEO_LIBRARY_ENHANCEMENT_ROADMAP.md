@@ -239,14 +239,16 @@ Sitemap: https://example.com/sitemap.xml
 
 ---
 
-# Phase 10: Sitemap Enhancements
+# Phase 10: Sitemap Enhancements (Complete)
 
 ## Lifecycle Status
 
-Phase 10 implementation is complete, Verification passed, and the Documentation
-Sweep is complete. Runtime gaps are `0` and implementation Work Units remaining
-are `0`. Final Review against the latest `main` is still pending, so Phase 10 is
-not globally Complete and umbrella PR #191 remains Draft.
+Phase 10 implementation is complete, Verification passed, Documentation Sweep
+is complete, and Final Review passed against exact latest `main`
+`c4b0a60adf29fa104f8911e253d02fa35bb19e83`. Runtime gaps are `0` and
+implementation Work Units remaining are `0`. PR #191 is the Phase 10
+Integration PR and final integration path to `main`. Ready and squash-merge are
+separate maintainer integration actions.
 
 ## Goal
 
@@ -279,9 +281,8 @@ Example:
 
 ## 10B: Hreflang / Alternate URL Support in Web Renderer (Complete)
 
-The core generator and Web string renderer support alternates.
-
-Enhance Web string helper to support:
+Current support includes alternates in the core generator and Web string
+renderer:
 
 * `xhtml:link`
 * `hreflang`
@@ -291,7 +292,7 @@ Enhance Web string helper to support:
 
 ## 10C: Image Sitemap Support (Already fully present)
 
-Support:
+Current support includes:
 
 * image URL
 * image title
@@ -301,7 +302,7 @@ Support:
 
 ## 10D: Video Sitemap Support (Complete)
 
-Support:
+Current support includes:
 
 * video thumbnail
 * title
@@ -312,9 +313,9 @@ Support:
 * embed URL
 * strict shared date validation for the video publication date
 
-## 10E: News Sitemap Support (Complete)
+## 10E: News Sitemap Support (Already fully present)
 
-Support:
+Current support includes:
 
 * Google News sitemap tags
 * publication name, language
