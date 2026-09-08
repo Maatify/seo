@@ -2,10 +2,7 @@
 
 ## Phase status
 
-The Phase 10 implementation is complete, the Verification Gate passed, the
-Documentation Sweep is complete, and Final Review against the latest `main`
-passed. Phase 10 satisfies its technical Definition of Done and is
-**Complete**.
+The Phase 10 implementation is complete. After the initial Final Review, a later independent review found runtime/coverage correction requirements. Correction PR #198 was accepted and squash-merged, and a fresh post-correction Verification was completed and accepted. Documentation synchronization is complete, and a fresh Final Review is pending.
 
 PR #191 is the Phase 10 Integration PR and final integration path to `main`.
 Ready and squash-merge are separate maintainer integration actions.
@@ -15,15 +12,15 @@ Current lifecycle state:
 - Blueprint: complete.
 - WU-10-1 — Strict sitemap date validation: complete.
 - WU-10-2 — Raw-array URL contract parity: complete.
-- Verification: complete / `PASS`.
+- Post-correction Verification: complete / `PASS`.
 - Runtime gaps: `0`.
 - Implementation Work Units remaining: `0`.
-- Documentation Sweep: complete.
-- Final Review: `PASS`.
+- Post-correction Documentation Synchronization: complete.
+- Fresh Final Review: pending.
 
 Lifecycle:
 
-`Draft Integration PR → Blueprint → Work Units → Verification → Documentation Sweep → Final Review vs latest main → Ready → Merge`
+`Draft Integration PR → Blueprint → Work Units → Verification → Documentation Sweep → Final Review vs latest main → Correction → Post-Correction Verification → Documentation Synchronization → Fresh Final Review → Ready → Merge`
 
 ## Verified runtime contracts
 
@@ -39,7 +36,9 @@ HTTP responses, filesystem or cache policy, and delivery.
   provided; it is intentionally not strict shared date validation.
 - `SitemapXmlStringRenderer` supports typed DTO and raw associative URL inputs.
   Raw top-level `loc`, `lastmod`, `changefreq`, and `priority` follow the typed
-  contract.
+  contract. Typed and raw priority must be finite and within `0.0..1.0` (rejecting `NAN`, `+INF`, `-INF`).
+- Valid calendar ATOM sitemap dates and strict `YYYY-MM-DD` dates are accepted, while malformed/invalid calendar ATOM dates are correctly rejected.
+- Persisted Blueprint regression coverage exists for date and priority constraints.
 - Hreflang alternates, `x-default`, image, video, and news child collections
   are supported with conditional XML namespaces and native XML escaping.
 - The two sitemap-index DTOs remain separate public contracts: the Shared DTO
@@ -81,40 +80,25 @@ No Google eligibility, Search Console submission, indexing guarantee, network
 integration, filesystem ownership, HTTP response ownership, or framework
 coupling is claimed by these updates.
 
-## Final Review evidence
+## Historical Final Review evidence
 
-Final Review passed against the exact reviewed references below:
+The original Final Review passed against the exact reviewed references below:
 
-- Latest actual `main`: `c4b0a60adf29fa104f8911e253d02fa35bb19e83`.
 - Reviewed Draft baseline: `a84bb1293504638b0e5ec13de75544c842894d97`.
-- Merge-base: `c4b0a60adf29fa104f8911e253d02fa35bb19e83`.
-- Reviewed topology: Draft was `6` commits ahead and `0` commits behind.
+- Topology at that historical review: `6 ahead / 0 behind`.
+- Original Verification: `PASS`.
+- Original Documentation Sweep: complete.
+- Original Final Review: `PASS`.
+
+## Current post-correction state
+
+- Current accepted Draft baseline before this documentation PR: `68796ac86e5d33a0297f421ebea10ce508a5a151`.
+- Latest `main`: `c4b0a60adf29fa104f8911e253d02fa35bb19e83`.
 - Runtime gaps: `0`.
 - Implementation Work Units remaining: `0`.
-- Verification: `PASS`.
-- Documentation Sweep: complete.
-
-The accumulated Phase 10 stack contains exactly 15 files:
-
-1. `README.md`
-2. `docs/SEO_LIBRARY_REFERENCE.md`
-3. `docs/blueprints/PHASE_10_SITEMAP_ENHANCEMENTS_BLUEPRINT.md`
-4. `docs/guides/INTEGRATION_GUIDE.md`
-5. `docs/guides/USAGE_GUIDE.md`
-6. `docs/phases/PHASE_10_SITEMAP_ENHANCEMENTS.md`
-7. `docs/roadmap/SEO_LIBRARY_ENHANCEMENT_ROADMAP.md`
-8. `docs/roadmap/SEO_LIBRARY_ROADMAP.md`
-9. `docs/verification/PHASE_10_SITEMAP_ENHANCEMENTS_VERIFICATION_REPORT.md`
-10. `examples/sitemap-output.php`
-11. `src/Shared/DTO/Sitemap/SitemapUrlDTO.php`
-12. `src/Web/Sitemap/SitemapXmlStringRenderer.php`
-13. `tests/Phase10ASitemapIndexXmlStringRendererTest.php`
-14. `tests/Phase10DVideoSitemapXmlStringRendererTest.php`
-15. `tests/Phase7ESitemapXmlStringRendererTest.php`
-
-The review confirmed that the Phase 10 technical Definition of Done is
-satisfied without changing runtime code, tests, examples, dependencies, or
-CI workflows in this Final Review record.
+- Post-correction Verification: `PASS`.
+- Accumulated Phase 10 changed files after this documentation synchronization: `19`.
+- Fresh Final Review: pending.
 
 ## Integration boundary
 
