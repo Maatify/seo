@@ -92,6 +92,29 @@ assertSameValue10E(
 );
 
 assertSameValue10E(
+    'one URL entry renders multiple news entries in input order',
+    $xmlHeader
+    . '<url xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"><loc>https://example.com/news/multi</loc><news:news><news:publication><news:name>Example Daily</news:name><news:language>en</news:language></news:publication><news:publication_date>2026-07-01</news:publication_date><news:title>First story</news:title></news:news><news:news><news:publication><news:name>Example Tribune</news:name><news:language>en</news:language></news:publication><news:publication_date>2026-07-02T10:00:00+00:00</news:publication_date><news:title>Second story</news:title></news:news></url>' . "\n",
+    $renderer->renderUrlEntry([
+        'loc' => 'https://example.com/news/multi',
+        'news' => [
+            [
+                'publicationName' => 'Example Daily',
+                'publicationLanguage' => 'en',
+                'publicationDate' => '2026-07-01',
+                'title' => 'First story',
+            ],
+            [
+                'publicationName' => 'Example Tribune',
+                'publicationLanguage' => 'en',
+                'publicationDate' => '2026-07-02T10:00:00+00:00',
+                'title' => 'Second story',
+            ],
+        ],
+    ]),
+);
+
+assertSameValue10E(
     'full URL set with news declares news namespace once on urlset',
     $xmlHeader
     . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"><url><loc>https://example.com/news/story</loc><news:news><news:publication><news:name>Example Daily</news:name><news:language>en</news:language></news:publication><news:publication_date>2026-07-01</news:publication_date><news:title>Breaking News</news:title></news:news></url><url><loc>https://example.com/news/story-2</loc><news:news><news:publication><news:name>Example Tribune</news:name><news:language>en</news:language></news:publication><news:publication_date>2026-07-01T10:00:00+00:00</news:publication_date><news:title>Market Update</news:title><news:access>Subscription</news:access><news:genres>PressRelease, Blog</news:genres><news:keywords>markets, stocks</news:keywords><news:stock_tickers>NASDAQ:EXM</news:stock_tickers></news:news></url></urlset>' . "\n",

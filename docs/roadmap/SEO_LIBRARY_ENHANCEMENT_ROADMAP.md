@@ -239,15 +239,32 @@ Sitemap: https://example.com/sitemap.xml
 
 ---
 
-# Phase 10: Sitemap Enhancements
+# Phase 10: Sitemap Enhancements (Complete)
+
+## Lifecycle Status
+
+Phase 10 implementation is complete, post-correction Verification passed, and post-correction Documentation Synchronization is complete.
+
+- Post-correction Verification: `PASS`
+- Post-correction Documentation Synchronization: `complete`
+- Fresh Final Review: `PASS`
+- Reviewed Draft baseline: `03eb7965e8ee8cc4fead1a4608ff6041de5e7e24`
+- Latest reviewed `main`: `c4b0a60adf29fa104f8911e253d02fa35bb19e83`
+- Topology: `10 ahead / 0 behind`
+- Accumulated Phase 10 changed files: `19`
+- Runtime gaps: `0`
+- Implementation Work Units remaining: `0`
+- Phase 10 technical lifecycle: `Complete`
+
+PR #191 remains Draft until the maintainer explicitly performs the Ready action. Ready and squash-merge are separate maintainer integration actions.
 
 ## Goal
 
 Expand sitemap support beyond basic URL sitemap rendering.
 
-## 10A: Sitemap Index String Renderer
+## 10A: Sitemap Index String Renderer (Complete)
 
-Add:
+Current support includes:
 
 * `Web/Sitemap/SitemapIndexXmlStringRenderer.php`
 
@@ -257,6 +274,7 @@ Support:
 * `loc`
 * `lastmod`
 * multiple sitemap files
+* typed and raw entry inputs with strict date validation
 
 Example:
 
@@ -269,22 +287,20 @@ Example:
 </sitemapindex>
 ```
 
-## 10B: Hreflang / Alternate URL Support in Web Renderer
+## 10B: Hreflang / Alternate URL Support in Web Renderer (Complete)
 
-Current core generator supports alternates.
-
-Enhance Web string helper to support:
+Current support includes alternates in the core generator and Web string
+renderer:
 
 * `xhtml:link`
 * `hreflang`
 * alternate URLs
 * `x-default`
+* raw top-level URL validation parity for `loc`, `lastmod`, `changefreq`, and `priority` (must be finite within `0.0..1.0`, rejecting `NAN`, `+INF`, `-INF`)
 
-## 10C: Image Sitemap Support
+## 10C: Image Sitemap Support (Already fully present)
 
-Optional later.
-
-Support:
+Current support includes:
 
 * image URL
 * image title
@@ -294,7 +310,7 @@ Support:
 
 ## 10D: Video Sitemap Support (Complete)
 
-Support:
+Current support includes:
 
 * video thumbnail
 * title
@@ -303,15 +319,17 @@ Support:
 * publication date
 * content URL
 * embed URL
+* strict shared date validation for the video publication date
 
-## 10E: News Sitemap Support (Complete)
+## 10E: News Sitemap Support (Already fully present)
 
-Support:
+Current support includes:
 
 * Google News sitemap tags
 * publication name, language
 * title, date
 * access, genres, keywords, stock tickers
+* non-empty `publicationDate` emitted as provided; it is not subject to the shared strict date parser
 
 ---
 
@@ -876,8 +894,6 @@ external integration is separately approved Future Work, not a core Phase 21 gap
 
 ## Later / optional
 
-* Image sitemap
-* Video sitemap
 * Import/export helpers
 * CLI tooling
 * advanced social previews

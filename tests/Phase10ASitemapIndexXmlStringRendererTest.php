@@ -57,6 +57,23 @@ function assertThrowsSeoException10A(string $label, callable $callback): void
 $renderer = new SitemapIndexXmlStringRenderer();
 $xmlHeader = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 
+assertTrueValue10A(
+    'valid date-only lastmod remains accepted',
+    SitemapUrlDTO::isValidLastmod('2026-02-28'),
+);
+assertTrueValue10A(
+    'invalid date-only lastmod remains rejected',
+    !SitemapUrlDTO::isValidLastmod('2026-02-31'),
+);
+assertTrueValue10A(
+    'valid ATOM lastmod remains accepted',
+    SitemapUrlDTO::isValidLastmod('2026-07-02T10:00:00+00:00'),
+);
+assertTrueValue10A(
+    'invalid calendar ATOM lastmod is rejected',
+    !SitemapUrlDTO::isValidLastmod('2026-02-31T10:00:00+00:00'),
+);
+
 $dto = new SitemapIndexEntryDTO(
     loc: 'https://example.com/sitemap-products.xml',
     lastmod: '2026-07-01',
@@ -88,6 +105,13 @@ assertSameValue10A(
 );
 
 assertSameValue10A(
+    'empty sitemap index renders safely',
+    $xmlHeader
+    . '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"/>' . "\n",
+    $renderer->renderIndex([]),
+);
+
+assertSameValue10A(
     'optional lastmod is omitted',
     $xmlHeader
     . '<sitemap><loc>https://example.com/sitemap-minimal.xml</loc></sitemap>' . "\n",
@@ -110,6 +134,15 @@ assertTrueValue10A(
 );
 
 assertThrowsSeoException10A('empty loc throws module exception', static fn() => new SitemapIndexEntryDTO('   '));
+assertThrowsSeoException10A('Web sitemap index DTO rejects invalid URL constructor input', static fn() => new SitemapIndexEntryDTO('not-a-url'));
+assertThrowsSeoException10A(
+    'Web sitemap index DTO rejects invalid calendar ATOM lastmod',
+    static fn() => new SitemapIndexEntryDTO('https://example.com/sitemap.xml', '2026-02-31T10:00:00+00:00'),
+);
+assertThrowsSeoException10A(
+    'typed sitemap URL DTO rejects invalid calendar ATOM lastmod',
+    static fn() => new SitemapUrlDTO('https://example.com/page', lastmod: '2026-02-31T10:00:00+00:00'),
+);
 assertThrowsSeoException10A('invalid URL throws module exception', static fn() => $renderer->renderEntry(['loc' => 'not-a-url']));
 assertThrowsSeoException10A('invalid lastmod throws module exception', static fn() => $renderer->renderEntry(['loc' => 'https://example.com/sitemap.xml', 'lastmod' => '2026-02-31']));
 assertThrowsSeoException10A('non-array non-DTO input throws module exception', static fn() => $renderer->renderEntry('https://example.com/sitemap.xml'));
