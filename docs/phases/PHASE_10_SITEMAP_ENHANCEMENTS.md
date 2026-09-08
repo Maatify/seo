@@ -2,7 +2,7 @@
 
 ## Phase status
 
-The Phase 10 implementation is complete. After the initial Final Review, a later independent review found runtime/coverage correction requirements. Correction PR #198 was accepted and squash-merged, and a fresh post-correction Verification was completed and accepted. Documentation synchronization is the current gate, and a fresh Final Review is pending.
+The Phase 10 implementation is complete. After the initial Final Review, a later independent review found runtime/coverage correction requirements. Correction PR #198 was accepted and squash-merged, and a fresh post-correction Verification was completed and accepted. Documentation synchronization is complete, and a fresh Final Review is pending.
 
 PR #191 is the Phase 10 Integration PR and final integration path to `main`.
 Ready and squash-merge are separate maintainer integration actions.
@@ -15,7 +15,7 @@ Current lifecycle state:
 - Post-correction Verification: complete / `PASS`.
 - Runtime gaps: `0`.
 - Implementation Work Units remaining: `0`.
-- Post-correction Documentation Synchronization: current gate.
+- Post-correction Documentation Synchronization: complete.
 - Fresh Final Review: pending.
 
 Lifecycle:
@@ -80,22 +80,25 @@ No Google eligibility, Search Console submission, indexing guarantee, network
 integration, filesystem ownership, HTTP response ownership, or framework
 coupling is claimed by these updates.
 
-## Final Review evidence
+## Historical Final Review evidence
 
-Final Review passed against the exact reviewed references below:
+The original Final Review passed against the exact reviewed references below:
 
-- Latest actual `main`: `c4b0a60adf29fa104f8911e253d02fa35bb19e83`.
 - Reviewed Draft baseline: `a84bb1293504638b0e5ec13de75544c842894d97`.
-- Merge-base: `c4b0a60adf29fa104f8911e253d02fa35bb19e83`.
-- Reviewed topology: Draft was `6` commits ahead and `0` commits behind.
+- Topology at that historical review: `6 ahead / 0 behind`.
+- Original Verification: `PASS`.
+- Original Documentation Sweep: complete.
+- Original Final Review: `PASS`.
+
+## Current post-correction state
+
+- Current accepted Draft baseline before this documentation PR: `68796ac86e5d33a0297f421ebea10ce508a5a151`.
+- Latest `main`: `c4b0a60adf29fa104f8911e253d02fa35bb19e83`.
 - Runtime gaps: `0`.
 - Implementation Work Units remaining: `0`.
-- Verification: `PASS`.
-- Documentation Sweep: complete.
-
-The accumulated Phase 10 stack contains exactly 19 files.
-
-*(Note: Stale topology/file-count evidence from the old Final Review has been superseded by the post-correction state.)*
+- Post-correction Verification: `PASS`.
+- Accumulated Phase 10 changed files after this documentation synchronization: `19`.
+- Fresh Final Review: pending.
 
 ## Integration boundary
 
