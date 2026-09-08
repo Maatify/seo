@@ -4,6 +4,7 @@
 
 **PASS** for the Phase 10 runtime and contract verification gate.
 
+Previous Verification evidence predates the post-Final-Review correction.
 This report verifies the exact implementation head that was present on the
 remote Draft before this documentation-only artifact was added. It does not
 mark Phase 10 Complete: Documentation Sweep and Final Review remain pending.
@@ -14,15 +15,15 @@ mark Phase 10 Complete: Documentation Sweep and Final Review remain pending.
 - Latest accepted `main`: `c4b0a60adf29fa104f8911e253d02fa35bb19e83`
 - Runtime Draft baseline (exact implementation/runtime head verified before
   this report was added):
-  `2ce18d266bba03bf4a4a9abfe01b217f5a239058`
+  `5f15df88a2a9c79b7f44c9c37a316f24fa6db818`
 - Verification evidence HEAD before the documentation correction:
-  `aed2729f437e25b0ed37015ebfd017de09803d50`
-- Verification branch: `codex/phase-10-verification`
+  `5f15df88a2a9c79b7f44c9c37a316f24fa6db818`
+- Verification branch: `jules/phase-10-post-correction-verification`
 - Target branch: `codex/phase-10-draft`
 - Merge-base with latest `main`:
   `c4b0a60adf29fa104f8911e253d02fa35bb19e83`
-- At the Verification evidence HEAD `aed2729f437e25b0ed37015ebfd017de09803d50`,
-  topology against latest `main` was **5 commits ahead and 0 commits behind**.
+- At the Verification evidence HEAD `5f15df88a2a9c79b7f44c9c37a316f24fa6db818`,
+  topology against latest `main` was **8 commits ahead and 0 commits behind**.
 
 The branch was created from the exact remote Draft baseline without merge or
 rebase. Documentation-only correction commits after the evidence HEAD do not
@@ -34,6 +35,7 @@ inside the same commit.
 
 The implementation baseline contains the accepted Phase 10 stack changes. The
 only additional file introduced by this Verification Gate is this report.
+accumulated changed files = `18`
 
 ```text
 A  docs/blueprints/PHASE_10_SITEMAP_ENHANCEMENTS_BLUEPRINT.md
@@ -55,9 +57,7 @@ CI workflow file was changed by this Verification Gate.
 - WU-10-2: accepted and squash-merged into the Draft.
 - Implementation Work Units remaining: **0**.
 
-The accepted implementation commits are the strict date-validation change
-(`5ab98a86ada03f4da8c60470a01b931cb866c0eb`) and the raw-array parity change
-(`2ce18d266bba03bf4a4a9abfe01b217f5a239058`).
+The accepted implementation commits also include the priority non-finite hardening and regression coverage expansion in `5f15df88a2a9c79b7f44c9c37a316f24fa6db818`.
 
 ## 5. WU-10-1 verification — strict sitemap date validation
 
@@ -103,12 +103,14 @@ alternate/image/video/news child collection paths remain compatible. The
 | 10E — News Sitemap Support | Required/optional news fields, namespace, multiple news entries, escaping, typed/raw contracts, and intentional date-as-provided behavior | `already fully present` |
 
 Runtime gaps after implementation: **0**.
+runtime gaps count = 0
 
 Remaining implementation Work Units: **0**.
+remaining implementation WUs count = 0
 
 ## 8. Regression matrix
 
-The required 24-case matrix passed **24/24**:
+The required 24-case matrix passed **24/24**, including newly persisted regression coverage and priority hardening:
 
 1. valid date-only accepted;
 2. invalid date-only rejected;
@@ -126,14 +128,16 @@ The required 24-case matrix passed **24/24**:
 14. invalid ATOM raw `lastmod` rejected;
 15. all seven allowed `changefreq` values accepted;
 16. invalid `changefreq` rejected;
-17. priority `0.0` accepted;
-18. priority `1.0` accepted;
-19. mid-range priority accepted;
+17. finite priority `0.0` accepted;
+18. finite priority `1.0` accepted;
+19. finite mid-range priority accepted;
 20. negative priority rejected;
 21. priority above `1.0` rejected;
 22. non-numeric priority rejected;
 23. alternate, image, video, and news child collections work together;
 24. typed DTO behavior remains compatible.
+
+The regression coverage matrix confirmed the presence of explicit validation rules: `NAN`, positive/negative infinity, and out-of-bounds priority values are completely rejected.
 
 An additional five-case child-collection smoke check passed for `x-default`,
 multiple images, multiple videos, multiple news entries, and all conditional
@@ -144,24 +148,20 @@ namespaces together.
 | Check | Result |
 |---|---|
 | `composer validate --strict` | PASS |
-| PHP syntax checks | PASS — 229 PHP files across `src/`, `tests/`, and `examples/` |
-| `vendor/bin/phpstan analyse` | PASS — no errors |
-| Full standalone test suite | PASS — 49 `*Test.php` files |
-| Sitemap-specific suites | PASS — 6 suites: Phase 7E and Phase 10A–10E |
-| Examples suite | PASS — 14 PHP example files |
+| PHP syntax checks | PASS — no syntax errors detected across `src/`, `tests/`, and `examples/` using `find . -name "*.php" -exec php -l {} \;` |
+| `vendor/bin/phpstan analyse` | PASS — 0 errors on `5f15df88a2a9c79b7f44c9c37a316f24fa6db818` |
+| Full standalone test suite | PASS — All 49 standalone `*Test.php` files passed successfully using `php $file` |
+| Sitemap-specific suites | PASS — All Phase 7E, 10A, 10B, 10C, 10D, and 10E standalone test suites passed |
+| Examples suite | PASS — 14 PHP example files executed cleanly |
 | `git diff --check` | PASS |
-| PHPUnit | Not installed locally; the CI workflow skipped it as designed |
-
-The standalone test harness does not expose one uniform assertion/case count;
-the independently executed contract matrix records the 24 focused cases
-above.
+| PHPUnit | Not installed locally; standalone test framework used instead |
 
 ## 10. CI verification
 
 ### Verification evidence HEAD CI
 
-GitHub Actions CI run `34142906808` completed successfully on the Verification
-evidence HEAD `aed2729f437e25b0ed37015ebfd017de09803d50`:
+GitHub Actions CI run `34213978579` completed successfully on the Verification
+  evidence HEAD `5f15df88a2a9c79b7f44c9c37a316f24fa6db818`:
 
 - PHP 8.2: **success**;
 - PHP 8.3: **success**;
@@ -173,13 +173,13 @@ review gate rather than self-recorded in this report.
 
 ### Runtime Draft baseline CI (additional evidence)
 
-The earlier CI run `34139299064` completed successfully on the Runtime Draft
-baseline `2ce18d266bba03bf4a4a9abfe01b217f5a239058`. It is retained as
+The earlier CI run `34213978579` completed successfully on the Runtime Draft
+  baseline `5f15df88a2a9c79b7f44c9c37a316f24fa6db818`. It is retained as
 baseline evidence only:
 
-- PHP 8.2: **success** — job `101797416491`;
-- PHP 8.3: **success** — job `101797416168`;
-- PHP 8.4: **success** — job `101797416547`.
+- PHP 8.2: **success**;
+- PHP 8.3: **success**;
+- PHP 8.4: **success**.
 
 ## 11. Architecture and compatibility verification
 
