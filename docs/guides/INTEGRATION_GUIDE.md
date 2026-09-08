@@ -252,6 +252,15 @@ echo $xmlString;
 exit;
 ```
 
+The Web URL renderer accepts either typed `SitemapUrlDTO` values or raw
+associative URL entries. Both forms use the same top-level contract for `loc`,
+`lastmod`, `changefreq`, and `priority`: valid date-only/ATOM values are
+accepted, invalid calendar dates and parser warnings are rejected, allowed
+frequency values are enforced, and priority remains within `0.0..1.0`.
+`SitemapNewsDTO::publicationDate` is intentionally only required to be
+non-empty and is emitted as provided; it is not subject to the shared strict
+date parser.
+
 If you need to output a `sitemapindex`:
 
 ```php

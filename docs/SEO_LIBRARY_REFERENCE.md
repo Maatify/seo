@@ -83,7 +83,7 @@ The `MetaGeneratorService` orchestrates the assembly of `<title>`, `<meta>` desc
 The `SitemapGeneratorService` generates valid XML strings for sitemap indexes and URL sets using `XMLWriter`.
 - **Responsibility**: It is fully host-agnostic and framework-agnostic. It accepts arrays of strict DTOs and returns a generated XML string in memory. The service contains **no SQL, no repository access, no host data fetching, no file writing, and no HTTP response generation**.
 - **`generateUrlSitemap()` Behavior**: Accepts a list of `SitemapUrlDTO` instances and returns a `SitemapGenerationResultDTO` containing the URL sitemap XML (`urlset`). It automatically adds the XHTML namespace if any `SitemapUrlDTO` contains alternate hreflang links.
-- **`generateSitemapIndex()` Behavior**: Accepts a list of `SitemapIndexEntryDTO` instances and returns a `SitemapGenerationResultDTO` containing the sitemap index XML (`sitemapindex`).
+- **`generateSitemapIndex()` Behavior**: Accepts a list of shared `Maatify\Seo\Shared\DTO\Sitemap\SitemapIndexEntryDTO` instances and returns a `SitemapGenerationResultDTO` containing the sitemap index XML (`sitemapindex`).
 
 ### Sitemap DTOs
 All inputs to the sitemap generator are strictly validated `final readonly` DTOs.
@@ -91,7 +91,7 @@ All inputs to the sitemap generator are strictly validated `final readonly` DTOs
 - **`SitemapAlternateUrlDTO`**: Represents a single `<xhtml:link>` hreflang alternate. Contains `hreflang` and `url`.
 - **`SitemapImageDTO`**: Represents a single `<image:image>` entry. Contains `loc`, optional `title`, `caption`, `geoLocation`, and `license`.
 - **`SitemapVideoDTO`**: Represents a single `<video:video>` entry. Contains `thumbnailLoc`, `title`, `description`, optional `contentLoc`, `playerLoc`, `duration`, and `publicationDate`.
-- **`SitemapIndexEntryDTO`**: Represents a single `<sitemap>` entry in a sitemap index. Contains `loc` and optional `lastmod`.
+- **`Shared\DTO\Sitemap\SitemapIndexEntryDTO`**: Core generator DTO for a single `<sitemap>` entry. It is a separate public contract from the Web renderer's index DTO.
 - **`SitemapGenerationResultDTO`**: Represents the result of a generation operation. Contains the full `xml` string, the `entryCount` (exposed as `entry_count` in JSON serialization), and the `type` (either `urlset` or `sitemapindex`).
 
 ### Redirect and Slug Management
@@ -164,7 +164,10 @@ The Web layer provides a dedicated adapter for optionally converting Spatie sche
 ### Sitemap String Output
 The Web layer includes optional helpers for rendering XML sitemap strings directly.
 - **`Web/Sitemap/SitemapXmlStringRenderer.php`**: A framework-neutral helper that returns XML strings only and does not emit HTTP responses. It supports `SitemapUrlDTO` objects and raw array URL entries, correctly handling and validating `loc`, `lastmod`, `changefreq`, `priority`, hreflang `alternates`, `images`, `videos`, and `news` fields. When `alternates` are present, it dynamically adds the `xmlns:xhtml` namespace and renders `<xhtml:link>` elements. When `images` are present, it dynamically adds the `xmlns:image` namespace and renders `<image:image>` elements. When `videos` are present, it dynamically adds the `xmlns:video` namespace and renders `<video:video>` elements. When `news` data is present, it dynamically adds the `xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"` namespace and renders `<news:news>` elements. It safely escapes XML values natively. The existing `SitemapGeneratorService` remains fully available and unchanged.
-- **`Web/Sitemap/SitemapIndexXmlStringRenderer.php`**: A framework-neutral helper that returns XML strings only for Sitemap Indexes. It supports `SitemapIndexEntryDTO` objects and raw array URL entries, safely escaping values.
+- **Raw URL validation parity**: For raw associative URL entries, top-level `loc`, optional `lastmod`, `changefreq`, and `priority` follow the typed URL contract. `lastmod` accepts valid `YYYY-MM-DD` and valid ATOM values while rejecting invalid calendar dates and parser warnings/errors; `changefreq` is limited to the seven sitemap values, and `priority` is numeric within `0.0..1.0`.
+- **`Web/Sitemap/SitemapIndexXmlStringRenderer.php`**: A framework-neutral helper that returns XML strings only for Sitemap Indexes. It supports `Maatify\Seo\Web\Sitemap\DTO\SitemapIndexEntryDTO` objects and raw associative entries, safely escaping values and applying the shared strict `lastmod` validation contract.
+- **Separate index DTO roles**: `Maatify\Seo\Shared\DTO\Sitemap\SitemapIndexEntryDTO` belongs to `SitemapGeneratorService`; `Maatify\Seo\Web\Sitemap\DTO\SitemapIndexEntryDTO` belongs to `SitemapIndexXmlStringRenderer`. They are deliberate separate public contracts and are not interchangeable by implication.
+- **News date contract**: `SitemapNewsDTO::$publicationDate` remains non-empty and is emitted exactly as provided. It intentionally does not use the strict shared `lastmod` date parser.
 - **`Shared/DTO/Sitemap/SitemapNewsDTO.php`**: A final readonly DTO that encapsulates Google News sitemap tags. It requires `publicationName`, `publicationLanguage`, `publicationDate`, and `title`. It optionally supports `access`, `genres`, `keywords`, and `stockTickers`. The `publicationDate` is accepted as-is and rendered exactly as provided. Required fields are trimmed, and providing empty required values throws a `SeoInvalidArgumentException`. Optional empty strings are normalized to `null` and are entirely omitted from the XML output. All values are safely escaped by `XMLWriter` when rendered.
 
 ### Robots.txt String Output
