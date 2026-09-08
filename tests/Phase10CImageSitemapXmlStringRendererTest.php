@@ -95,6 +95,19 @@ assertSameValue10C(
 );
 
 assertSameValue10C(
+    'one URL entry renders multiple images in input order',
+    $xmlHeader
+    . '<url xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"><loc>https://example.com/gallery</loc><image:image><image:loc>https://cdn.example.com/gallery/one.jpg</image:loc><image:title>Gallery one</image:title></image:image><image:image><image:loc>https://cdn.example.com/gallery/two.jpg</image:loc><image:title>Gallery two</image:title></image:image></url>' . "\n",
+    $renderer->renderUrlEntry(new SitemapUrlDTO(
+        loc: 'https://example.com/gallery',
+        images: [
+            new SitemapImageDTO('https://cdn.example.com/gallery/one.jpg', 'Gallery one'),
+            new SitemapImageDTO('https://cdn.example.com/gallery/two.jpg', 'Gallery two'),
+        ],
+    )),
+);
+
+assertSameValue10C(
     'full URL set with images declares image namespace once on urlset',
     $xmlHeader
     . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"><url><loc>https://example.com/product</loc><image:image><image:loc>https://cdn.example.com/products/product-1.jpg</image:loc><image:title>Product 1</image:title><image:caption>Product 1 image</image:caption><image:geo_location>Cairo, Egypt</image:geo_location><image:license>https://example.com/license</image:license></image:image></url><url><loc>https://example.com/category</loc><image:image><image:loc>https://cdn.example.com/categories/category-1.jpg</image:loc><image:title>Category 1</image:title><image:caption>Category 1 image</image:caption></image:image></url></urlset>' . "\n",

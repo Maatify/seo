@@ -48,7 +48,7 @@ final readonly class SitemapUrlDTO implements \JsonSerializable
         if ($this->changefreq !== null && !in_array($this->changefreq, self::allowedChangefreqValues(), true)) {
             throw SeoInvalidArgumentException::emptyField('changefreq');
         }
-        if ($this->priority !== null && ($this->priority < 0.0 || $this->priority > 1.0)) {
+        if ($this->priority !== null && (!is_finite($this->priority) || $this->priority < 0.0 || $this->priority > 1.0)) {
             throw SeoInvalidArgumentException::emptyField('priority');
         }
 

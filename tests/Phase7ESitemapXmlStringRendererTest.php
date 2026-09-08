@@ -149,6 +149,16 @@ assertSameValue(
     ]),
 );
 
+assertThrowsSeoException('typed NAN priority throws module exception', static fn() => new SitemapUrlDTO(
+    'https://example.com/nan-typed-priority',
+    priority: NAN,
+));
+
+assertThrowsSeoException('raw array NAN priority throws module exception', static fn() => $renderer->renderUrlEntry([
+    'loc' => 'https://example.com/nan-raw-priority',
+    'priority' => NAN,
+]));
+
 foreach (SitemapUrlDTO::allowedChangefreqValues() as $changefreq) {
     assertTrueValue(
         'raw array allowed changefreq remains valid: ' . $changefreq,
