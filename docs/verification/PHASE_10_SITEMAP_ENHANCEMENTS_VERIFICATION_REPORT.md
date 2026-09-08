@@ -34,7 +34,7 @@ inside the same commit.
 ## 3. Accumulated changes from `main` to the Verification branch
 
 The implementation baseline contains the accepted Phase 10 stack changes. The
-only additional file introduced by this Verification Gate is this report.
+only file modified by this Verification Gate is this verification report.
 The total accumulated changed files count is **18**.
 
 
