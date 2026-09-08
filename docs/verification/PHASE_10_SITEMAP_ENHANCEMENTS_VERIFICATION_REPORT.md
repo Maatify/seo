@@ -7,7 +7,7 @@
 Previous Verification evidence predates the post-Final-Review correction.
 This report verifies the exact implementation head that was present on the
 remote Draft before this documentation-only artifact was added. It does not
-mark Phase 10 Complete: Documentation Sweep and Final Review remain pending.
+mark Phase 10 Complete: Post-correction documentation synchronization and fresh Final Review remain pending.
 
 ## 2. Repository and exact references
 
@@ -18,7 +18,7 @@ mark Phase 10 Complete: Documentation Sweep and Final Review remain pending.
   `5f15df88a2a9c79b7f44c9c37a316f24fa6db818`
 - Verification evidence HEAD before the documentation correction:
   `5f15df88a2a9c79b7f44c9c37a316f24fa6db818`
-- Verification branch: `jules/phase-10-post-correction-verification`
+- Verification branch: `jules/phase-10-post-correction-verification-11700028991435130174`
 - Target branch: `codex/phase-10-draft`
 - Merge-base with latest `main`:
   `c4b0a60adf29fa104f8911e253d02fa35bb19e83`
@@ -37,15 +37,8 @@ The implementation baseline contains the accepted Phase 10 stack changes. The
 only additional file introduced by this Verification Gate is this report.
 accumulated changed files = `18`
 
-```text
-A  docs/blueprints/PHASE_10_SITEMAP_ENHANCEMENTS_BLUEPRINT.md
-M  src/Shared/DTO/Sitemap/SitemapUrlDTO.php
-M  src/Web/Sitemap/SitemapXmlStringRenderer.php
-M  tests/Phase10ASitemapIndexXmlStringRendererTest.php
-M  tests/Phase10DVideoSitemapXmlStringRendererTest.php
-M  tests/Phase7ESitemapXmlStringRendererTest.php
-A  docs/verification/PHASE_10_SITEMAP_ENHANCEMENTS_VERIFICATION_REPORT.md
-```
+The total accumulated changed files count is **18**.
+
 
 No runtime, test, example, README, guide, roadmap, Composer, dependency, or
 CI workflow file was changed by this Verification Gate.
@@ -103,10 +96,8 @@ alternate/image/video/news child collection paths remain compatible. The
 | 10E — News Sitemap Support | Required/optional news fields, namespace, multiple news entries, escaping, typed/raw contracts, and intentional date-as-provided behavior | `already fully present` |
 
 Runtime gaps after implementation: **0**.
-runtime gaps count = 0
 
 Remaining implementation Work Units: **0**.
-remaining implementation WUs count = 0
 
 ## 8. Regression matrix
 
@@ -137,7 +128,7 @@ The required 24-case matrix passed **24/24**, including newly persisted regressi
 23. alternate, image, video, and news child collections work together;
 24. typed DTO behavior remains compatible.
 
-The regression coverage matrix confirmed the presence of explicit validation rules: `NAN`, positive/negative infinity, and out-of-bounds priority values are completely rejected.
+The regression coverage matrix confirmed the presence of explicit validation rules for both typed DTO and raw-array paths: `NAN`, positive infinity, negative infinity, and out-of-bounds priority values are completely rejected.
 
 An additional five-case child-collection smoke check passed for `x-default`,
 multiple images, multiple videos, multiple news entries, and all conditional
@@ -153,10 +144,19 @@ namespaces together.
 | Full standalone test suite | PASS — All 49 standalone `*Test.php` files passed successfully using `php $file` |
 | Sitemap-specific suites | PASS — All Phase 7E, 10A, 10B, 10C, 10D, and 10E standalone test suites passed |
 | Examples suite | PASS — 14 PHP example files executed cleanly |
+| Direct Sitemap Example | PASS — `php examples/sitemap-output.php` executed cleanly |
 | `git diff --check` | PASS |
 | PHPUnit | Not installed locally; standalone test framework used instead |
 
 ## 10. CI verification
+
+### PR HEAD CI (current evidence)
+
+GitHub Actions CI run `34219807333` completed successfully on the current PR HEAD `7fe2a47205e124d777b28ba5c794a2461a9623d5`:
+
+- PHP 8.2: **success**;
+- PHP 8.3: **success**;
+- PHP 8.4: **success**.
 
 ### Verification evidence HEAD CI
 
@@ -210,15 +210,13 @@ Known documentation gaps are deferred to the later Documentation Sweep:
   and guide documents for extended child collections;
 - the public reference should explicitly explain the deliberate Core/Shared
   versus Web sitemap-index DTO split;
-- there is no current `docs/phases/` Phase 10 closure document.
 
 These are documentation findings, not runtime or compatibility blockers for
 this gate.
 
 ## 13. Lifecycle boundary
 
-This Verification Gate does not make Phase 10 Complete. Documentation Sweep
-and Final Review are still required after Verification review acceptance.
+This Verification Gate does not make Phase 10 Complete. Post-correction documentation synchronization and fresh Final Review are still required after Verification review acceptance.
 
 The Verification child PR targets `codex/phase-10-draft` only. It must remain
 unmerged until Verification review acceptance; after acceptance, it follows
