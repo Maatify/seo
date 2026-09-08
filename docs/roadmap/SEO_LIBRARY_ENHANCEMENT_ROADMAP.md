@@ -804,19 +804,46 @@ Allow host apps to export/import SEO metadata safely.
 
 # Phase 20: CLI-Friendly Examples
 
+## Current Status
+
+* WU1–WU6 implementation complete.
+* Verification Gate: `PASS`
+* Verified Draft SHA: `c54dcf026579f3f87a764e6b1f2dcc9dc9d70d0e`
+* Coverage after implementation: `15 covered / 0 partial / 0 missing / 1 N/A`
+* Documentation Sweep synchronized.
+* Final Review: pending.
+* Ready and merge remain separate maintainer decisions.
+
 ## Goal
 
-Add example scripts for maintainers and developers.
+Provide standalone, framework-neutral CLI examples for maintainers and developers
+without changing runtime contracts or adding a CLI dependency.
 
-## Examples
+## Existing coverage retained
 
-* generate sample sitemap
-* generate sample robots.txt
-* validate sample page SEO
-* print JSON-LD schema
-* audit product SEO
+* Sitemap generation remains covered by `examples/sitemap-output.php`.
+* JSON-LD schema output remains covered by `examples/schema-output.php` and the
+  existing JSON-LD builder examples.
 
-No actual CLI package is required unless needed later.
+## Added standalone coverage
+
+* `examples/robots-output.php` — representative `robots.txt` generation.
+* `examples/seo-validation.php` — page SEO validation, scoring, and report export.
+* `examples/product-seo-audit.php` — Product metadata and Product JSON-LD audit
+  through the existing validation pipeline.
+* `examples/redirect-slug-history.php` — slug-history, optional redirect creation,
+  legacy-slug resolution, and redirect decision workflow.
+* `examples/seo-override-meta-generation.php` — SEO override lookup, metadata
+  generation, default fallback, and canonical resolution.
+* `examples/seo-page-render.php` — high-level `SeoPageRenderService`
+  orchestration and payload output.
+
+## Constraints
+
+* Examples only; no runtime implementation is introduced by Phase 20.
+* No public contract changes.
+* No CLI package or framework dependency.
+
 
 ---
 
