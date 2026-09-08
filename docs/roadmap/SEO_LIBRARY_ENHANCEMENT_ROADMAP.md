@@ -243,12 +243,7 @@ Sitemap: https://example.com/sitemap.xml
 
 ## Lifecycle Status
 
-Phase 10 implementation is complete, Verification passed, Documentation Sweep
-is complete, and Final Review passed against exact latest `main`
-`c4b0a60adf29fa104f8911e253d02fa35bb19e83`. Runtime gaps are `0` and
-implementation Work Units remaining are `0`. PR #191 is the Phase 10
-Integration PR and final integration path to `main`. Ready and squash-merge are
-separate maintainer integration actions.
+Phase 10 implementation is complete, post-correction Verification passed, and documentation synchronization is current. A fresh Final Review is pending. Runtime gaps are `0` and implementation Work Units remaining are `0`. PR #191 is the Phase 10 Integration PR and remains Draft. Ready and squash-merge are separate maintainer integration actions.
 
 ## Goal
 
@@ -288,7 +283,7 @@ renderer:
 * `hreflang`
 * alternate URLs
 * `x-default`
-* raw top-level URL validation parity for `loc`, `lastmod`, `changefreq`, and `priority`
+* raw top-level URL validation parity for `loc`, `lastmod`, `changefreq`, and `priority` (must be finite within `0.0..1.0`, rejecting `NAN`, `+INF`, `-INF`)
 
 ## 10C: Image Sitemap Support (Already fully present)
 

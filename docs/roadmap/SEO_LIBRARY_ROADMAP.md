@@ -189,12 +189,10 @@ A PDO-based schema is required for specific sub-systems where persistence provid
 - **Phase 9: Robots.txt Output Helpers**
   - **Phase 9A: Robots.txt String Renderer (Complete):** Provide framework-neutral helpers for generating `robots.txt` content as plain strings.
 
-- **Phase 10: Sitemap Enhancements (Complete)**
-  Implementation, Verification, Documentation Sweep, and Final Review passed
-  against exact latest `main` `c4b0a60adf29fa104f8911e253d02fa35bb19e83`.
+- **Phase 10: Sitemap Enhancements**
+  Implementation, post-correction Verification passed, and documentation synchronization is current. A fresh Final Review is pending.
   The verified runtime has zero gaps and zero implementation Work Units
-  remaining. PR #191 is the Phase 10 Integration PR and final integration path
-  to `main`. Ready and squash-merge are separate maintainer integration actions.
+  remaining. PR #191 is the Phase 10 Integration PR and remains Draft. Ready and squash-merge are separate maintainer integration actions.
   - **Phase 10A: Sitemap Index String Renderer (Complete):** Framework-neutral XML string rendering for sitemap indexes, including strict `lastmod` validation.
   - **Phase 10B: Hreflang / Alternate URL Support (Complete):** Web string rendering for `xhtml:link`, alternate URLs, and `x-default`, with typed/raw top-level URL validation parity.
   - **Phase 10C: Image Sitemap Support (Already fully present):** Web string rendering for image child elements, including image metadata and XML escaping.
