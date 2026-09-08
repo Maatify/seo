@@ -110,6 +110,29 @@ assertSameValue10D(
 );
 
 assertSameValue10D(
+    'one URL entry renders multiple videos in input order',
+    $xmlHeader
+    . '<url xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"><loc>https://example.com/video-library</loc><video:video><video:thumbnail_loc>https://cdn.example.com/videos/library-one.jpg</video:thumbnail_loc><video:title>Library video one</video:title><video:description>First library video</video:description><video:content_loc>https://cdn.example.com/videos/library-one.mp4</video:content_loc></video:video><video:video><video:thumbnail_loc>https://cdn.example.com/videos/library-two.jpg</video:thumbnail_loc><video:title>Library video two</video:title><video:description>Second library video</video:description><video:content_loc>https://cdn.example.com/videos/library-two.mp4</video:content_loc></video:video></url>' . "\n",
+    $renderer->renderUrlEntry([
+        'loc' => 'https://example.com/video-library',
+        'videos' => [
+            [
+                'thumbnailLoc' => 'https://cdn.example.com/videos/library-one.jpg',
+                'title' => 'Library video one',
+                'description' => 'First library video',
+                'contentLoc' => 'https://cdn.example.com/videos/library-one.mp4',
+            ],
+            [
+                'thumbnailLoc' => 'https://cdn.example.com/videos/library-two.jpg',
+                'title' => 'Library video two',
+                'description' => 'Second library video',
+                'contentLoc' => 'https://cdn.example.com/videos/library-two.mp4',
+            ],
+        ],
+    ]),
+);
+
+assertSameValue10D(
     'full URL set with videos declares video namespace once on urlset',
     $xmlHeader
     . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"><url><loc>https://example.com/video-page</loc><video:video><video:thumbnail_loc>https://cdn.example.com/videos/thumb.jpg</video:thumbnail_loc><video:title>Video title</video:title><video:description>Video description</video:description><video:content_loc>https://cdn.example.com/videos/video.mp4</video:content_loc></video:video></url><url><loc>https://example.com/video-page-2</loc><video:video><video:thumbnail_loc>https://cdn.example.com/videos/thumb-2.jpg</video:thumbnail_loc><video:title>Video title 2</video:title><video:description>Video description 2</video:description><video:player_loc>https://player.example.com/videos/2</video:player_loc><video:duration>120</video:duration><video:publication_date>2026-07-01</video:publication_date></video:video></url></urlset>' . "\n",

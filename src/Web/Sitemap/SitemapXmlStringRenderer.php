@@ -119,7 +119,7 @@ final readonly class SitemapXmlStringRenderer
         }
 
         $priority = $this->nullableArrayFloat($url, 'priority');
-        if ($priority !== null && ($priority < 0.0 || $priority > 1.0)) {
+        if ($priority !== null && (!is_finite($priority) || $priority < 0.0 || $priority > 1.0)) {
             throw SeoInvalidArgumentException::emptyField('priority');
         }
 

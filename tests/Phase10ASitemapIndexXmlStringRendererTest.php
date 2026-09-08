@@ -105,6 +105,13 @@ assertSameValue10A(
 );
 
 assertSameValue10A(
+    'empty sitemap index renders safely',
+    $xmlHeader
+    . '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"/>' . "\n",
+    $renderer->renderIndex([]),
+);
+
+assertSameValue10A(
     'optional lastmod is omitted',
     $xmlHeader
     . '<sitemap><loc>https://example.com/sitemap-minimal.xml</loc></sitemap>' . "\n",
@@ -127,6 +134,7 @@ assertTrueValue10A(
 );
 
 assertThrowsSeoException10A('empty loc throws module exception', static fn() => new SitemapIndexEntryDTO('   '));
+assertThrowsSeoException10A('Web sitemap index DTO rejects invalid URL constructor input', static fn() => new SitemapIndexEntryDTO('not-a-url'));
 assertThrowsSeoException10A(
     'Web sitemap index DTO rejects invalid calendar ATOM lastmod',
     static fn() => new SitemapIndexEntryDTO('https://example.com/sitemap.xml', '2026-02-31T10:00:00+00:00'),

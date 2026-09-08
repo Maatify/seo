@@ -86,6 +86,19 @@ assertSameValue10B(
 );
 
 assertSameValue10B(
+    'array alternates normalize x-default and hreflang case and whitespace',
+    $xmlHeader
+    . '<url xmlns:xhtml="http://www.w3.org/1999/xhtml"><loc>https://example.com/en/product</loc><xhtml:link rel="alternate" hreflang="x-default" href="https://example.com/product"/><xhtml:link rel="alternate" hreflang="en-us" href="https://example.com/en-us/product"/></url>' . "\n",
+    $renderer->renderUrlEntry([
+        'loc' => 'https://example.com/en/product',
+        'alternates' => [
+            ['hreflang' => ' X-DEFAULT ', 'url' => 'https://example.com/product'],
+            ['hreflang' => ' EN-US ', 'url' => 'https://example.com/en-us/product'],
+        ],
+    ]),
+);
+
+assertSameValue10B(
     'full URL set with alternates declares xhtml namespace once on urlset',
     $xmlHeader
     . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml"><url><loc>https://example.com/en/product</loc><xhtml:link rel="alternate" hreflang="en" href="https://example.com/en/product"/><xhtml:link rel="alternate" hreflang="ar" href="https://example.com/ar/product"/></url><url><loc>https://example.com/en/category</loc><xhtml:link rel="alternate" hreflang="en" href="https://example.com/en/category"/><xhtml:link rel="alternate" hreflang="ar" href="https://example.com/ar/category"/></url></urlset>' . "\n",
