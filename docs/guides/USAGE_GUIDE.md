@@ -1120,3 +1120,60 @@ $summary = SeoValidationReportExporter::toSummaryArray($report);
 // Export as human-readable Markdown for CI/CD output or pull request comments
 $markdown = SeoValidationReportExporter::toMarkdown($report);
 ```
+
+## 15. Optional Search Console Indexed-Result Verification
+
+The optional Search Console boundary inspects Google's indexed version of a URL
+through the URL Inspection API. The library does not perform HTTP, OAuth, or
+credential handling. A host application supplies a transport implementation and
+keeps provider results separate from core SEO validation and scoring.
+
+The following is the integration shape; `HostSearchConsoleGateway` represents a
+host-owned adapter around the host's configured HTTP and OAuth facilities:
+
+```php
+use Maatify\Seo\Web\Indexing\SearchConsole\DTO\SearchConsoleInspectionRequestDTO;
+use Maatify\Seo\Web\Indexing\SearchConsole\DTO\SearchConsoleTransportResponseDTO;
+use Maatify\Seo\Web\Indexing\SearchConsole\Mapper\SearchConsoleResponseMapper;
+use Maatify\Seo\Web\Indexing\SearchConsole\SearchConsoleInspectionService;
+use Maatify\Seo\Web\Indexing\SearchConsole\SearchConsoleTransportInterface;
+
+final readonly class HostSearchConsoleTransport implements SearchConsoleTransportInterface
+{
+    public function __construct(private HostSearchConsoleGateway $gateway)
+    {
+    }
+
+    public function inspect(SearchConsoleInspectionRequestDTO $request): SearchConsoleTransportResponseDTO
+    {
+        $response = $this->gateway->inspect(
+            $request->inspectionUrl,
+            $request->siteUrl,
+            $request->languageCode,
+        );
+
+        return new SearchConsoleTransportResponseDTO(
+            httpStatus: $response->httpStatus,
+            decodedBody: $response->decodedBody,
+        );
+    }
+}
+
+$service = new SearchConsoleInspectionService(
+    new HostSearchConsoleTransport($hostSearchConsoleGateway),
+    new SearchConsoleResponseMapper(),
+);
+
+$result = $service->inspect(new SearchConsoleInspectionRequestDTO(
+    inspectionUrl: 'https://example.com/articles/seo/',
+    siteUrl: 'https://example.com/',
+    languageCode: 'en-US',
+));
+```
+
+`HostSearchConsoleGateway` is intentionally not implemented by the library: it
+owns the Google request, OAuth credentials, and the recommended
+`webmasters.readonly` scope. The mapped result reports provider/index evidence
+only; it does not alter `SeoMetaValidator`, scoring, summaries, batch reports, or
+existing exporters. A missing provider `richResultsResult` remains `null` rather
+than being treated as a pass, and this API is not a live Rich Results Test.

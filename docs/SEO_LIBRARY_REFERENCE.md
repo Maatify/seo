@@ -258,6 +258,38 @@ Release-readiness procedures are collected in
 source of truth; Phase 21 does not add a version file or automatic tag, release, or
 package-publish behavior.
 
+### Search Console Indexed-Result Verification
+
+Phase 22 adds an optional provider boundary under
+`Maatify\Seo\Web\Indexing\SearchConsole` for Google Search Console URL Inspection
+API results. The boundary is typed and host-driven; it does not make network calls
+or own OAuth, credentials, or provider lifecycle.
+
+The provider capability is the URL Inspection endpoint:
+`POST https://searchconsole.googleapis.com/v1/urlInspection/index:inspect`.
+It evaluates the version available in Google's index. It is not a live page
+fetch and is not a replacement for the Rich Results Test.
+
+The public boundary consists of `SearchConsoleInspectionRequestDTO`,
+`SearchConsoleTransportInterface`, `SearchConsoleTransportResponseDTO`,
+`SearchConsoleResponseMapper`, `SearchConsoleInspectionService`, and the typed
+inspection/index-status/rich-results result DTOs. The transport returns the HTTP
+status and decoded provider body; the host supplies the HTTP and OAuth
+implementation and should use the `webmasters.readonly` scope where applicable.
+No Google SDK, Guzzle, PSR-18 client, cURL integration, credentials, retries,
+cache, persistence, queue, or scheduling is provided by the library.
+
+Provider results remain independent from `SeoMetaValidator`,
+`JsonLdSemanticValidator`, `SeoValidationResultDTO`, `SeoValidationReportDTO`,
+scoring, issue taxonomy, and existing exporters. A missing `richResultsResult`
+is represented as `null`, not as a passing verdict, and unknown provider values
+are preserved as received. Non-2xx responses and malformed provider bodies use
+the Search Console exception boundary before mapping.
+
+Merchant API eligibility, Search Analytics, sitemap submission, indexing
+requests, browser automation, Rich Results Test scraping, and unofficial Google
+endpoints are outside this boundary.
+
 ### JSON-LD Builders
 The Web layer includes builders for constructing Schema.org-oriented JSON-LD structures. These builders encapsulate the logic for creating complex schemas and provide a fluent interface for setting properties and composing nodes; they do not perform semantic Schema.org validation or establish Google Rich Results eligibility.
 - **`Web/JsonLd/Builder/AbstractJsonLdBuilder.php`**: Base class implementing `JsonLdBuilderInterface` and using `JsonLdBuilderTrait`.
