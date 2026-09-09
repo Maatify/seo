@@ -914,6 +914,31 @@ external integration is separately approved Future Work, not a core Phase 21 gap
 
 ---
 
+# Phase 22: Search Console External Verification
+
+## Current Status
+
+* WU1–WU3: complete
+* Verification Gate: PASS
+* Documentation Sweep: complete
+* Final Review: PASS
+* Phase 22: Complete
+
+## Scope and provider boundary
+
+Phase 22 provides an optional, framework-neutral boundary for Google's Search
+Console URL Inspection API. It evaluates the version available in Google's index;
+it is not a live Rich Results Test replacement. The host owns HTTP, OAuth,
+credentials, quotas, retries, and scheduling. Provider results remain independent
+from core validation, scoring, summaries, batch reports, and existing exporters.
+
+The library introduces no SDK, network implementation, credentials, persistence,
+or change to public core validation contracts. Merchant API eligibility, Search
+Analytics, sitemap submission, indexing requests, browser automation, and
+unofficial endpoints remain out of scope.
+
+---
+
 # Recommended Implementation Order
 
 ## Best practical order

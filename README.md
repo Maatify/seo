@@ -77,6 +77,7 @@ echo $renderer->render($metaTags);
 - **Host-owned output:** Renderers return XML strings; the host application owns routes, headers, HTTP responses, and any persistence or delivery strategy.
 - **Redirects and slug history:** Logic to manage URL migrations and legacy paths cleanly.
 - **SEO validation and scoring:** Audit generated SEO metadata arrays or objects to warn about missing fields, conflicts, and compute actionable SEO scores.
+- **Optional Search Console verification:** Inspect Google's indexed result through typed provider contracts while keeping transport, OAuth, and credentials in the host application and separate from core validation.
 - **Import/export:** SEO metadata import and export functionality for administrative portability.
 - **Admin tooling:** Admin-specific commands and queries for managing SEO overrides, tracking slug history, and SERP/Social previews.
 - **Framework-agnostic architecture:** 100% PHP domain logic with zero framework or UI dependencies, ready to drop into any stack.
@@ -132,6 +133,7 @@ Full documentation, including internal compliance checks, library references, an
 - [Roadmap](docs/roadmap/) - Development and feature roadmap.
 - [Proposals](docs/proposals/) - Architectural design proposals.
 - [Verification Reports](docs/verification/) - Detailed audit trails and release readiness reports.
+- [Phase 22 Search Console verification](docs/phases/PHASE_22_SEARCH_CONSOLE_EXTERNAL_VERIFICATION.md) - Optional indexed-result verification boundaries and limitations.
 
 ## Design Principles
 
