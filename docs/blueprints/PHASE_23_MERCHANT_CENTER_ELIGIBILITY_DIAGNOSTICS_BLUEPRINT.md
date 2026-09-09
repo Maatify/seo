@@ -56,10 +56,12 @@ To ensure resilience against external API changes, the blueprint mandates:
 
 ## 6. Error Model
 
-A dedicated exception family (e.g., `MerchantCenterException`) will enforce error boundaries, distinguishing between:
-1. **Invalid Local Request:** Missing required IDs or invalid parameters before attempting transport.
-2. **Transport/Provider HTTP Failure:** Non-2xx responses from the provider.
-3. **Malformed Decoded Response:** Missing required structural fields in the parsed array that prevent successful DTO hydration.
+A dedicated exception family will enforce error boundaries, distinguishing between:
+1. **Invalid Local Request:** (`MerchantCenterInvalidRequestException`) Missing required IDs or invalid parameters before attempting transport.
+2. **Transport/Provider HTTP Failure:** (`MerchantCenterTransportException`) Non-2xx / transport-level provider failure.
+3. **Malformed Decoded Response:** (`MerchantCenterMalformedResponseException`) Missing required structural fields in the parsed array that prevent successful DTO hydration.
+
+All must remain under the provider-specific exception hierarchy (`MerchantCenterException`) and implement the repository SEO exception contract as appropriate.
 
 The exception model must **never** leak:
 * OAuth tokens.
@@ -88,6 +90,9 @@ Final mapped results must not contain generic nested arrays. Typed DTO lists may
 * `src/Web/MerchantCenter/DTO/MerchantCenterAggregateIssueDTO.php`
 * `src/Web/MerchantCenter/DTO/MerchantCenterAggregateStatusResultDTO.php`
 * `src/Web/MerchantCenter/Exception/MerchantCenterException.php`
+* `src/Web/MerchantCenter/Exception/MerchantCenterInvalidRequestException.php`
+* `src/Web/MerchantCenter/Exception/MerchantCenterTransportException.php`
+* `src/Web/MerchantCenter/Exception/MerchantCenterMalformedResponseException.php`
 * `src/Web/MerchantCenter/Mapper/MerchantCenterResponseMapper.php`
 * `src/Web/MerchantCenter/MerchantCenterDiagnosticsService.php`
 
@@ -97,7 +102,19 @@ The implementation will be completed in a single PR, structured into exactly thr
 
 ### WU1 — Merchant Contracts & Typed DTOs
 **Scope:** Establish the transport interface, exception foundation, and strictly typed request/response DTO hierarchy.
-* Define `MerchantCenterTransportInterface` locking exact methods for `products.get` and `aggregateProductStatuses.list`.
+* Define `MerchantCenterTransportInterface` locking exact methods for `products.get` and `aggregateProductStatuses.list`:
+  ```php
+  interface MerchantCenterTransportInterface
+  {
+      public function getProduct(
+          MerchantCenterProductRequestDTO $request
+      ): MerchantCenterTransportResponseDTO;
+
+      public function listAggregateProductStatuses(
+          MerchantCenterAggregateRequestDTO $request
+      ): MerchantCenterTransportResponseDTO;
+  }
+  ```
 * Define Product and Aggregate Request DTOs.
 * Define immutable Result DTOs (`MerchantCenterDestinationStatusDTO`, `MerchantCenterItemIssueDTO`, `MerchantCenterProductStatusResultDTO`, `MerchantCenterAggregateStatisticsDTO`, `MerchantCenterAggregateIssueDTO`, `MerchantCenterAggregateStatusResultDTO`).
 * Establish `MerchantCenterException`.
