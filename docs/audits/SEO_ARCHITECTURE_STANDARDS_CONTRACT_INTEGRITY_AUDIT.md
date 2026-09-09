@@ -250,11 +250,11 @@ Sitemaps.org defines base sitemap constraints including:
 
 - No more than 50,000 URLs per sitemap.
 - Uncompressed sitemap size no greater than 50 MB.
-- Each required `<loc>` value must be a protocol-qualified page URL and must be less than 2,048 characters.
+- Each required `<loc>` value inside a `<url>` entry must be a protocol-qualified page URL and must be less than 2,048 characters.
 - Sitemap location constrains which URLs it can describe.
 - Protocol / host scope rules apply to URLs contained by a sitemap.
 
-Not all of these constraints belong at the same validation level. The `<loc>` lexical/length rule is entry-level; count, byte-size, and location/context rules are document-level.
+Not all of these constraints belong at the same validation level. The page URL `<loc>` lexical/length rule is entry-level; count, byte-size, and location/context rules are document-level.
 
 ### Current implementation limitation
 
@@ -273,7 +273,7 @@ The architecture needs separate levels:
 
 1. **Entry validation**
    - URL shape
-   - `<loc>` length below 2,048 characters
+   - page URL `<loc>` length below 2,048 characters
    - lastmod lexical format
    - changefreq vocabulary
    - priority range
@@ -1373,7 +1373,7 @@ Add layered validation.
 
 ### Order
 
-1. Base sitemap entry/document policy, including `<loc>` length, URL count, byte size, and hosting context.
+1. Base sitemap entry/document policy, including page URL `<loc>` length, URL count, byte size, and hosting context.
 2. Image provider status / deprecated-tag handling plus 1,000-image and cross-domain context rules.
 3. Video limits.
 4. News language/date rules plus 1,000-entry and two-day metadata-window rules.
