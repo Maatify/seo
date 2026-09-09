@@ -1,0 +1,168 @@
+# Phase 23 — Merchant Center Eligibility Diagnostics Blueprint
+
+## 1. Goal
+
+The goal of Phase 23 is to design an optional external diagnostics boundary for reading and diagnosing Google Merchant Center product eligibility, status, and issues via the Merchant API v1. This integration is strictly isolated and its results must not be merged into or alter the core SEO validation processes or taxonomy.
+
+## 2. Scope Decision
+
+**Included in Scope:**
+1. **Product-level eligibility diagnostics:** Exact product diagnostic retrieval via the `products.get` operation, which returns a `Product` resource. The diagnostics are extracted from the `productStatus` field on this resource, which contains `destinationStatuses`, `itemLevelIssues`, and provider status timestamps/metadata.
+2. **Typed status/issues:** Modeling the provider structure truthfully into strictly typed, read-only DTOs. For `productStatus`, this maps `destinationStatuses[]` (containing `reportingContext`, `approvedCountries[]`, `pendingCountries[]`, `disapprovedCountries[]`) and `itemLevelIssues[]` (containing provider issue fields including raw severity).
+3. **Aggregate Product Statuses:** Utilizing the `aggregateProductStatuses.list` operation (currently under Merchant Issue Resolution v1) to return one aggregate resource per reporting-context/country combination, with statistics and aggregate issues. This does not mix account-level issues with aggregate product issues. Note: Google warns that aggregate status updates may experience a delay of more than 30 minutes; this must be documented.
+
+**Deferred from Scope:**
+* **Reports API (`product_view` filtering):** Deferred. The complex filtering and search capabilities, as well as the aggregated reporting context statuses (e.g., `ELIGIBLE`, `PENDING`), are out of scope.
+* **Issue Resolution (`renderproductissue`, `renderaccountissue`) / actions:** Deferred.
+* **Account issue workflows:** Deferred.
+* **Mutations:** Deferred (product creation, updates, deletes, feed submission, etc.).
+* **Search Console changes:** Deferred.
+* **Core SEO validation integration:** Deferred.
+
+## 3. Strict Boundaries
+
+Phase 23 must strictly preserve core validation isolation. The Merchant Center results **must not** modify, merge into, or be referenced by:
+* `SeoMetaValidator`
+* `JsonLdSemanticValidator`
+* `SeoValidationResultDTO`
+* `SeoValidationReportDTO`
+* SEO scoring algorithms.
+* Validation summaries or batch validation reports.
+* Existing exporters.
+* The current SEO issue taxonomy.
+
+Google Merchant issues are provider-specific external diagnostics, not core SEO library validation issues.
+
+## 4. Host Ownership
+
+The library defines contracts and mappings but pushes execution to the host. The host application strictly owns:
+* **HTTP Client & Network Execution:** (Guzzle, PSR-18, cURL, etc.). The library will not include HTTP dependencies.
+* **OAuth Flow & Credentials:** Client ID, Client Secret, credential storage, and token lifecycles.
+* **JSON Decoding:** The host decodes the JSON response and passes raw arrays to the library's mapper.
+* **Scheduling & Persistence:** Retries, quotas, backoff strategy, queueing, and database storage.
+
+*Note: The required OAuth scope for the Merchant API must be managed by the host. The exact scope is `https://www.googleapis.com/auth/content`.*
+
+## 5. Provider Semantics
+
+To ensure resilience against external API changes, the blueprint mandates:
+* **Raw Value Preservation:** Provider enum values (status, severity) must be preserved in their raw string format.
+* **Unknown Value Resilience:** Future unknown statuses, enum values, or severities must not break parsing or throw mapping exceptions.
+* **No Default Success:** Unknown statuses must not automatically be treated as "eligible" or "success".
+* **Missing Data:** Missing provider sections or missing issue arrays do not implicitly mean a "PASS". They must be represented as empty collections or nullable properties.
+* **No Automatic Remediation:** The library provides read-only diagnostics without attempting to automatically resolve or mutate issues.
+* **Freshness Warning:** The documentation must clearly state that Merchant Center status updates are subject to provider delay (especially aggregate status which can lag by >30 minutes) and are not real-time.
+* **Identifiers:** Product and resource identifiers must be accepted and passed without inventing custom parsing contracts.
+
+## 6. Error Model
+
+A dedicated exception family will enforce error boundaries, distinguishing between:
+1. **Invalid Local Request:** (`MerchantCenterInvalidRequestException`) Missing required IDs or invalid parameters before attempting transport.
+2. **Transport/Provider HTTP Failure:** (`MerchantCenterTransportException`) Non-2xx / transport-level provider failure.
+3. **Malformed Decoded Response:** (`MerchantCenterMalformedResponseException`) Missing required structural fields in the parsed array that prevent successful DTO hydration.
+
+All must remain under the provider-specific exception hierarchy (`MerchantCenterException`) and implement the repository SEO exception contract as appropriate.
+
+The exception model must **never** leak:
+* OAuth tokens.
+* Credentials or Authorization headers.
+* Secrets.
+* Raw, unsafe provider payloads containing sensitive account data.
+
+Additionally, standard HTTP statuses (like 401/403) should not be over-classified as specific authorization errors, as they are transport-level concerns.
+
+## 7. Namespace and File Plan
+
+All Phase 23 components will be strictly locked under the following namespace:
+`Maatify\Seo\Web\MerchantCenter`
+
+Final mapped results must not contain generic nested arrays. Typed DTO lists may remain PHP arrays only as `list<SpecificDTO>` with PHPStan annotations. The raw decoded provider transport body may remain `array<string, mixed>`.
+
+**Planned Files:**
+* `src/Web/MerchantCenter/MerchantCenterTransportInterface.php`
+* `src/Web/MerchantCenter/DTO/MerchantCenterProductRequestDTO.php`
+* `src/Web/MerchantCenter/DTO/MerchantCenterAggregateRequestDTO.php`
+* `src/Web/MerchantCenter/DTO/MerchantCenterTransportResponseDTO.php`
+* `src/Web/MerchantCenter/DTO/MerchantCenterDestinationStatusDTO.php`
+* `src/Web/MerchantCenter/DTO/MerchantCenterItemIssueDTO.php`
+* `src/Web/MerchantCenter/DTO/MerchantCenterProductStatusResultDTO.php`
+* `src/Web/MerchantCenter/DTO/MerchantCenterAggregateStatisticsDTO.php`
+* `src/Web/MerchantCenter/DTO/MerchantCenterAggregateIssueDTO.php`
+* `src/Web/MerchantCenter/DTO/MerchantCenterAggregateStatusResultDTO.php`
+* `src/Web/MerchantCenter/Exception/MerchantCenterException.php`
+* `src/Web/MerchantCenter/Exception/MerchantCenterInvalidRequestException.php`
+* `src/Web/MerchantCenter/Exception/MerchantCenterTransportException.php`
+* `src/Web/MerchantCenter/Exception/MerchantCenterMalformedResponseException.php`
+* `src/Web/MerchantCenter/Mapper/MerchantCenterResponseMapper.php`
+* `src/Web/MerchantCenter/MerchantCenterDiagnosticsService.php`
+
+## 8. Work Units
+
+The implementation will be completed in a single PR, structured into exactly three logical work units (WU1–WU3). There is no WU4.
+
+### WU1 — Merchant Contracts & Typed DTOs
+**Scope:** Establish the transport interface, exception foundation, and strictly typed request/response DTO hierarchy.
+* Define `MerchantCenterTransportInterface` locking exact methods for `products.get` and `aggregateProductStatuses.list`:
+  ```php
+  interface MerchantCenterTransportInterface
+  {
+      public function getProduct(
+          MerchantCenterProductRequestDTO $request
+      ): MerchantCenterTransportResponseDTO;
+
+      public function listAggregateProductStatuses(
+          MerchantCenterAggregateRequestDTO $request
+      ): MerchantCenterTransportResponseDTO;
+  }
+  ```
+* Define Product and Aggregate Request DTOs.
+* Define immutable Result DTOs (`MerchantCenterDestinationStatusDTO`, `MerchantCenterItemIssueDTO`, `MerchantCenterProductStatusResultDTO`, `MerchantCenterAggregateStatisticsDTO`, `MerchantCenterAggregateIssueDTO`, `MerchantCenterAggregateStatusResultDTO`).
+* Establish `MerchantCenterException`.
+
+### WU2 — Provider Response Mapping
+**Scope:** Implement the deterministic response mapper to convert decoded transport arrays into the typed DTO hierarchy.
+* Build `MerchantCenterResponseMapper`.
+* Implement safe parsing for unknown statuses and severities.
+* Handle missing optional fields and malformed response structures.
+
+### WU3 — Merchant Diagnostics Service
+**Scope:** Implement the orchestration layer connecting the DTOs, Transport, and Mapper.
+* Build `MerchantCenterDiagnosticsService`.
+* Orchestrate request validation, transport execution, and mapping.
+* Handle provider failure propagation and ensure strict decoupling from core SEO validation.
+
+## 9. Tests Required
+
+Standalone, no-network tests are mandatory and must cover:
+1. Fully approved destination/country.
+2. Pending country.
+3. Disapproved country.
+4. Mixed approved/pending/disapproved countries.
+5. Multiple reporting contexts.
+6. Item issues with varying severities.
+7. Optional/missing provider fields.
+8. Unknown future statuses and severities (verifying parsing does not break).
+9. Malformed decoded provider response.
+10. Non-2xx transport/provider response.
+11. Invalid local request.
+12. Transport failure propagation.
+13. Verification that no automatic retries are executed.
+14. Verification of complete decoupling from core SEO validation.
+15. Aggregate diagnostics: approved/pending/disapproved counts.
+16. Aggregate diagnostics: aggregate issue mapping.
+17. Aggregate diagnostics: reporting-context/country mapping.
+
+## 10. Explicit Non-Goals
+
+The following features and integrations are explicitly out of scope for Phase 23:
+* Product creation, updates, or deletions.
+* Feed submission or inventory mutation.
+* Merchant Center account configuration.
+* Automatic issue remediation or mutation logic.
+* Campaign management.
+* Performance or pricing analytics.
+* OAuth flow, credential storage, or HTTP client implementation.
+* Issue Resolution UI or UI actions.
+* Search Console integration changes.
+* Any integration with or changes to core SEO structural/semantic validation pipelines.
+* Deriving synthetic overall eligibility enums (e.g., `ELIGIBLE`, `PENDING`) not strictly present in the Product API.
