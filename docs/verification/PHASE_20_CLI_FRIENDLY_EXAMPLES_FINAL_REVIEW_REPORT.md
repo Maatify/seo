@@ -39,13 +39,13 @@ This Final Review covers the Phase 20 implementation, evaluated against the repo
 - No dummy/hardcoded output bypasses the actual domain logic.
 
 ### WU5 — SEO Override + Meta Generation (`examples/seo-override-meta-generation.php`)
-- Employs `MetaGeneratorService` reading from an injected mock `SeoOverrideQueryService` and `HostUrlGeneratorInterface`.
+- Employs `MetaGeneratorService` reading from the real `SeoOverrideQueryService` (which is backed by a host-style `InMemorySeoOverrideRepository`) and `HostUrlGeneratorInterface`.
 - Proves both an override-present case (metadata is successfully altered) and an override-absent case (fallback to default canonical and tags).
 
 ### WU6 — SeoPageRenderService Orchestration (`examples/seo-page-render.php`)
-- Constructs a `RenderSeoPageCommand` and feeds it to `SeoPageRenderService`.
+- Constructs a `RenderSeoPageCommand` holding the schema input and feeds it to `SeoPageRenderService`.
+- `SeoPageRenderService` calls the injected real `SchemaGeneratorService` to generate the graph within the actual orchestration path.
 - Returns a complete `SeoPagePayloadDTO`.
-- Metadata is successfully aggregated with injected Schema graph.
 
 ## 3. Coverage Inventory Review
 
