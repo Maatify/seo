@@ -1177,3 +1177,74 @@ owns the Google request, OAuth credentials, and the recommended
 only; it does not alter `SeoMetaValidator`, scoring, summaries, batch reports, or
 existing exporters. A missing provider `richResultsResult` remains `null` rather
 than being treated as a pass, and this API is not a live Rich Results Test.
+
+## 16. Optional Merchant Center Eligibility Diagnostics
+
+The optional Merchant Center boundary provides typed DTOs and orchestration for reading product eligibility and issues from the Google Merchant API v1. The library handles the validation and mapping, but the host application is responsible for the HTTP transport, OAuth (`https://www.googleapis.com/auth/content`), JSON decoding, pagination, and scheduling.
+
+The host must implement `MerchantCenterTransportInterface`. Unknown provider values are passed through safely, and the library does not attempt automatic remediation.
+
+```php
+use Maatify\Seo\Web\MerchantCenter\DTO\MerchantCenterAggregateRequestDTO;
+use Maatify\Seo\Web\MerchantCenter\DTO\MerchantCenterProductRequestDTO;
+use Maatify\Seo\Web\MerchantCenter\DTO\MerchantCenterTransportResponseDTO;
+use Maatify\Seo\Web\MerchantCenter\Mapper\MerchantCenterResponseMapper;
+use Maatify\Seo\Web\MerchantCenter\MerchantCenterDiagnosticsService;
+use Maatify\Seo\Web\MerchantCenter\MerchantCenterTransportInterface;
+
+final readonly class HostMerchantCenterTransport implements MerchantCenterTransportInterface
+{
+    public function __construct(private HostMerchantCenterGateway $gateway)
+    {
+    }
+
+    public function getProduct(
+        MerchantCenterProductRequestDTO $request
+    ): MerchantCenterTransportResponseDTO {
+        // Host executes GET https://merchantapi.googleapis.com/inventories/v1beta/{$request->name}
+        $response = $this->gateway->fetchProduct($request->name);
+
+        return new MerchantCenterTransportResponseDTO(
+            httpStatus: $response->httpStatus,
+            decodedBody: $response->decodedBody,
+        );
+    }
+
+    public function listAggregateProductStatuses(
+        MerchantCenterAggregateRequestDTO $request
+    ): MerchantCenterTransportResponseDTO {
+        // Host executes GET https://merchantapi.googleapis.com/inventories/v1beta/{$request->parent}/productStatuses
+        $response = $this->gateway->fetchAggregateStatuses(
+            $request->parent,
+            $request->pageSize,
+            $request->pageToken,
+            $request->filter
+        );
+
+        return new MerchantCenterTransportResponseDTO(
+            httpStatus: $response->httpStatus,
+            decodedBody: $response->decodedBody,
+        );
+    }
+}
+
+$service = new MerchantCenterDiagnosticsService(
+    new HostMerchantCenterTransport($hostMerchantCenterGateway),
+    new MerchantCenterResponseMapper(),
+);
+
+// Fetch specific product diagnostics
+$productResult = $service->getProductDiagnostics(
+    new MerchantCenterProductRequestDTO(
+        name: 'accounts/123/products/en~US~sku123'
+    )
+);
+
+// Fetch aggregate statistics (host manages pagination via nextPageToken)
+$aggregateResult = $service->listAggregateProductDiagnostics(
+    new MerchantCenterAggregateRequestDTO(
+        parent: 'accounts/123',
+        pageSize: 100, // Provider may coerce >250, library passes it through
+    )
+);
+```

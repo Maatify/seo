@@ -939,6 +939,24 @@ unofficial endpoints remain out of scope.
 
 ---
 
+# Phase 23: Merchant Center Eligibility Diagnostics
+
+## Current Status
+
+* WU1–WU3: complete
+* Verification Gate: PASS
+* Documentation Sweep: complete
+* Final Review: pending
+* Phase 23: Draft
+
+## Scope and provider boundary
+
+Phase 23 provides an optional, framework-neutral boundary for Google's Merchant Center Eligibility Diagnostics via the Merchant API v1 (`products.get` and `aggregateProductStatuses.list`). The host owns HTTP, OAuth, JSON decoding, credentials, quotas, retries, pagination, and scheduling. Provider results remain independent from core validation.
+
+The library introduces no SDK, concrete HTTP implementation, credentials, persistence, or auto-remediation logic. Missing provider data maps to null, and unknown provider values remain raw.
+
+---
+
 # Recommended Implementation Order
 
 ## Best practical order
