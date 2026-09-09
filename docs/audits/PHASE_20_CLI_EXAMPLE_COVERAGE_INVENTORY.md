@@ -18,6 +18,9 @@ The inventory was reviewed against:
 The Phase 20 Draft baseline for this inventory is
 `5d1770d86e47b5528affd878901a41b8914fe129`.
 
+The post-implementation synchronization reference for WU1–WU6 is
+`c54dcf026579f3f87a764e6b1f2dcc9dc9d70d0e`.
+
 ## Classification Rules
 
 - `covered`: an existing runnable example demonstrates the family at the
@@ -40,30 +43,26 @@ The Phase 20 Draft baseline for this inventory is
 | 4 | Admin SERP and social previews | `Admin/Preview/*`, `SerpPreviewDTO`, `SocialPreviewDTO` | `examples/admin-previews.php` | `covered` | Keep as existing coverage |
 | 5 | Hreflang head-link generation | `Web/Hreflang/*` | `examples/hreflang-generation.php` | `covered` | Keep as existing coverage |
 | 6 | Canonical URL and meta-robots helpers | `Web/Indexing/CanonicalUrlBuilder`, `Web/Robots/MetaRobotsBuilder` | `examples/meta-robots-canonical.php` | `covered` | Keep as existing coverage |
-| 7 | Structured-data construction, graph generation, and JSON-LD output | `Shared/Service/SchemaGeneratorService`, schema DTOs, `Web/JsonLd/Builder/*`, `Web/Render/JsonLdScriptRenderer`, `Web/Schema/SpatieSchemaAdapter` | `examples/schema-output.php`, `examples/phase13-jsonld-builders.php`, `examples/phase13o-product-advanced.php` | `partial` | WU6 will demonstrate the high-level generation/orchestration path; existing builder and output coverage remains valid |
+| 7 | Structured-data construction, graph generation, and JSON-LD output | `Shared/Service/SchemaGeneratorService`, schema DTOs, `Web/JsonLd/Builder/*`, `Web/Render/JsonLdScriptRenderer`, `Web/Schema/SpatieSchemaAdapter` | `examples/schema-output.php`, `examples/phase13-jsonld-builders.php`, `examples/phase13o-product-advanced.php`, and high-level graph orchestration in `examples/seo-page-render.php` | `covered` | WU6 is implemented and verified; existing builder and output coverage remains valid |
 | 8 | Sitemap XML generation and extended sitemap data | `SitemapGeneratorService`, `Web/Sitemap/*`, shared sitemap DTOs for alternates, images, videos, and news | `examples/sitemap-output.php` | `covered` | Keep as existing coverage |
 | 9 | `robots.txt` generation | `Web/Robots/RobotsTxtRenderer` and robots DTOs | `examples/robots-output.php` | `covered` | WU1 is complete |
 | 10 | Page SEO validation, scoring, and report export | `SeoMetaValidator`, score/report builders, DTOs, and exporters | `examples/seo-validation.php` | `covered` | WU2 is complete |
 | 11 | Product SEO audit with structured-data validation | Product metadata/schema contracts plus `SeoMetaValidator` JSON-LD semantic path | `examples/product-seo-audit.php` | `covered` | WU3 is complete |
 | 12 | Metadata import/export | `Admin/Export/*`, `Admin/Import/*`, import/export DTOs | `examples/import-export.php` | `covered` | Keep as existing coverage |
-| 13 | Override-aware metadata generation and canonical fallback | `MetaGeneratorService`, `GenerateMetaTagsCommand`, `SeoOverrideQueryService`, `HostUrlGeneratorInterface`, `MetaTagsDTO` | Direct DTO/rendering examples cover output, but no example demonstrates override lookup, default fallback, and canonical resolution together | `partial` | WU5 adds the missing service workflow |
-| 14 | Redirect and slug-history workflow | `SlugHistoryService`, `RedirectManagerService`, shared commands/decisions, and Admin/Shared redirect and slug services | No current standalone workflow example | `missing` | WU4 adds the in-memory host-style workflow example |
-| 15 | High-level SEO page render orchestration | `RenderSeoPageCommand`, `SeoPageRenderService`, `SeoPagePayloadDTO` | No current standalone orchestration example | `missing` | WU6 adds the payload orchestration example |
+| 13 | Override-aware metadata generation and canonical fallback | `MetaGeneratorService`, `GenerateMetaTagsCommand`, `SeoOverrideQueryService`, `HostUrlGeneratorInterface`, `MetaTagsDTO` | `examples/seo-override-meta-generation.php` demonstrates override lookup, default fallback, and canonical resolution together | `covered` | WU5 is implemented and verified |
+| 14 | Redirect and slug-history workflow | `SlugHistoryService`, `RedirectManagerService`, shared commands/decisions, and Admin/Shared redirect and slug services | `examples/redirect-slug-history.php` demonstrates the in-memory host-style workflow | `covered` | WU4 is implemented and verified |
+| 15 | High-level SEO page render orchestration | `RenderSeoPageCommand`, `SeoPageRenderService`, `SeoPagePayloadDTO` | `examples/seo-page-render.php` demonstrates the orchestration path and returned payload | `covered` | WU6 is implemented and verified |
 | 16 | Persistence, bootstrap/container wiring, host interfaces, exceptions, and raw DTO/value contracts | `Shared/Infrastructure/Persistence/*`, `Bootstrap/SeoBindings`, host contracts, exception classes, and reusable DTO families | Integration Guide and reference documentation describe these boundaries; they are not user-facing CLI capabilities | `not-applicable-for-dedicated-cli-example` | No Work Unit; do not add a dedicated example |
 
 ## Approved Phase 20 Coverage Result
 
-WU1–WU3 are covered in the current Draft:
+WU1–WU6 are implemented and verified in the current Draft:
 
 - WU1 covers `robots.txt` generation through `examples/robots-output.php`.
 - WU2 covers page SEO validation and scoring through
   `examples/seo-validation.php`.
 - WU3 covers a real Product SEO audit, including Product JSON-LD evaluation,
   through `examples/product-seo-audit.php`.
-
-The remaining example coverage is intentionally limited to three additional
-Work Units:
-
 - WU4 — Redirect + Slug History Workflow Example
   (`examples/redirect-slug-history.php`)
 - WU5 — SEO Override + Meta Generation Example
@@ -80,9 +79,9 @@ reference, not independent user-facing CLI capabilities.
 
 | Classification | Count |
 | --- | ---: |
-| `covered` | 11 |
-| `partial` | 2 |
-| `missing` | 2 |
+| `covered` | 15 |
+| `partial` | 0 |
+| `missing` | 0 |
 | `not-applicable-for-dedicated-cli-example` | 1 |
 | **Total capability families** | **16** |
 
