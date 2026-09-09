@@ -64,10 +64,30 @@ final readonly class SearchConsoleInspectionService
     {
         if (str_starts_with(strtolower($siteUrl), 'sc-domain:')) {
             $domain = substr($siteUrl, strlen('sc-domain:'));
-            return preg_match('/^[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?$/', $domain) === 1;
+            return $this->isValidHostname($domain);
         }
 
-        return $this->isAbsoluteHttpUrl($siteUrl);
+        return str_ends_with($siteUrl, '/') && $this->isAbsoluteHttpUrl($siteUrl);
+    }
+
+    private function isValidHostname(string $hostname): bool
+    {
+        if ($hostname === '' || strlen($hostname) > 253) {
+            return false;
+        }
+
+        $labels = explode('.', $hostname);
+        foreach ($labels as $label) {
+            if ($label === '' || strlen($label) > 63) {
+                return false;
+            }
+
+            if (preg_match('/^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/', $label) !== 1) {
+                return false;
+            }
+        }
+
+        return filter_var('https://' . $hostname, FILTER_VALIDATE_URL) !== false;
     }
 
     private function isAbsoluteHttpUrl(string $url): bool

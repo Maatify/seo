@@ -133,6 +133,23 @@ assertSameValue22('rich results verdict', 'PASS', $result->richResultsResult?->v
 assertSameValue22('transport called once', 1, $transport->calls);
 assertSameValue22('request forwarded', $request, $transport->receivedRequest);
 
+foreach ([
+    'https://example.com/',
+    'https://example.com/blog/',
+    'sc-domain:example.com',
+    'sc-domain:sub.example.com',
+] as $validSiteUrl) {
+    $validSiteTransport = phase22Service(phase22BaseResponse());
+    $validSiteResult = (new SearchConsoleInspectionService($validSiteTransport, new SearchConsoleResponseMapper()))->inspect(
+        new SearchConsoleInspectionRequestDTO(
+            inspectionUrl: 'https://example.com/articles/search-console',
+            siteUrl: $validSiteUrl,
+        ),
+    );
+    assertSameValue22('valid site property result', 'Google Search Console', $validSiteResult->providerIdentity);
+    assertSameValue22('valid site property reaches transport', 1, $validSiteTransport->calls);
+}
+
 /** @var array<string, mixed> $errorBody */
 $errorBody = phase22BaseResponse();
 $errorBody['inspectionResult']['richResultsResult']['verdict'] = 'ERROR';
@@ -241,14 +258,20 @@ try {
     assertSameValue22('invalid inspection URL does not call transport', 0, $invalidInspectionTransport->calls);
 }
 
-foreach (['example.com', 'sc-domain:'] as $invalidSiteUrl) {
+$invalidSiteTransport = phase22Service(phase22BaseResponse());
+foreach ([
+    'https://example.com',
+    'https://example.com/blog',
+    'sc-domain:',
+    'sc-domain:example..com',
+] as $invalidSiteUrl) {
     try {
-        (new SearchConsoleInspectionService(phase22Service(phase22BaseResponse()), new SearchConsoleResponseMapper()))->inspect(
+        (new SearchConsoleInspectionService($invalidSiteTransport, new SearchConsoleResponseMapper()))->inspect(
             new SearchConsoleInspectionRequestDTO('https://example.com/', $invalidSiteUrl),
         );
         assertTrueValue22('invalid site property throws', false);
     } catch (SearchConsoleInvalidRequestException) {
-        // Expected for invalid URL-prefix and domain property formats.
+        assertSameValue22('invalid site property does not call transport', 0, $invalidSiteTransport->calls);
     }
 }
 
