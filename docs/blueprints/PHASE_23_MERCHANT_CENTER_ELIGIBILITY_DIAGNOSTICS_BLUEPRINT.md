@@ -9,7 +9,7 @@ The goal of Phase 23 is to design an optional external diagnostics boundary for 
 **Included in Scope:**
 1. **Product-level eligibility diagnostics:** Exact product diagnostic retrieval via the `products.get` operation, which returns a `Product` resource. The diagnostics are extracted from the `productStatus` field on this resource, which contains `destinationStatuses`, `itemLevelIssues`, and provider status timestamps/metadata.
 2. **Typed status/issues:** Modeling the provider structure truthfully into strictly typed, read-only DTOs. For `productStatus`, this maps `destinationStatuses[]` (containing `reportingContext`, `approvedCountries[]`, `pendingCountries[]`, `disapprovedCountries[]`) and `itemLevelIssues[]` (containing provider issue fields including raw severity).
-3. **Aggregate Product Statuses:** Utilizing the `aggregateProductStatuses.list` operation (currently under Merchant Issue Resolution v1) to return one aggregate resource per reporting-context/country combination, with statistics and aggregate issues. This does not mix account-level issues with aggregate product issues. Note: Google warns that aggregate status updates may experience a delay of more than 30 minutes; this must be documented.
+3. **Aggregate Product Statuses:** Utilizing the `aggregateProductStatuses.list` operation to return one aggregate resource per reporting-context/country combination. The API contract strictly uses active, pending, disapproved, and expiring counts (no approvedCount or countryCode), and explicit itemLevelIssues[] (no generic issues or sample-product based shapes). The library does not auto-paginate; the host decides whether/when to request subsequent pages via pageToken. This does not mix account-level issues with aggregate product issues. Note: Google warns that aggregate status updates may experience a delay of more than 30 minutes; this must be documented.
 
 **Deferred from Scope:**
 * **Reports API (`product_view` filtering):** Deferred. The complex filtering and search capabilities, as well as the aggregated reporting context statuses (e.g., `ELIGIBLE`, `PENDING`), are out of scope.
@@ -49,7 +49,11 @@ To ensure resilience against external API changes, the blueprint mandates:
 * **Raw Value Preservation:** Provider enum values (status, severity) must be preserved in their raw string format.
 * **Unknown Value Resilience:** Future unknown statuses, enum values, or severities must not break parsing or throw mapping exceptions.
 * **No Default Success:** Unknown statuses must not automatically be treated as "eligible" or "success".
-* **Missing Data:** Missing provider sections or missing issue arrays do not implicitly mean a "PASS". They must be represented as empty collections or nullable properties.
+* **Missing Data:** Missing productStatus => empty status/issues collections + nullable timestamps; never implicit PASS. Missing aggregate list => empty statuses list. Missing aggregate itemLevelIssues => empty list. Missing aggregate stats => null.
+* **Malformed Data:** malformed present fields with wrong structural types => MerchantCenterMalformedResponseException.
+* **No Auto-retry:** no auto-retry.
+* **No Auto-pagination:** no auto-pagination.
+* **No Payload Leakage:** no provider payload leakage in exceptions.
 * **No Automatic Remediation:** The library provides read-only diagnostics without attempting to automatically resolve or mutate issues.
 * **Freshness Warning:** The documentation must clearly state that Merchant Center status updates are subject to provider delay (especially aggregate status which can lag by >30 minutes) and are not real-time.
 * **Identifiers:** Product and resource identifiers must be accepted and passed without inventing custom parsing contracts.
@@ -89,12 +93,73 @@ Final mapped results must not contain generic nested arrays. Typed DTO lists may
 * `src/Web/MerchantCenter/DTO/MerchantCenterAggregateStatisticsDTO.php`
 * `src/Web/MerchantCenter/DTO/MerchantCenterAggregateIssueDTO.php`
 * `src/Web/MerchantCenter/DTO/MerchantCenterAggregateStatusResultDTO.php`
+* `src/Web/MerchantCenter/DTO/MerchantCenterAggregateStatusListResultDTO.php`
 * `src/Web/MerchantCenter/Exception/MerchantCenterException.php`
 * `src/Web/MerchantCenter/Exception/MerchantCenterInvalidRequestException.php`
 * `src/Web/MerchantCenter/Exception/MerchantCenterTransportException.php`
 * `src/Web/MerchantCenter/Exception/MerchantCenterMalformedResponseException.php`
 * `src/Web/MerchantCenter/Mapper/MerchantCenterResponseMapper.php`
 * `src/Web/MerchantCenter/MerchantCenterDiagnosticsService.php`
+
+**Exact DTO Shapes:**
+
+* `MerchantCenterAggregateRequestDTO`:
+  - `string $parent`
+  - `?int $pageSize`
+  - `?string $pageToken`
+  - `?string $filter`
+
+* `MerchantCenterAggregateStatusListResultDTO`:
+  - `list<MerchantCenterAggregateStatusResultDTO> $statuses`
+  - `?string $nextPageToken`
+
+* `MerchantCenterAggregateStatisticsDTO`:
+  - `string $activeCount`
+  - `string $pendingCount`
+  - `string $disapprovedCount`
+  - `string $expiringCount`
+
+* `MerchantCenterAggregateIssueDTO`:
+  - `?string $code`
+  - `?string $severity`
+  - `?string $resolution`
+  - `?string $attribute`
+  - `?string $description`
+  - `?string $detail`
+  - `?string $documentationUri`
+  - `?string $productCount`
+
+* `MerchantCenterAggregateStatusResultDTO`:
+  - `string $name`
+  - `string $reportingContext`
+  - `string $country`
+  - `?MerchantCenterAggregateStatisticsDTO $stats`
+  - `list<MerchantCenterAggregateIssueDTO> $itemLevelIssues`
+
+* `MerchantCenterProductStatusResultDTO`:
+  - `string $productName`
+  - `list<MerchantCenterDestinationStatusDTO> $destinationStatuses`
+  - `list<MerchantCenterItemIssueDTO> $itemLevelIssues`
+  - `?string $creationDate`
+  - `?string $lastUpdateDate`
+  - `?string $googleExpirationDate`
+
+* `MerchantCenterDestinationStatusDTO`:
+  - `string $reportingContext`
+  - `list<string> $approvedCountries`
+  - `list<string> $pendingCountries`
+  - `list<string> $disapprovedCountries`
+
+* `MerchantCenterItemIssueDTO`:
+  - `?string $code`
+  - `?string $severity`
+  - `?string $resolution`
+  - `?string $attribute`
+  - `?string $reportingContext`
+  - `?string $description`
+  - `?string $detail`
+  - `?string $documentation`
+  - `list<string> $applicableCountries`
 
 ## 8. Work Units
 
@@ -148,9 +213,12 @@ Standalone, no-network tests are mandatory and must cover:
 12. Transport failure propagation.
 13. Verification that no automatic retries are executed.
 14. Verification of complete decoupling from core SEO validation.
-15. Aggregate diagnostics: approved/pending/disapproved counts.
+15. Aggregate diagnostics: active/pending/disapproved/expiring counts.
 16. Aggregate diagnostics: aggregate issue mapping.
 17. Aggregate diagnostics: reporting-context/country mapping.
+18. Aggregate diagnostics: nextPageToken and request pageToken/filter/pageSize pass-through.
+19. Aggregate diagnostics: unknown aggregate severity/resolution.
+20. Aggregate diagnostics: empty aggregate response.
 
 ## 10. Explicit Non-Goals
 
