@@ -953,33 +953,4 @@ unofficial endpoints remain out of scope.
 
 Phase 23 provides an optional, framework-neutral boundary for Google's Merchant Center Eligibility Diagnostics via the Merchant API v1 (`products.get` and `aggregateProductStatuses.list`). The host owns HTTP, OAuth, JSON decoding, credentials, quotas, retries, pagination, and scheduling. Provider results remain independent from core validation.
 
-The library introduces no SDK, concrete HTTP implementation, credentials, persistence, or auto-remediation logic. Missing provider data maps to null, and unknown provider values remain raw.
-
----
-
-# Recommended Implementation Order
-
-## Best practical order
-
-1. Phase 13P: Structured-data semantic validation
-2. Phase 21: Quality / CI / Release Readiness
-3. Phase 8: Developer Experience & Docs
-
-## Later / optional
-
-* Import/export helpers
-* CLI tooling
-* advanced social previews
-* [Optional Admin SEO Control Layer (RFC)](proposals/OPTIONAL_ADMIN_SEO_CONTROL_LAYER_RFC.md)
-
----
-
-# Priority Recommendation
-
-The strongest next real-world enhancement is:
-
-## Semantic structured-data validation (Phase 13P)
-
-After that:
-
-1. Quality / CI / Release Readiness (Phase 21)
+The library introduces no SDK, concrete HTTP implementation, credentials, persistence, or auto-remediation logic. Missing provider data maps to empty collections or null timestamps, and unknown provider values remain raw.

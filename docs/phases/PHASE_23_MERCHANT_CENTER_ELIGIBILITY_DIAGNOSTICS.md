@@ -25,12 +25,15 @@ The Phase is not marked complete until Final Review has passed.
 
 The library provides typed contracts under `Maatify\Seo\Web\MerchantCenter` and accepts a host-owned transport. The host owns HTTP, OAuth (`https://www.googleapis.com/auth/content`), credentials, JSON decoding, retry/backoff, pagination loops, cache, and scheduling. The library handles request validation, transport execution orchestration, and deterministic response mapping into a typed DTO hierarchy.
 
-Provider results are completely independent from core SEO validation. Missing optional provider data remains null or empty, unknown statuses are preserved as raw strings, and no synthetic overall eligibility is derived. The host consumes `nextPageToken` for pagination without library interference. Aggregate status updates may be delayed by the provider.
+Provider results are completely independent from core SEO validation. Missing optional provider data remains null or empty, unknown statuses are preserved as raw strings, and no synthetic overall eligibility is derived. The host consumes `nextPageToken` for pagination without library interference. Aggregate status updates may be delayed by the provider by more than 30 minutes and are not real-time.
 
 No Google SDK, concrete HTTP client, or auto-remediation logic is introduced by the library.
 
 ## Limitations and out of scope
 
+- Reports API `product_view`
+- Issue Resolution
+- account issue workflows
 - Product creation, updates, or deletions
 - Feed submission or inventory mutation
 - Automatic issue remediation or mutation logic

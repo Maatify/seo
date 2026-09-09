@@ -1201,7 +1201,7 @@ final readonly class HostMerchantCenterTransport implements MerchantCenterTransp
     public function getProduct(
         MerchantCenterProductRequestDTO $request
     ): MerchantCenterTransportResponseDTO {
-        // Host executes GET https://merchantapi.googleapis.com/inventories/v1beta/{$request->name}
+        // Host executes GET https://merchantapi.googleapis.com/products/v1/{$request->name}
         $response = $this->gateway->fetchProduct($request->name);
 
         return new MerchantCenterTransportResponseDTO(
@@ -1213,7 +1213,7 @@ final readonly class HostMerchantCenterTransport implements MerchantCenterTransp
     public function listAggregateProductStatuses(
         MerchantCenterAggregateRequestDTO $request
     ): MerchantCenterTransportResponseDTO {
-        // Host executes GET https://merchantapi.googleapis.com/inventories/v1beta/{$request->parent}/productStatuses
+        // Host executes GET https://merchantapi.googleapis.com/issueresolution/v1/{$request->parent}/aggregateProductStatuses
         $response = $this->gateway->fetchAggregateStatuses(
             $request->parent,
             $request->pageSize,
