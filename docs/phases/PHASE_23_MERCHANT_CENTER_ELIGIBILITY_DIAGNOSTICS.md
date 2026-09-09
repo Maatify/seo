@@ -23,7 +23,7 @@ The Phase is not marked complete until Final Review has passed.
 
 ## Architecture boundary
 
-The library provides typed contracts under `Maatify\Seo\Web\MerchantCenter` and accepts a host-owned transport. The host owns HTTP, OAuth (`https://www.googleapis.com/auth/content`), credentials, JSON decoding, retry/backoff, pagination loops, cache, and scheduling. The library handles request validation, transport execution orchestration, and deterministic response mapping into a typed DTO hierarchy.
+The library provides typed contracts under `Maatify\Seo\Web\MerchantCenter` and accepts a host-owned transport. The host owns HTTP, OAuth (`https://www.googleapis.com/auth/content`), credentials, JSON decoding, retry/backoff, pagination loops, cache, scheduling, persistence, queueing, and quotas. The library handles request validation, transport execution orchestration, and deterministic response mapping into a typed DTO hierarchy.
 
 Provider results are completely independent from core SEO validation. Missing optional provider data remains null or empty, unknown statuses are preserved as raw strings, and no synthetic overall eligibility is derived. The host consumes `nextPageToken` for pagination without library interference. Aggregate status updates may be delayed by the provider by more than 30 minutes and are not real-time.
 
@@ -38,6 +38,8 @@ No Google SDK, concrete HTTP client, or auto-remediation logic is introduced by 
 - Feed submission or inventory mutation
 - Automatic issue remediation or mutation logic
 - Deriving synthetic overall eligibility enums (e.g., `ELIGIBLE`, `PENDING`) not strictly present in the Product API.
+- Guarantees for Merchant eligibility, approval, ranking, or provider acceptance
+- Real Merchant account or network verification claims
 - Search Console changes
 - Changes to core validation semantics
 

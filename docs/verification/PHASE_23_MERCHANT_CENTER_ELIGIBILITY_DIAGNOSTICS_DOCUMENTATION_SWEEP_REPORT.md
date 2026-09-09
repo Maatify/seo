@@ -42,7 +42,7 @@ The Verification Gate passed before this sweep. The Post-Documentation checks ex
 - `php tests/Phase23MerchantCenterEligibilityDiagnosticsTest.php`
 - the complete standalone PHP test suite
 
-The documentation review confirmed typed Merchant Center contracts, an injected transport, host-owned HTTP/OAuth/JSON-decoding, isolation from core SEO validation, missing data mapped to null, and preservation of raw string values for unknown statuses.
+The documentation review confirmed typed Merchant Center contracts, an injected transport, host-owned HTTP/OAuth/JSON-decoding, isolation from core SEO validation, missing data mapped to empty collections or null depending on the field, and preservation of raw string values for unknown statuses.
 
 ## Limitations and lifecycle
 
