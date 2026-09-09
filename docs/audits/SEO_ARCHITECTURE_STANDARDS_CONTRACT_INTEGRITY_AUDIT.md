@@ -248,13 +248,14 @@ Before refactoring:
 
 Sitemaps.org defines base sitemap constraints including:
 
-- No more than 50,000 URLs per sitemap.
-- Uncompressed sitemap size no greater than 50 MB.
-- Each required `<loc>` value inside a `<url>` entry must be a protocol-qualified page URL and must be less than 2,048 characters.
-- Sitemap location constrains which URLs it can describe.
-- Protocol / host scope rules apply to URLs contained by a sitemap.
+- URL sitemap maximum: 50,000 `<url>` entries.
+- Sitemap index maximum: 50,000 `<sitemap>` entries.
+- 50 MB uncompressed size limit where defined by the protocol.
+- Each required `<loc>` value inside a `<url>` entry must be a protocol-qualified page URL and must be less than 2,048 characters (only where the protocol actually defines it).
+- Sitemap location / host scope constrains which URLs it can describe.
+- Cross-submission / cross-host behavior where ownership or submission evidence permits it.
 
-Not all of these constraints belong at the same validation level. The page URL `<loc>` lexical/length rule is entry-level; count, byte-size, and location/context rules are document-level.
+Not all of these constraints belong at the same validation level. The page URL `<loc>` lexical/length rule is entry-level; count, byte-size, and location/context rules are document-level or host/submission-context-level.
 
 ### Current implementation limitation
 
@@ -263,9 +264,9 @@ Not all of these constraints belong at the same validation level. The page URL `
 - where the sitemap will be hosted,
 - the final uncompressed XML byte length,
 - total URL count,
-- site / path ownership context.
+- site / path ownership context or cross-submission evidence.
 
-Therefore those rules **cannot safely be pushed into the DTO constructor**.
+Therefore those rules **cannot safely be pushed into the DTO constructor**. Do not turn host/path rules into unconditional same-host constructor rejection.
 
 ### Safe target
 
@@ -283,9 +284,12 @@ The architecture needs separate levels:
    - entry count
    - output size
    - sitemap index count
-   - document context
 
-3. **Provider extension validation**
+3. **Host/submission context rules**
+   - document context
+   - cross-submission / cross-host behavior
+
+4. **Provider extension validation**
    - Google Image
    - Google Video
    - Google News
@@ -293,7 +297,7 @@ The architecture needs separate levels:
 
 ### What must not be done
 
-Do not force document-context rules into a single-entry DTO.
+Do not force document-context or host-context rules into a single-entry DTO.
 
 That would either require hidden global state or create fake validation that cannot actually prove the rule.
 
@@ -377,9 +381,13 @@ Do not remove constructor parameters or output support in a compatibility-breaki
 
 Current Google documentation includes constraints such as:
 
-- video description maximum: 2048 characters.
-- video duration range: 1 to 28800 seconds.
-- video publication date uses W3C-supported date forms.
+- `description` maximum length.
+- duration range.
+- publication-date formats.
+- requirement for `content_loc` or `player_loc`.
+- relationship between `content_loc` / `player_loc` and the parent page `<loc>`.
+- provider requirements around video resource format/accessibility.
+- thumbnail requirements relevant to `thumbnail_loc`.
 
 The current DTO only enforces `duration > 0`, so values above 28800 are accepted.
 
@@ -389,7 +397,11 @@ The current title/description checks are non-empty checks, not full provider eli
 
 Do not make every Google provider rule a universal `SitemapVideoDTO` constructor exception unless the DTO is explicitly defined as a Google Video DTO contract.
 
-A safer architecture is to make provider validation explicit and testable.
+A safer architecture is to make provider validation explicit and testable. Clearly distinguish:
+
+- locally deterministic validation,
+- document/context validation,
+- conditions that require external/provider evidence and therefore must not become fake offline validation.
 
 If the existing type remains specifically Google-oriented, then tightening can be justified, but the behavior change must be treated as intentional and covered by regression tests.
 
@@ -413,7 +425,13 @@ If the existing type remains specifically Google-oriented, then tightening can b
 It does not validate:
 
 - ISO 639 language-code semantics.
-- W3C publication-date lexical validity.
+- The exact currently supported publication-date forms from Google's News sitemap documentation.
+- publication language rules.
+- publication name semantics.
+- title semantics where relevant.
+- maximum 1,000 News entries.
+- two-day News metadata window.
+- current status of legacy optional News fields already exposed by the library.
 
 The repository example `examples/sitemap-output.php` currently uses:
 
@@ -449,7 +467,7 @@ The four legacy optional fields must be treated as compatibility/provider-status
 
 Do not silently change a generic date helper into a News-specific parser if that changes unrelated sitemap behavior.
 
-The News policy should be explicit.
+The News policy should be explicit. The two-day rule must remain deterministic: Do not permit a future validator to call hidden `now()` / system time internally. The architecture must require caller-supplied reference time/context for time-relative validation.
 
 ---
 
@@ -498,11 +516,16 @@ This is not only cosmetic validation.
 
 Introduce RFC-aware validation with explicit rules for:
 
-- product token.
-- empty pattern.
-- slash-prefixed non-empty path pattern.
-- control-character rejection.
-- comments if comments remain part of the public DTO.
+- valid product-token grammar.
+- valid empty Allow/Disallow pattern.
+- slash-prefixed path pattern.
+- raw `#` comment semantics.
+- percent-encoded literal values where applicable.
+- CR/LF and other forbidden control characters in rule values.
+- CR/LF safety for rule comments.
+- CR/LF safety for top-level comments.
+
+The current renderer is line-oriented, so injection prevention must be an explicit contract rather than an implied generic string check.
 
 ### What must not be done
 
@@ -993,6 +1016,20 @@ As of this audit:
 - Google's current documentation updates include removal of a Book deprecation banner because a feature still uses the markup.
 - Google's current supported structured-data gallery remains the correct source for currently surfaced Google Search features.
 
+Explicitly distinguish current provider evidence for concepts such as:
+
+- Course Info versus Course List.
+- Book / Book Actions and any eligibility/provider restrictions.
+- Schema.org vocabulary support versus Google Search feature support.
+
+Do not treat the Search Gallery as the sole source for every Google provider capability.
+
+Provider-status verification should use, as applicable:
+
+- feature-specific current documentation,
+- Google Search documentation updates,
+- supported-feature gallery.
+
 ### Audit rule
 
 No builder may be deleted, deprecated, or marked "unsupported by Google" from memory or an old announcement alone.
@@ -1373,7 +1410,7 @@ Add layered validation.
 
 ### Order
 
-1. Base sitemap entry/document policy, including page URL `<loc>` length, URL count, byte size, and hosting context.
+1. Base sitemap entry/document policy, including `<loc>` length, URL count, byte size, and hosting context.
 2. Image provider status / deprecated-tag handling plus 1,000-image and cross-domain context rules.
 3. Video limits.
 4. News language/date rules plus 1,000-entry and two-day metadata-window rules.
@@ -1540,6 +1577,8 @@ Provider facts must be rechecked against official current documentation.
 
 # 9. Test Strategy Required for the Remediation
 
+The test strategy must cover the contracts introduced by the findings, not only representative examples.
+
 ## 9.1 Characterization tests
 
 Purpose: preserve behavior before refactoring.
@@ -1557,16 +1596,51 @@ Examples:
 
 Purpose: prove formal protocol behavior.
 
-Examples for RFC 9309:
+Add explicit boundary cases including at minimum:
+
+### Sitemap core
+
+- 50,000 / 50,001 URL entries.
+- 50,000 / 50,001 sitemap-index entries.
+- uncompressed-size boundary.
+- page URL `<loc>` length boundary.
+- host/submission-context cases.
+
+### Robots
 
 - valid `*`.
 - valid identifier.
 - invalid identifier containing digits if treated as RFC product-token input.
 - valid empty Allow/Disallow pattern.
 - valid slash path.
-- invalid control characters.
+- raw `#`.
+- percent-encoded literal path case where applicable.
+- CR/LF in Allow/Disallow.
+- CR/LF in rule comments.
+- CR/LF in document comments.
 
 ## 9.3 Provider profile tests
+
+Add explicit boundary cases including at minimum:
+
+### Google Image
+
+- 1,000 / 1,001 images per URL.
+
+### Google Video
+
+- description length boundary.
+- duration boundaries.
+- `content_loc` / `player_loc` relationship to parent `<loc>`.
+- deterministic checks versus external-evidence-only conditions.
+
+### Google News
+
+- 1,000 / 1,001 entries.
+- every documented accepted publication-date form.
+- invalid arbitrary date.
+- language cases.
+- two-day-window validation using explicit reference time.
 
 Examples:
 
@@ -1576,20 +1650,6 @@ Google robots meta:
 - `max-video-preview:-1`.
 - `indexifembedded` with `noindex`.
 - `unavailable_after` recognized/unrecognized values.
-
-Google Video:
-
-- 2048-character description boundary.
-- 2049-character rejection/issue.
-- duration 1.
-- duration 28800.
-- duration 28801.
-
-Google News:
-
-- supported date forms.
-- invalid arbitrary date.
-- valid/invalid language forms.
 
 Hreflang:
 
