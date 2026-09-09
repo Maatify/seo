@@ -38,13 +38,19 @@ Google WARNING or ERROR statuses are not core SEO issues and must remain a **pro
 
 ## 5. Namespace/file plan
 
-Phase 22 introduces contracts and DTOs within `src/Web/Indexing/SearchConsole/` (or similar appropriate namespace depending on final repository layout).
+Phase 22 is strictly locked under the namespace: `Maatify\Seo\Web\Indexing\SearchConsole`
 
-Proposed structure:
+The file structure expands to include nested typed DTOs required for the provider result, rather than relying on generic arrays:
+
 * `src/Web/Indexing/SearchConsole/SearchConsoleTransportInterface.php`
 * `src/Web/Indexing/SearchConsole/DTO/SearchConsoleInspectionRequestDTO.php`
 * `src/Web/Indexing/SearchConsole/DTO/SearchConsoleTransportResponseDTO.php`
 * `src/Web/Indexing/SearchConsole/DTO/SearchConsoleInspectionResultDTO.php`
+* `src/Web/Indexing/SearchConsole/DTO/SearchConsoleIndexStatusResultDTO.php`
+* `src/Web/Indexing/SearchConsole/DTO/SearchConsoleRichResultsResultDTO.php`
+* `src/Web/Indexing/SearchConsole/DTO/SearchConsoleDetectedItemDTO.php`
+* `src/Web/Indexing/SearchConsole/DTO/SearchConsoleRichResultItemDTO.php`
+* `src/Web/Indexing/SearchConsole/DTO/SearchConsoleRichResultIssueDTO.php`
 * `src/Web/Indexing/SearchConsole/Exception/SearchConsoleException.php`
 * `src/Web/Indexing/SearchConsole/Mapper/SearchConsoleResponseMapper.php`
 * `src/Web/Indexing/SearchConsole/SearchConsoleInspectionService.php`
@@ -77,18 +83,33 @@ Represents the transport's response:
 * `decodedBody` (array)
 * **No tokens or credentials.**
 
-### Final Result: `SearchConsoleInspectionResultDTO`
-A standalone, typed result containing:
+### Final Result Hierarchy
+The mapped results must use a genuinely typed DTO hierarchy. Untyped arrays are strictly prohibited within the mapped result (except for raw decoded transport body preservation if applicable).
+
+`SearchConsoleInspectionResultDTO`
 * `providerIdentity` (string) = "Google Search Console"
 * `inspectionResultLink` (string|null)
-* `indexStatusSummary` (array)
-* `richResultsResult` (array|null)
+* `indexStatusResult` (`SearchConsoleIndexStatusResultDTO`)
+* `richResultsResult` (`SearchConsoleRichResultsResultDTO`|null) - Nullable because Google may omit this object if no rich results exist.
 
-**Index Status Fields:**
-* `verdict`, `coverageState`, `robotsTxtState`, `indexingState`, `lastCrawlTime`, `pageFetchState`, `googleCanonical`, `userCanonical`, `crawledAs`
+`SearchConsoleIndexStatusResultDTO`
+* Covers fields such as: `verdict`, `coverageState`, `robotsTxtState`, `indexingState`, `lastCrawlTime`, `pageFetchState`, `googleCanonical`, `userCanonical`, `crawledAs`
 
-**Rich Results Fields:**
-* `verdict`, `detectedRichResultGroups`/`types`, `items`, `itemName` (nullable), `issues`, `issueMessage`, `severity`
+`SearchConsoleRichResultsResultDTO`
+* `verdict` (string)
+* `detectedItems` (array of `SearchConsoleDetectedItemDTO`)
+
+`SearchConsoleDetectedItemDTO`
+* `richResultType` (string)
+* `items` (array of `SearchConsoleRichResultItemDTO`)
+
+`SearchConsoleRichResultItemDTO`
+* `name` (string|null)
+* `issues` (array of `SearchConsoleRichResultIssueDTO`)
+
+`SearchConsoleRichResultIssueDTO`
+* `issueMessage` (string)
+* `severity` (string)
 
 *Note: The absence of `richResultsResult` is not equivalent to PASS. It must explicitly be represented as `null` or "not reported".*
 
@@ -106,23 +127,25 @@ A standalone, typed result containing:
 * OAuth flow, Client ID, Client Secret.
 * Refresh tokens and access-token lifecycle.
 * Credential storage and HTTP implementation.
+* JSON Decoding (Host parses JSON and creates array).
 * Secret logging policy.
 * Scheduling, throttling, and caching/persistence of results.
 
 ## 9. Mapping semantics
 
-Google provider enum/string values may evolve. Mapping must be robust:
-* Known values are mapped and understood.
-* Unknown values must not break the parsing process completely.
-* Raw provider values must not be lost.
-* Unknown values are never automatically converted to PASS or FAIL.
+Google provider enum/string values may evolve. Mapping strategy must explicitly handle unknown provider values:
+* Provider enum/state fields must retain the raw string received from Google.
+* Known values can be interpreted or differentiated, but any future unknown value **must not** break the parsing process completely.
+* Unknown values **must not** be automatically converted to PASS or FAIL.
+* The raw provider value **must not** be lost.
+* Do not use closed PHP enums that throw exceptions upon encountering new Google values unless they are explicitly designed with an unknown/raw preservation fallback.
 
 ## 10. Error semantics
 
 A custom exception family (e.g., `SearchConsoleException`) will be introduced. It must architecturally differentiate between:
 1. **Invalid local request:** Malformed URL or missing required fields before transport.
 2. **Transport/provider HTTP failure:** Non-2xx response from Google (including 403, which shouldn't be over-classified as it can mean many things).
-3. **Malformed/unusable response:** Invalid JSON or missing critical provider fields.
+3. **Malformed/unusable provider response shapes:** The host transport is responsible for HTTP, OAuth, and JSON decoding. If JSON decoding fails, the transport must throw a transport-level exception. The `SearchConsoleResponseMapper` exclusively handles decoded arrays and is responsible for detecting malformed or unusable provider shapes (e.g., missing required structural fields or incorrect field types).
 
 Exceptions may retain the HTTP status and safe provider error information, but must absolutely exclude:
 * Credentials, Authorization headers, tokens, and secrets.
@@ -153,7 +176,7 @@ Phase 22 is divided into precisely three WUs (Work Units). **There is no WU4.**
 **No HTTP implementation.**
 
 ### WU2 — Search Console Response Mapper
-**Scope:** Implements deterministic parsing for index status, rich results, detected types/items, issues/severity, absent optional sections, unknown provider values, and malformed responses.
+**Scope:** Implements deterministic parsing for index status, rich results, detected types/items, issues/severity, absent optional sections, unknown provider values, and malformed provider decoded arrays.
 **Must be testable without network access.**
 
 ### WU3 — Inspection Service Orchestration
@@ -171,7 +194,7 @@ Standalone, deterministic tests (without network or credentials) are required. M
 6. Index-status fields present.
 7. Optional provider fields absent.
 8. Unknown provider verdict/severity/value.
-9. Malformed response.
+9. Malformed decoded provider response array.
 10. Non-2xx provider response.
 11. Invalid local request.
 12. Verification that no core validation DTO or service is modified or invoked.
