@@ -61,10 +61,10 @@ final readonly class MerchantCenterDiagnosticsService
             );
         }
 
-        if ($request->pageSize !== null && ($request->pageSize < 1 || $request->pageSize > 250)) {
+        if ($request->pageSize !== null && $request->pageSize < 1) {
             throw MerchantCenterInvalidRequestException::forField(
                 'pageSize',
-                'must be between 1 and 250 when provided',
+                'must be positive when provided',
             );
         }
 

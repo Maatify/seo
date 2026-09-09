@@ -256,9 +256,7 @@ assertSameValue23(1, $missingProductTransport->productCalls, 'missing product st
 /** @var array<string, mixed> $optionalProductStatus */
 $optionalProductStatus = [
     'name' => 'accounts/123/products/en~US~optional-fields',
-    'productStatus' => [
-        'destinationStatuses' => [],
-    ],
+    'productStatus' => [],
 ];
 [, $optionalProductService] = phase23ProductService($optionalProductStatus);
 $optionalProductResult = $optionalProductService->getProductDiagnostics(
@@ -266,6 +264,9 @@ $optionalProductResult = $optionalProductService->getProductDiagnostics(
 );
 assertSameValue23([], $optionalProductResult->itemLevelIssues, 'missing optional issue array is empty');
 assertSameValue23([], $optionalProductResult->destinationStatuses, 'empty destination array maps to empty list');
+assertSameValue23(null, $optionalProductResult->creationDate, 'empty product status creation date');
+assertSameValue23(null, $optionalProductResult->lastUpdateDate, 'empty product status update date');
+assertSameValue23(null, $optionalProductResult->googleExpirationDate, 'empty product status expiration date');
 
 $malformedProductCaught = false;
 try {
@@ -354,6 +355,21 @@ assertSameValue23('next-page-token', $aggregateResult->nextPageToken, 'next page
 assertSameValue23(1, $aggregateTransport->aggregateCalls, 'aggregate transport called exactly once');
 assertSameValue23($aggregateRequest, $aggregateTransport->receivedAggregateRequest, 'aggregate request forwarded unchanged');
 
+$providerCoercedPageSizeRequest = new MerchantCenterAggregateRequestDTO(
+    parent: 'accounts/123',
+    pageSize: 251,
+);
+[$providerCoercedPageSizeTransport, $providerCoercedPageSizeService] = phase23AggregateService(
+    phase23AggregateResponse(),
+);
+$providerCoercedPageSizeService->listAggregateProductDiagnostics($providerCoercedPageSizeRequest);
+assertSameValue23(1, $providerCoercedPageSizeTransport->aggregateCalls, 'page size above provider maximum calls once');
+assertSameValue23(
+    251,
+    $providerCoercedPageSizeTransport->receivedAggregateRequest?->pageSize,
+    'page size above provider maximum is passed through unchanged',
+);
+
 /** @var array<string, mixed> $unknownAggregateResponse */
 $unknownAggregateResponse = phase23AggregateResponse();
 $unknownAggregateResponse['aggregateProductStatuses'][0]['itemLevelIssues'][0]['severity'] = 'FUTURE_AGGREGATE_SEVERITY';
@@ -406,7 +422,6 @@ assertTrueValue23($nonTwoHundredAggregateCaught, 'non-2xx aggregate response thr
 foreach ([
     new MerchantCenterAggregateRequestDTO(''),
     new MerchantCenterAggregateRequestDTO('accounts/123', pageSize: 0),
-    new MerchantCenterAggregateRequestDTO('accounts/123', pageSize: 251),
     new MerchantCenterAggregateRequestDTO('accounts/123', pageToken: ''),
     new MerchantCenterAggregateRequestDTO('accounts/123', filter: ''),
 ] as $invalidAggregateRequest) {

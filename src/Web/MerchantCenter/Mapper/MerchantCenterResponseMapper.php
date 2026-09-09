@@ -231,7 +231,7 @@ final class MerchantCenterResponseMapper
      */
     private function requiredObject(array $parent, string $field, string $path): array
     {
-        if (!array_key_exists($field, $parent) || !is_array($parent[$field]) || array_is_list($parent[$field])) {
+        if (!array_key_exists($field, $parent) || !$this->isObjectArray($parent[$field])) {
             throw MerchantCenterMalformedResponseException::forPath($path, 'an object is required');
         }
 
@@ -245,13 +245,18 @@ final class MerchantCenterResponseMapper
      */
     private function objectAt(mixed $value, string $path): array
     {
-        if (!is_array($value) || array_is_list($value)) {
+        if (!$this->isObjectArray($value)) {
             throw MerchantCenterMalformedResponseException::forPath($path, 'an object is required');
         }
 
         /** @var array<string, mixed> $object */
         $object = $value;
         return $object;
+    }
+
+    private function isObjectArray(mixed $value): bool
+    {
+        return is_array($value) && ($value === [] || !array_is_list($value));
     }
 
     /**
