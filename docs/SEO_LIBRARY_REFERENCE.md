@@ -290,6 +290,16 @@ Merchant API eligibility, Search Analytics, sitemap submission, indexing
 requests, browser automation, Rich Results Test scraping, and unofficial Google
 endpoints are outside this boundary.
 
+### Merchant Center Eligibility Diagnostics
+
+Phase 23 adds an optional provider boundary under `Maatify\Seo\Web\MerchantCenter` for Google Merchant API v1 product eligibility diagnostics (`products.get` and `aggregateProductStatuses.list`). The boundary is strictly typed and host-driven; it does not make network calls, handle OAuth (requiring `https://www.googleapis.com/auth/content`), decode JSON, or own the provider lifecycle.
+
+The public boundary consists of `MerchantCenterProductRequestDTO`, `MerchantCenterAggregateRequestDTO`, `MerchantCenterTransportInterface`, `MerchantCenterTransportResponseDTO`, `MerchantCenterResponseMapper`, `MerchantCenterDiagnosticsService`, and a fully typed result DTO hierarchy (e.g., `MerchantCenterProductStatusResultDTO`, `MerchantCenterAggregateStatusListResultDTO`). The transport returns the HTTP status and decoded provider body array. The host supplies the HTTP implementation.
+
+Provider results remain completely separated from core SEO validation. Unknown provider values are preserved as raw strings, missing data remains null or empty, and no synthetic overall eligibility is derived. Non-2xx responses or malformed bodies trigger provider-specific exceptions (`MerchantCenterTransportException`, `MerchantCenterMalformedResponseException`).
+
+Product/feed mutation, automatic remediation, Search Console integration, and core SEO validation changes are explicitly out of scope.
+
 ### JSON-LD Builders
 The Web layer includes builders for constructing Schema.org-oriented JSON-LD structures. These builders encapsulate the logic for creating complex schemas and provide a fluent interface for setting properties and composing nodes; they do not perform semantic Schema.org validation or establish Google Rich Results eligibility.
 - **`Web/JsonLd/Builder/AbstractJsonLdBuilder.php`**: Base class implementing `JsonLdBuilderInterface` and using `JsonLdBuilderTrait`.
