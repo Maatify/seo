@@ -939,6 +939,21 @@ unofficial endpoints remain out of scope.
 
 ---
 
+# Phase 23: Merchant Center Eligibility Diagnostics
+
+## Current Status
+
+* WU1–WU3: complete
+* Verification Gate: PASS
+* Documentation Sweep: complete
+* Final Review: pending
+
+## Scope and provider boundary
+
+Phase 23 provides an optional external diagnostics boundary for Google Merchant Center product eligibility via the Merchant API v1. It is strictly isolated and does not merge into core SEO validation.
+
+---
+
 # Recommended Implementation Order
 
 ## Best practical order

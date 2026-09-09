@@ -134,6 +134,7 @@ Full documentation, including internal compliance checks, library references, an
 - [Proposals](docs/proposals/) - Architectural design proposals.
 - [Verification Reports](docs/verification/) - Detailed audit trails and release readiness reports.
 - [Phase 22 Search Console verification](docs/phases/PHASE_22_SEARCH_CONSOLE_EXTERNAL_VERIFICATION.md) - Optional indexed-result verification boundaries and limitations.
+- [Phase 23 Merchant Center Diagnostics](docs/phases/PHASE_23_MERCHANT_CENTER_ELIGIBILITY_DIAGNOSTICS.md) - Optional product eligibility diagnostics boundary and limitations.
 
 ## Design Principles
 

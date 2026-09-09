@@ -258,6 +258,12 @@ Release-readiness procedures are collected in
 source of truth; Phase 21 does not add a version file or automatic tag, release, or
 package-publish behavior.
 
+### Merchant Center Eligibility Diagnostics
+
+Phase 23 adds an optional provider boundary under `Maatify\Seo\Web\MerchantCenter` for reading Google Merchant Center product eligibility via the Merchant API v1 (`products.get` and `aggregateProductStatuses.list`). It is strictly isolated and its results must not be merged into core SEO validation.
+
+The host application owns the HTTP client, OAuth, credentials (using `https://www.googleapis.com/auth/content`), JSON decoding, retries, and pagination. The library provides typed request/response contracts and mapping semantics without adding network dependencies.
+
 ### Search Console Indexed-Result Verification
 
 Phase 22 adds an optional provider boundary under
