@@ -248,9 +248,6 @@ A PDO-based schema is required for specific sub-systems where persistence provid
 - **Batch 3: Hreflang Head Link Builder**
   - **Batch 3: Hreflang Head Link Builder (Complete):** HTML head `<link rel="alternate" hreflang="..." href="...">` generation (`HreflangLinkBuilder`, `HreflangLinkDTO`, `HreflangLinkRenderer`).
 
-- **Phase 23: Merchant Center Eligibility Diagnostics**
-  Implementation complete; Final Review pending.
-
 ## 11. Risks / Decisions that Need Approval Before Coding
 
 - **Entity Identifier Type**: Host projects might use `int`, `string` (UUID), or mixed types for `entity_id`. Should `entity_id` in `maa_seo_*` tables be `VARCHAR(36)` to safely support UUIDs, even if the host uses integers? (Recommendation: Yes, `VARCHAR(36)`).

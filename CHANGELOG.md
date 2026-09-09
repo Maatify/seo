@@ -3,7 +3,6 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.0.0] - Unreleased
-- **Added:** Phase 23 Merchant Center Diagnostics implementation providing an optional boundary for product eligibility diagnostics.
 - **Fixed:** Strict sitemap date validation now rejects malformed calendar ATOM dates. Valid YYYY-MM-DD and ATOM timestamps remain accepted.
 - **Fixed:** Raw top-level sitemap URL validation is now aligned with the typed DTO contract.
 - **Fixed:** Sitemap priority validation correctly enforces a finite number within `0.0..1.0` (rejecting `NAN`, `+INF`, and `-INF`).
