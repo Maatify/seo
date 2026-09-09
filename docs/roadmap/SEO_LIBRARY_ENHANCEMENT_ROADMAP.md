@@ -802,7 +802,7 @@ Allow host apps to export/import SEO metadata safely.
 
 ---
 
-# Phase 20: CLI-Friendly Examples
+# Phase 20: CLI-Friendly Examples (Complete)
 
 ## Current Status
 
@@ -811,8 +811,11 @@ Allow host apps to export/import SEO metadata safely.
 * Verified Draft SHA: `c54dcf026579f3f87a764e6b1f2dcc9dc9d70d0e`
 * Coverage after implementation: `15 covered / 0 partial / 0 missing / 1 N/A`
 * Documentation Sweep synchronized.
-* Final Review: pending.
-* Ready and merge remain separate maintainer decisions.
+* Final Review Gate: PASS (`docs/verification/PHASE_20_CLI_FRIENDLY_EXAMPLES_FINAL_REVIEW_REPORT.md`)
+* Reviewed main: `2cc1bbeafb9b612da5c7552185145274e2e57c35`
+* Reviewed Draft: `9bd895e86f87ee50f87cca94c72a1346ccfe7965`
+
+*(Note: Lead Final Acceptance / Ready / merge remain separate decisions. The PR is not automatically merged by this Phase.)*
 
 ## Goal
 
