@@ -13,5 +13,5 @@
 - **Security Verdict:** PASS. No OAuth secrets, Authorization headers, tokens, or credentials exist in DTOs, exceptions, or documentation. Exceptions do not leak sensitive data.
 - **Test Verdict:** PASS. Standalone tests cover indexed PASS, rich-results PASS, ERROR, WARNING, multiple rich-result types/items, missing `richResultsResult`, missing optional fields, unknown values, malformed response, non-2xx, invalid URLs, and transport failure propagation without retries or core coupling.
 - **Documentation Verdict:** PASS. README, Library Reference, Usage Guide, Phase 22 record, Roadmap, and Doc Sweep are synchronized. Docs clarify this is indexed only, not live testing, and the host owns HTTP/OAuth with `webmasters.readonly` scope.
-- **Quality-Gates Results:** PASS. Composer validate, linting, PHPStan (after fixing require in test), and Phase 22 standalone tests pass.
+- **Quality-Gates Results:** PASS. composer validate --strict (PASS), PHP syntax/lint (PASS), vendor/bin/phpstan analyse (PASS), php tests/Phase22SearchConsoleExternalVerificationTest.php (PASS), full standalone test suite (PASS), git diff --check (PASS).
 - **Final Result:** PASS.
