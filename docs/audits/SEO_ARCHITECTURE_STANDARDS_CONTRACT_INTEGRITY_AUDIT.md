@@ -1,8 +1,10 @@
 # SEO Architecture, Standards, and Contract Integrity Audit
 
 **Repository:** `Maatify/seo`  
-**Baseline branch:** `main`  
-**Baseline commit:** `1e2cca61fa4259da3cf20c8908b08f413b93c51b`  
+**Audit evidence baseline branch:** `main`  
+**Audit evidence baseline commit:** `1e2cca61fa4259da3cf20c8908b08f413b93c51b`  
+**Integration branch reviewed:** `codex/phase-23-draft`  
+**Integration snapshot reviewed:** `bbaf7bf641e20fe51261d17903def893e0ee2ecb`  
 **Audit date:** 2026-09-10  
 **Audit type:** Pre-remediation architecture and SEO standards audit  
 **Status:** `NEEDS REMEDIATION`  
@@ -38,9 +40,21 @@ A safe remediation must satisfy all four dimensions at once.
 
 ### 2.1 Baseline
 
-All code findings in this document were re-checked against:
+The architecture and standards findings were established against the last completed `main` baseline:
 
 `main@1e2cca61fa4259da3cf20c8908b08f413b93c51b`
+
+Before this audit was attached to Phase 23, the current Phase 23 integration Draft was also reviewed at:
+
+`codex/phase-23-draft@bbaf7bf641e20fe51261d17903def893e0ee2ecb`
+
+The Phase 23 Draft is five commits ahead of the audited `main` baseline and adds the Merchant Center boundary plus related tests and documentation. Those changes do not invalidate the pre-remediation findings below, but repository-state claims that can change between `main` and the integration Draft are stated against the Phase 23 snapshot where relevant.
+
+This distinction is intentional:
+
+- **Audit evidence baseline** identifies the completed repository state from which the standards audit was derived.
+- **Integration snapshot** identifies the Draft state into which this audit is being incorporated.
+- Later remediation stacks must re-check the then-current Draft HEAD before changing production behavior.
 
 The audit does not rely on an older patch baseline.
 
@@ -236,10 +250,11 @@ Sitemaps.org defines base sitemap constraints including:
 
 - No more than 50,000 URLs per sitemap.
 - Uncompressed sitemap size no greater than 50 MB.
+- Each required `<loc>` value must be a protocol-qualified page URL and must be less than 2,048 characters.
 - Sitemap location constrains which URLs it can describe.
 - Protocol / host scope rules apply to URLs contained by a sitemap.
 
-These are document-level constraints.
+Not all of these constraints belong at the same validation level. The `<loc>` lexical/length rule is entry-level; count, byte-size, and location/context rules are document-level.
 
 ### Current implementation limitation
 
@@ -258,6 +273,7 @@ The architecture needs separate levels:
 
 1. **Entry validation**
    - URL shape
+   - `<loc>` length below 2,048 characters
    - lastmod lexical format
    - changefreq vocabulary
    - priority range
@@ -311,6 +327,16 @@ Google officially deprecated these image sitemap tags and states that they have 
 
 Google also states that leaving them in existing sitemaps has no immediate negative effect.
 
+### Additional current Google Image constraints
+
+The current Google Image sitemap reference also states:
+
+- each `<url>` may contain up to 1,000 `<image:image>` entries;
+- an image URL may be hosted on another domain, but Google requires both the main site and the image-hosting domain to be verified in Search Console for that cross-domain setup;
+- crawlability of image URLs remains a provider-context concern.
+
+The current `SitemapUrlDTO` accepts an unbounded image list and cannot know Search Console verification state. These rules therefore need an explicit Google Image provider validation/context layer rather than being silently folded into generic URL validation.
+
 ### Correct conclusion
 
 This is **not** a justification for deleting the public fields immediately.
@@ -321,6 +347,7 @@ The safe conclusion is:
 - They may remain for backward compatibility.
 - They must not be documented as current Google indexing enhancements.
 - New examples should not encourage them as recommended Google output.
+- The Google Image profile must also model the 1,000-images-per-URL limit and cross-domain verification context.
 - A future deprecation path can be considered separately.
 
 ### What must not be done
@@ -402,10 +429,21 @@ Google documents:
 
 - publication language should use ISO 639 language codes, with documented Chinese exceptions.
 - publication date must use supported W3C date forms.
+- a News sitemap may contain at most 1,000 `<news:news>` entries.
+- News sitemap metadata should only be retained for articles created within the last two days; older URLs may remain in a general sitemap, but their `<news:news>` metadata should be removed.
+
+The current Google News sitemap reference lists the currently supported News sitemap tags and no longer lists the repository's optional `news:access`, `news:genres`, `news:keywords`, or `news:stock_tickers` fields. Absence from the current reference is not, by itself, sufficient evidence to delete public compatibility fields, but their provider status must be explicitly classified before remediation.
 
 ### Correct conclusion
 
 This is a real provider-validation gap and also an incorrect example.
+
+The remediation needs two levels:
+
+- entry/provider lexical validation for publication language and publication date;
+- document/context validation for the 1,000-entry cap and two-day News metadata window.
+
+The four legacy optional fields must be treated as compatibility/provider-status candidates pending explicit source-backed classification; they must not continue to be presented as current Google News requirements or recommendations without evidence.
 
 ### What must not be done
 
@@ -788,23 +826,21 @@ That would break an intentional, tested public behavior for a recommendation rat
 
 ---
 
-## F-15 — Hreflang needs cluster-level validation, and current normalization is not script-aware
+## F-15 — Hreflang has multiple normalization paths and lacks provider-aware cluster validation
 
-**Decision:** `FIX` + `ADD`  
+**Decision:** `RECLASSIFY` + `ADD`  
 **Risk:** High  
 **Area:** International SEO
 
 ### Repository evidence
 
-`HreflangLinkDTO` validates one link:
+Hreflang behavior is implemented through more than one path:
 
-- non-empty hreflang
-- valid URL
+1. `src/Web/Hreflang/HreflangLinkDTO.php`
+2. `src/Shared/DTO/Sitemap/SitemapAlternateUrlDTO.php`
+3. `src/Web/Sitemap/SitemapXmlStringRenderer.php`
 
-Its normalization logic:
-
-- lowercases the first subtag.
-- uppercases every later subtag.
+`HreflangLinkDTO` validates one link for non-empty hreflang and absolute URL, then normalizes by lowercasing the first subtag and uppercasing every later subtag.
 
 Examples:
 
@@ -813,40 +849,67 @@ zh-Hant     -> zh-HANT
 zh-Hans-US  -> zh-HANS-US
 ```
 
-This treats every non-first component like a region code.
+The sitemap path uses a different permissive regex and lowercases the full hreflang value for output.
 
-### Current Google position
+This means equivalent hreflang concepts do not currently share one normalization/validation source of truth.
 
-Google documents:
+### Standards and provider interpretation
 
-- language code based on ISO 639-1.
-- optional region based on ISO 3166-1 Alpha 2.
-- script variants can use ISO 15924, e.g. `zh-Hant`, `zh-Hans`.
-- each language version should list itself and all other versions.
-- alternate URLs should be fully-qualified.
-- reciprocal links are required for reliable interpretation.
+BCP 47 comparisons are case-insensitive, and case regularization is optional. Therefore `zh-HANT` is not, by casing alone, proof of an invalid language tag.
+
+However, BCP 47's conventional casing distinguishes:
+
+- language subtags: lowercase;
+- script subtags: title case, for example `Hant`;
+- alphabetic region subtags: uppercase.
+
+Google's current hreflang documentation supports:
+
+- ISO 639-1 language codes;
+- optional ISO 3166-1 Alpha 2 regions;
+- explicit ISO 15924 scripts such as `zh-Hant` and `zh-Hans`;
+- combinations such as `zh-Hans-US`;
+- `x-default`.
+
+The current repository paths do not consistently prove that a syntactically accepted subtag is actually in the provider-supported language/region/script sets.
+
+### Current Google cluster requirements
+
+Google also documents:
+
+- each language version should list itself and the relevant alternates;
+- alternate URLs must be fully-qualified;
+- reciprocal / bidirectional links matter for processing;
+- sitemap hreflang annotations require the same alternate set to be represented per localized URL.
 
 ### Architecture conclusion
 
+The casing difference is primarily a canonicalization/consistency issue, not sufficient evidence of provider invalidity by itself.
+
+The material architecture gaps are:
+
+- duplicate hreflang normalization/validation implementations;
+- permissive syntax that is not equivalent to provider-supported code validation;
+- absence of deterministic cluster-level checks for self-reference and reciprocal relationships.
+
 A single-link DTO cannot validate cluster rules such as reciprocity.
-
-Those rules need a collection/context-level validator.
-
-At the same time, per-link normalization should be standards-aware enough not to treat script subtags as region subtags.
 
 ### Safe target
 
-Separate:
+Separate and unify:
 
-1. Link syntax / normalization.
-2. Provider-supported language/region/script validation.
-3. Cluster integrity:
+1. Shared hreflang parsing / normalization semantics used by Web and Sitemap entry points.
+2. Generic language-tag syntax where a generic contract is needed.
+3. Google provider-supported language/region/script validation.
+4. Cluster integrity:
    - self-reference
    - reciprocal relationships
    - complete/consistent alternate groups
    - fully-qualified URLs
 
 ### What must not be done
+
+Do not treat capitalization alone as a Google-invalidity error.
 
 Do not hide network crawling inside the DTO to prove reciprocity.
 
@@ -994,11 +1057,13 @@ These must be introduced incrementally because new errors change validation resu
 **Risk:** High  
 **Area:** Documentation truth
 
-### A. CHANGELOG is incomplete for post-RC main
+### A. CHANGELOG is incomplete for the audited post-RC history
 
-Current `CHANGELOG.md` under `1.0.0 - Unreleased` only lists three sitemap fixes.
+At the audited `main@1e2cca61...` baseline, `CHANGELOG.md` under `1.0.0 - Unreleased` listed only three sitemap fixes.
 
-Current main also contains substantial additions such as:
+At the reviewed Phase 23 integration snapshot, one Phase 23 Merchant Center entry has also been added, but substantial earlier post-RC work remains absent from the Unreleased history.
+
+The repository history also contains substantial additions such as:
 
 - advanced Product structured data.
 - ProductGroup / AggregateOffer composition.
@@ -1007,7 +1072,7 @@ Current main also contains substantial additions such as:
 - CI / quality work.
 - Search Console provider boundary.
 
-The changelog therefore does not represent the actual change history from the previous tagged state to current main.
+The changelog therefore does not represent the actual change history from the previous tagged state through the reviewed Phase 23 integration snapshot.
 
 This is a documentation integrity problem independent of release decisions.
 
@@ -1308,12 +1373,13 @@ Add layered validation.
 
 ### Order
 
-1. Base sitemap document policy.
-2. Image provider status / deprecated-tag handling.
+1. Base sitemap entry/document policy, including `<loc>` length, URL count, byte size, and hosting context.
+2. Image provider status / deprecated-tag handling plus 1,000-image and cross-domain context rules.
 3. Video limits.
-4. News language/date rules.
-5. Correct examples.
-6. Clarify README claims.
+4. News language/date rules plus 1,000-entry and two-day metadata-window rules.
+5. Explicit provider-status classification for legacy News optional fields.
+6. Correct examples.
+7. Clarify README claims.
 
 ### Critical constraint
 
@@ -1351,7 +1417,8 @@ Do not silently change existing score math while changing semantic categories.
 
 ### Hreflang
 
-- fix script-aware normalization.
+- unify Web and Sitemap hreflang parsing / normalization semantics.
+- use canonical BCP 47 casing when normalization is performed, without treating casing alone as provider invalidity.
 - validate provider-supported language/region/script shape.
 - add cluster-level validation.
 - preserve deterministic behavior and host ownership.
@@ -1531,6 +1598,8 @@ Hreflang:
 - `zh-Hant`
 - `zh-Hans-US`
 - `x-default`
+- equivalent normalization through Web and Sitemap entry points
+- unsupported-but-regex-shaped language/region/script values
 - reciprocal cluster
 - missing self-reference
 - missing return link
@@ -1594,9 +1663,9 @@ The exact paths can be adjusted to repository conventions, but the authority lev
 |---|---|---|---|
 | F-01 | Two independent sitemap serialization paths | FIX | High |
 | F-02 | Base sitemap vs provider policies not separated | ADD / RECLASSIFY | High |
-| F-03 | Deprecated Google Image tags presented as first-class | RECLASSIFY | Medium |
+| F-03 | Google Image legacy tags and provider constraints need explicit classification | RECLASSIFY | Medium |
 | F-04 | Video sitemap provider constraints incomplete | ADD | High |
-| F-05 | News sitemap language/date validation incomplete; example invalid | ADD / DOC-FIX | High |
+| F-05 | News sitemap provider validation/context incomplete; example invalid | ADD / DOC-FIX | High |
 | F-06 | robots.txt DTO mismatches RFC 9309 grammar | FIX | High |
 | F-07 | crawl-delay presented like core REP behavior | RECLASSIFY | Medium |
 | F-08 | Meta robots rejects valid Google `-1` | FIX | High |
@@ -1606,7 +1675,7 @@ The exact paths can be adjusted to repository conventions, but the authority lev
 | F-12 | SEO validity and heuristics conflated | RECLASSIFY / ADD | High |
 | F-13 | Open Graph required-field model mismatches OGP | FIX | High |
 | F-14 | Relative canonical must remain generic-compatible | KEEP / ADD profile | Medium |
-| F-15 | Hreflang lacks cluster validation; normalization not script-aware | FIX / ADD | High |
+| F-15 | Hreflang has duplicate normalization paths and lacks provider-aware cluster validation | RECLASSIFY / ADD | High |
 | F-16 | Structured Data needs explicit provider profiles | KEEP principle / ADD | High |
 | F-17 | Old Course/Book deprecation assumption is unsafe | CORRECTION | High |
 | F-18 | JSON-LD "semantic" validation is scoped, not complete lexical validation | RECLASSIFY / ADD | Medium |
@@ -1650,6 +1719,9 @@ All provider facts should be rechecked again when the corresponding remediation 
 
 - RFC 9309 — Robots Exclusion Protocol  
   https://www.rfc-editor.org/rfc/rfc9309.html
+
+- RFC 5646 / BCP 47 — Tags for Identifying Languages  
+  https://www.rfc-editor.org/rfc/rfc5646.html
 
 - Sitemaps.org Protocol  
   https://www.sitemaps.org/protocol.html
@@ -1717,6 +1789,7 @@ Primary repository evidence referenced during this audit:
 - `src/Web/Sitemap/SitemapXmlStringRenderer.php`
 - `src/Web/Sitemap/SitemapIndexXmlStringRenderer.php`
 - `src/Shared/DTO/Sitemap/SitemapUrlDTO.php`
+- `src/Shared/DTO/Sitemap/SitemapAlternateUrlDTO.php`
 - `src/Shared/DTO/Sitemap/SitemapImageDTO.php`
 - `src/Shared/DTO/Sitemap/SitemapVideoDTO.php`
 - `src/Shared/DTO/Sitemap/SitemapNewsDTO.php`
