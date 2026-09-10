@@ -402,47 +402,30 @@ Do not remove constructor parameters or output support in a compatibility-breaki
 
 ## F-04 — Google Video sitemap validation is materially incomplete
 
-**Decision:** `ADD`  
+**Decision:** `ADD` (Provider Layer)
 **Risk:** High  
-**Area:** Google Video sitemap
+**Area:** Google Extensions
 
 ### Repository evidence
 
-`SitemapVideoDTO` currently validates:
+- `src/Shared/DTO/Sitemap/SitemapVideoDTO.php`
 
-- thumbnail URL
-- non-empty title
-- non-empty description
-- content/player URL presence
-- duration greater than zero
-- publication date using the shared sitemap date helper
+### The problem
 
-### Missing current Google constraints
+The current DTO implements only a subset of the Google Video sitemap provider constraints.
 
 Current Google documentation includes constraints such as:
-
-- `video:title`: should match the title of the video on the web page.
-- `video:description`:
-  - maximum 2,048 characters.
-  - must match the description shown on the page, though exact word-for-word identity is not explicitly required.
-- `video:thumbnail_loc`:
-  - must be a valid URL.
-  - supported formats include BMP, GIF, JPEG, PNG, WebP, SVG, and AVIF.
-  - minimum dimensions: 60x30 pixels.
-  - transparency: At least 80% of the thumbnail's pixels must have an alpha (transparency) value greater than 250.
-  - the URL must be stable.
-  - must be accessible to Googlebot and Googlebot Images.
-- `video:duration`: 1..28,800 seconds.
-- `video:publication_date` documented forms:
-  - `YYYY-MM-DD`
-  - `YYYY-MM-DDThh:mm:ssTZD`
+- `video:duration` must be between 1 and 28,800 seconds.
+- `video:description` maximum length is 2,048 characters.
+- `video:publication_date` accepted forms are W3C Datetime (YYYY-MM-DD or YYYY-MM-DDThh:mm:ssTZD).
 - `video:content_loc` vs `video:player_loc`:
-  - At least one of `video:content_loc` or `video:player_loc` must be present.
-  - `video:content_loc` must point to a supported video file format. Google currently documents support for: 3GP, 3G2, ASF, AVI, DivX, M2V, M3U, M3U8, M4V, MKV, MOV, MP4, MPEG, OGV, QVT, RAM, RM, VOB, WebM, WMV, XAP.
+  - At least one of `video:content_loc` or `video:player_loc` must be present. (When `video:content_loc` is available, Google officially recommends using it rather than relying solely on `player_loc`—this is a **provider recommendation**, not a strict validity requirement).
+  - `video:content_loc` must point to a supported video file type. Google currently documents support for: 3GP, 3G2, ASF, AVI, DivX, M2V, M3U, M3U8, M4V, MKV, MOV, MP4, MPEG, OGV, QVT, RAM, RM, VOB, WebM, WMV, XAP.
   - Video URLs must use HTTP, HTTPS, or FTP. Streaming protocols are explicitly unsupported.
   - Data URLs are explicitly unsupported for video URLs.
   - Both must not be the same URL as the parent page `<loc>`.
   - The resources must be accessible to Googlebot (Googlebot must not be blocked by robots.txt or login requirements, and must be able to fetch the file).
+  - The video must be relevant to the host page content, and not embedded on a page completely unrelated to the video.
 
 The current DTO enforces part of the contract (such as non-empty title/description, minimum duration, basic URL shapes, and requiring at least one of `contentLoc` or `playerLoc`), but does not enforce all additional Google Video constraints documented above.
 
@@ -454,22 +437,23 @@ The current DTO enforces part of the contract (such as non-empty title/descripti
    - `video:description` maximum length.
    - `video:publication_date` accepted forms.
    - Requirement of either `video:content_loc` or `video:player_loc`.
+   - Inequality of `content_loc`/`player_loc` to parent `<loc>`.
    - `video:thumbnail_loc` URL shape.
    - Rejection of explicitly unsupported protocols (e.g. streaming protocols, Data URLs) for `content_loc`. Enforcement of HTTP/HTTPS/FTP where applicable.
 
 2. **Document/Context validation:**
-   - Inequality of `content_loc`/`player_loc` to parent `<loc>`.
+   - (Inequality check is handled deterministically if parent `<loc>` is supplied via context).
 
 3. **Serialization/Output Guarantees:**
    - `video:title` and `video:description` must be properly XML entity-escaped or CDATA wrapped during output rendering.
    - The library must not instruct the implementation to double-escape values.
 
 4. **External/Provider-evidence condition:**
-   - Consistency between `video:title`/`video:description` and the on-page visible content.
+   - Host-page relevance requirement (consistency between video context and the on-page visible content).
    - Actual remote accessibility of `content_loc`, `player_loc`, and `thumbnail_loc` to Googlebot.
-   - Actual remote MIME/file format of `content_loc` matching the documented supported types.
-   - Actual remote image format, transparency (at least 80% with alpha > 250), dimensions, and stability of `thumbnail_loc`.
-   (These must not be converted into fake offline validation).
+   - Actual remote file format of `content_loc` matching the documented supported types.
+   - Actual remote image format, transparency, dimensions, and stability of `thumbnail_loc`.
+   (These remote/accessibility constraints must not be converted into fake offline validation).
 
 Note: Watch-page or video indexing eligibility is an external outcome entirely separate from the Video Sitemap resource contract and must not be used as a DTO validation rule.
 
@@ -477,207 +461,82 @@ Note: Watch-page or video indexing eligibility is an external outcome entirely s
 
 Provider extensions should act as explicit decorators or context-aware validators on top of the base sitemap.
 
----
+## F-05 — Google News sitemap data is structurally accepted without enough provider validation; cardinality mismatch
 
-## F-05 — Google News sitemap data is structurally accepted without enough provider validation
-
-**Decision:** `ADD` + `DOC-FIX`  
+**Decision:** `ADD` (Provider Layer) / `DOC-FIX`
 **Risk:** High  
-**Area:** Google News sitemap
+**Area:** Google Extensions
 
 ### Repository evidence
 
-`SitemapNewsDTO` only requires non-empty values for:
+- `src/Shared/DTO/Sitemap/SitemapNewsDTO.php`
+- `src/Web/Sitemap/SitemapXmlStringRenderer.php`
+- `src/Shared/DTO/Sitemap/SitemapUrlDTO.php`
+- `examples/sitemap-output.php`
 
-- publicationName
-- publicationLanguage
-- publicationDate
-- title
+### The problem
 
-It does not validate:
+The current architecture lacks explicit distinction between core Sitemap mechanics and Google News extension rules, leading to several provider mismatches:
 
-- ISO 639 language-code semantics.
-- The exact currently supported publication-date forms from Google's News sitemap documentation.
-- publication language rules.
-- publication name semantics.
-- title semantics where relevant.
-- maximum 1,000 News entries.
-- two-day News metadata window.
-- current status of legacy optional News fields already exposed by the library.
+1. **Cardinality mismatch:** Google News officially mandates a maximum of **one** `<news:news>` tag per `<url>` entry, and up to 1,000 `<news:news>` tags total per sitemap file. The current `SitemapUrlDTO::$news` is an array/list, and `SitemapXmlStringRenderer` iterates over it to output multiple news entries under a single `<url>`, violating the provider's cardinality contract.
+2. The current documentation/examples pass "publication date" without an explicit time-relative rule. Google News requires the article to have been published within the last **two days** (48 hours) to be eligible.
+3. The legacy generic documentation provides an invalid example for `SitemapNewsDTO::$publicationName` by retaining the parenthetical `(The)` (e.g. `The Example (The)`). Google News explicitly forbids extra parentheticals or strings in the publication name, stating it must match exactly.
+4. Google News requires `news:publication/news:language` to be a 2 or 3 letter ISO 639 code, explicitly including Google's specific documented exceptions for simplified `zh-cn` and traditional `zh-tw` Chinese.
 
-The repository example `examples/sitemap-output.php` currently uses:
+### Safe target architecture
 
-```php
-publicationDate: 'as-provided',
-```
+The News policy should be explicit.
 
-This is accepted by the DTO but is not a valid Google News publication date.
-
-### Current Google position
-
-Google documents:
-
-- publication language follows Google's documented language rules and documented Chinese exceptions.
-- publication date must use supported W3C date forms:
-  - `YYYY-MM-DD`
-  - `YYYY-MM-DDThh:mmTZD`
-  - `YYYY-MM-DDThh:mm:ssTZD`
-  - `YYYY-MM-DDThh:mm:ss.sTZD`
-- a News sitemap may contain at most 1,000 `<news:news>` entries.
-- News sitemap metadata applies to articles created within the last 2 days; older URLs may remain in a general sitemap, but their `<news:news>` metadata should be removed.
-- `news:publication/news:name`:
-  - It must match exactly the publication name shown on articles in Google News.
-  - Parenthetical portions must be omitted where Google's documentation requires that behavior.
-- `news:title`:
-  - It represents the article title as it appears on the site.
-  - Do not include author name.
-  - Do not include publication name.
-  - Do not include publication date.
-
-The current Google News sitemap reference lists the currently supported News sitemap tags and no longer lists the repository's optional `news:access`, `news:genres`, `news:keywords`, or `news:stock_tickers` fields. Absence from the current reference is not, by itself, sufficient evidence to delete public compatibility fields, but their provider status must be explicitly classified before remediation.
-
-### Correct conclusion
-
-This is a real provider-validation gap and also an incorrect example.
-
-The remediation needs two levels:
-
-- entry/provider lexical validation for publication language and publication date;
-- document/context validation for the 1,000-entry cap and two-day News metadata window.
-
-The four legacy optional fields must be treated as compatibility/provider-status candidates pending explicit source-backed classification; they must not continue to be presented as current Google News requirements or recommendations without evidence.
-
-### What must not be done
-
-Do not silently change a generic date helper into a News-specific parser if that changes unrelated sitemap behavior.
-
-The News policy should be explicit. The two-day rule must remain deterministic: Do not permit a future validator to call hidden `now()` / system time internally. The architecture must require caller-supplied reference time/context for time-relative validation.
+- **Two-day metadata window:** This must remain deterministic: Do not permit a future validator to call hidden `now()` / system time internally. The architecture must require caller-supplied reference time/context for time-relative validation.
+- **Cardinality:** The current list API (`SitemapUrlDTO::$news`) must not be broken immediately to avoid breaking compatibility. Instead, this requires a compatibility-safe remediation path where multiple entries are explicitly classified as provider-invalid/diagnostic, while maintaining the one-entry-per-URL valid state.
+- **Publication Name/Title:** The title semantics must enforce exclusion of author, publication name, and publication date.
 
 ### Classification of Rules
 
 1. **Deterministic lexical/local validation:**
    - `news:publication_date` W3C Datetime lexical shape constraints.
    - `news:publication/news:language` must be a 2 or 3 letter ISO 639 code (including Google's documented exceptions for simplified `zh-cn` and traditional `zh-tw` Chinese).
+   - Cardinality validation: One News entry per URL is valid. Multiple News entries on one URL is provider-invalid/diagnostic.
+   - Title semantics (excluding author, publication, date) where locally possible.
+   - Publication-name semantics (exactly matching Google News publication name, avoiding parentheticals).
 
 2. **Document/Context validation:**
-   - 1,000-entry limit per News sitemap.
-   - Two-day window rule (requires caller-supplied deterministic reference time).
+   - 1,000 total News entries limit per News sitemap (distinct from per-URL cardinality).
+   - The two-day publication window (relative to caller-provided time context).
 
-3. **External/Provider-evidence (Content Semantics):**
-   - `news:publication_date` representing original article publish time (not sitemap generation time).
-   - `news:publication/news:name` exactly matching Google News publication name.
-   - `news:title` semantics (excluding author, publication, date).
-   (These are content semantics and must not become fake offline validation).
+3. **External/Provider-evidence condition:**
+   - Accuracy of the article text versus the reported language.
+   - Actual provider ingestion eligibility.
 
----
+## F-06 — `robots.txt` DTO does not conform cleanly to RFC 9309 grammar and Google provider contracts
 
-
-## F-06 — `robots.txt` DTO does not conform cleanly to RFC 9309 grammar
-
-**Decision:** `FIX`  
+**Decision:** `FIX` (RFC Compliance & Provider Profiles)
 **Risk:** High  
-**Area:** Robots Exclusion Protocol
+**Area:** Robots.txt Validation
 
 ### Repository evidence
 
-`RobotsRuleDTO` currently:
+- `src/Web/Robots/DTO/RobotsTxtDTO.php`
 
-- accepts any non-empty `userAgent`.
-- rejects empty allow paths.
-- rejects empty disallow paths.
-- accepts path strings without enforcing RFC path grammar.
-- does not explicitly reject control characters / line breaks.
+### The problem
 
-### RFC 9309 requirements
+The current implementation treats RFC 9309 and Google-specific parsing rules as interchangeable and utilizes incomplete offline validators.
 
-RFC 9309 defines:
+1. **Path semantics:** The `RobotsRuleDTO` enforces that rule paths start with `/`. The RFC allows `*`, and Errata 7995 proposes changing the ABNF to allow `/` or `*` at the start. Furthermore, Google parsing behavior has specific rules for leading slashes.
+2. **`Sitemap:` URL contract vs current validator:** Google officially states that the `Sitemap:` directive requires a fully-qualified URL (including protocol and host), is case-sensitive, does not have to be URL-encoded (accepting Unicode paths), may be cross-host, may occur multiple times without a documented count limit, and is entirely independent of user-agent groups.
+   - The current code uses PHP's `FILTER_VALIDATE_URL`, which operates on ASCII URLs only. This incorrectly flags perfectly valid Unicode sitemap paths as invalid.
 
-- `product-token = identifier / "*"`
-- `identifier` contains one or more characters from:
-  - `-`
-  - `A-Z`
-  - `_`
-  - `a-z`
-- Digits are not part of the RFC 9309 `identifier` grammar.
-- `*` is the separate product-token alternative.
-- Empty Allow/Disallow pattern is valid.
-- The published ABNF defines the non-empty `path-pattern` beginning with `/`.
-- The RFC's own examples also demonstrate wildcard patterns such as: `Disallow: *.gif$`
-- The RFC explains `*` wildcard matching in a way that supports that example.
-- RFC Editor Errata 7995 reports this inconsistency and proposes allowing `/` or `*` at the start.
-- Errata 7995 is currently a reported erratum/proposed correction, not an incorporated normative replacement for the RFC text.
-- Do not instruct the remediation to implement unconditional slash-only rejection.
-- Do not classify a leading `*` pattern as definitely invalid solely from the published ABNF.
-- Explicitly document the RFC text/example inconsistency.
-- Treat this as a contract decision requiring compatibility-safe handling.
-- Characterization tests must capture existing wildcard behavior before tightening validation.
-- Any future accepted grammar must preserve supported wildcard semantics deliberately rather than accidentally rejecting them.
+### Safe target architecture
 
-### Line-ending injection
+1. Separate the RFC 9309 parsing boundary from the Google-specific execution profile.
+2. Explicitly map Errata 7995 as a reported/proposed correction, not as absolute RFC text, while handling the difference between standard and Google path semantics.
+3. Replace the current `FILTER_VALIDATE_URL` Sitemap check with a compatibility-safe target validation that satisfies the actual Google contract:
+   - Must allow Unicode / non-URL-encoded provider compatibility.
+   - Must enforce absolute/fully-qualified URLs (protocol + host).
+   - Must allow multiplicity and cross-host semantics.
+   - Must preserve independence from user-agent groups.
 
-Because `robots.txt` is line-oriented:
-
-- raw `#` starts comment semantics;
-- raw `#` is not an ordinary literal path-pattern character;
-- literal `#` in a path is represented using percent encoding such as `%23`;
-- CR/LF must not be able to inject additional robots.txt directives.
-
-The CR/LF protection must explicitly cover:
-
-- Allow/Disallow values,
-- rule comments,
-- top-level document comments.
-
-### Confirmed mismatch
-
-The current DTO simultaneously:
-
-- **rejects valid RFC input**: empty Allow/Disallow pattern.
-- **accepts invalid RFC input**: arbitrary user-agent token.
-- can accept strings containing line-breaking control characters that should not be part of the rule value.
-
-### Why the newline issue matters
-
-Because `robots.txt` is a line-oriented protocol, uncontrolled newline content can alter rendered directive structure.
-
-This is not only cosmetic validation.
-
-### Safe Target
-
-Implement a strict RFC 9309 `RobotsRuleDTO` and serialization layer that:
-
-- accepts `identifier` without digits.
-- accepts `*`.
-- allows empty path-patterns.
-- explicitly prevents CR/LF injection in serialized output.
-
-### Google robots.txt parsing rules
-
-Google's provider-level behavior for robots.txt includes additional rules:
-- Must be a UTF-8 encoded plain text file.
-- File size limit is currently 500 kibibytes (kiB) (Google parses up to this limit and ignores the rest).
-- The `Sitemap:` field is case-insensitive, but its value is case-sensitive.
-- `Sitemap:` takes an absolute URL.
-- Multiple `Sitemap:` fields are allowed.
-- The `Sitemap:` field is independent of user-agent groups.
-- `Sitemap:` URLs can be cross-host (e.g., pointing to a CDN).
-- An empty Allow/Disallow rule path (e.g., `Allow:` or `Disallow:`) means the rule is ignored.
-- The path value must start with `/` to designate the root.
-
-**Classification:**
-- UTF-8 encoded plain text file constraint: **Serialization/output responsibility**
-- File size limit (500 KiB): **Google provider document-level constraint** (The library can measure the generated document size deterministically and warn if it exceeds 500 KiB, but actual HTTP/file delivery remains the host's responsibility).
-- `Sitemap:` absolute URL, multiplicity, cross-host, case-sensitivity: **Google provider contract**
-- Empty path ignorance: **Google provider parsing rules**.
-- Leading `/` requirement: **Google provider parsing behavior**. Google's requirement for a leading `/` must be compared against **RFC 9309 path-pattern semantics and documented Errata 7995** (which allows `*` or `/`), not against the RFC `identifier` grammar (which is exclusively for product-tokens).
-
-The current renderer is line-oriented, so injection prevention must be an explicit contract rather than an implied generic string check.
-
-### What must not be done
-
-Do not "tighten all strings to non-empty" as a generic safety rule. RFC 9309 explicitly permits an empty rule pattern.
-
----
+*Characterization tests must capture the current ASCII-only `FILTER_VALIDATE_URL` behavior before migration.*
 
 ## F-07 — `crawl-delay` is modeled as if it were core robots behavior
 
@@ -907,63 +766,38 @@ Do not call them Google limits.
 
 ---
 
-## F-13 — Open Graph validation currently requires the wrong basic property set
+## F-13 — Open Graph required-field model mismatches OGP and omits full exposed contract details
 
-**Decision:** `FIX`, preferably through an explicit protocol profile  
+**Decision:** `FIX` (Protocol Profiling)
 **Risk:** High  
-**Area:** Open Graph
+**Area:** Social Metadata
 
 ### Repository evidence
 
-When Open Graph data is detected, `SeoMetaValidator` currently expects:
+- `src/Web/Social/OpenGraphBuilder.php`
+- `src/Web/Social/SocialImage.php`
+- Related rendering and validation tests
 
-- `og:title`
-- `og:description`
-- `og:image`
+### The problem
 
-It does not require:
+The `SeoMetaValidator` enforces `og:description` as a required field for 100% validity and generates issues if it is missing or exceeds generic string lengths.
 
-- `og:type`
-- `og:url`
-
-The current Phase 11A tests lock this behavior.
-
-### Open Graph Protocol
-
-The Open Graph Protocol defines four required basic properties:
-
+According to the official Open Graph Protocol (OGP), only **four** properties are strictly required for every page:
 - `og:title`
 - `og:type`
 - `og:image`
 - `og:url`
 
-`og:description` is optional metadata.
+`og:description` is optional in the OGP protocol, yet the library currently scores it as a required semantic component.
 
-### Confirmed mismatch
+Furthermore, the existing Open Graph builders expose several other properties (such as `og:site_name` and support for multiple images via arrays) whose semantic rules and serialization ordering guarantees are undocumented and unverified against the provider contract.
 
-The current validator:
+### Safe target architecture
 
-- treats an optional OGP property as required/recommended in its basic set.
-- omits two protocol-required properties from that set.
+First establish an explicit OGP-conformance validator/profile that enforces the 4 true required properties.
 
-### Additional architecture complication
-
-The repository has two social metadata paths:
-
-1. `MetaTagsDTO` / `MetaGeneratorService` / HTML renderers.
-2. `OpenGraphBuilder` / `SocialMetaCollection`.
-
-`MetaGeneratorService` populates title, description, and URL but does not automatically provide Open Graph type or image.
-
-`OpenGraphBuilder` is a richer dedicated model.
-
-### Safe remediation
-
-Do not immediately change the legacy validator and thereby alter all existing scores and reports.
-
-First establish an explicit OGP-conformance validator/profile that enforces the protocol's basic required properties: `og:title`, `og:type`, `og:image`, `og:url`.
-
-Additionally, the audit of the OGP provider contract must fully cover the capabilities actually exposed by `OpenGraphBuilder` and `SocialImage`, including:
+Additionally, the audit of the OGP provider contract must fully cover every capability actually exposed by `OpenGraphBuilder` and `SocialImage`, explicitly documenting the behavior according to OGP. This includes at a minimum:
+- `og:site_name`: optional string.
 - `og:determiner`: enum of (a, an, the, "", auto)
 - `og:locale`: format `language_TERRITORY`
 - URL datatypes: OGP specifies URLs must use `http://` or `https://` schemes.
@@ -973,11 +807,14 @@ Additionally, the audit of the OGP provider contract must fully cover the capabi
 - `og:image:width`: integer
 - `og:image:height`: integer
 - `og:image:alt`: string. The OGP protocol officially recommends providing this whenever `og:image` is used. It must be explicitly classified as a **protocol-level recommendation / optional structured property**, not a heuristic recommendation and not a required validity rule.
-- structured-property ordering semantics with respect to the root property (e.g., `og:image` properties must be grouped sequentially after the root `og:image` tag).
+
+#### Array and Multiplicity Ordering Semantic Contract
+The library currently supports multiple images. OGP states that multiple properties of the same name are considered arrays. Crucially, when there are conflicts or structured properties attached to a root property (e.g. `og:image:width` attached to `og:image`), **the protocol dictates that properties are ordered from top to bottom, and structured properties are grouped sequentially after their root property**.
+- This represents a strict serialization contract.
+- A non-regression requirement must be established to guarantee that the ordering of the first image and its associated structured properties is maintained exactly during serialization.
+- Characterization tests must be added to map current multiple-image ordering behavior before refactoring.
 
 Then decide how the legacy `SeoMetaValidator` should migrate to that profile.
-
----
 
 ## F-14 — Canonical URL behavior is permissive by design; relative canonical must not be mislabeled as universally invalid
 
@@ -1556,9 +1393,10 @@ Robots has:
 2. Explicit CR/LF injection prevention.
 3. Line-by-line renderer with provider document-level constraints (e.g. 500 KiB boundary warning, UTF-8 encoded plain text output).
 4. Preserve non-standard extensions separately.
-5. Implement explicit separation between RFC 9309 behavior, Errata 7995, and Google provider path parsing rules.
+5. Implement explicit separation between RFC 9309 behavior, Errata 7995 (mapping it explicitly as a proposed correction, not absolute text), and Google provider path parsing rules.
 6. Implement Google `Sitemap:` contract validation:
-   - Enforce fully-qualified/absolute URLs.
+   - Introduce compatibility-safe validation covering Unicode / non-URL-encoded provider compatibility.
+   - Enforce absolute/fully-qualified URLs (protocol + host).
    - Support multiplicity (multiple `Sitemap:` fields without limits).
    - Explicitly allow cross-host semantics.
    - Verify independence from user-agent groups.
@@ -1627,23 +1465,26 @@ Add layered validation.
 - existing content/player-presence behavior characterization.
 - description limit.
 - duration range.
-- publication-date forms.
+- publication-date forms (W3C Datetime).
 - parent `<loc>` relationship.
-- deterministic versus external/provider-evidence rules.
+- host-page relevance content-context rule (external evidence).
+- document `content_loc` preference as a provider recommendation.
+- deterministic versus external/provider-evidence rules (e.g. remote format verification).
 - video title/description serialization semantics (XML/CDATA escaping).
 - thumbnail contract classification (URL shape vs external image format, dimensions, stability, accessibility, and transparency).
 - Implement Google Video explicit profile with entry, document, and serialization levels.
-- Document supported video file types.
+- Document explicitly supported video file types (not MIME types).
 - Explicitly reject Data URLs and streaming protocols (HTTP/HTTPS/FTP only).
 - Explicitly separate Googlebot resource-accessibility boundaries as external/provider-evidence.
 
 #### Google News
 - language contract (ISO 639 formatting, including Google's `zh-cn`/`zh-tw` exceptions).
 - exact date forms (W3C Datetime).
-- publication-name semantics (exactly matching Google News publication name).
+- publication-name semantics (exactly matching Google News publication name, avoiding parentheticals).
 - title semantics (excluding author, publication, date).
-- 1,000-entry limit per News sitemap.
-- two-day metadata window with explicit reference time.
+- 1,000-entry limit per News sitemap (document level).
+- One News entry per URL valid vs multiple entries provider-invalid/diagnostic (compatibility-safe cardinality remediation).
+- two-day metadata window with explicit caller-supplied reference time.
 - legacy optional-field provider-status classification.
 
 ### Critical constraint
@@ -1667,7 +1508,7 @@ Stop mixing heuristic recommendations with protocol validity.
 5. Make an explicit decision on title/description measurement units (bytes, code points, etc.).
 6. Add characterization tests for ASCII and Arabic/Unicode title/description lengths before altering `strlen()` usage.
 7. Declare Twitter/X provider conformance out of scope until an official-source revalidation is conducted.
-8. Implement strict OGP DTO profile (only 4 required) and formalize remaining supported optional properties (determiner, locale, HTTP/HTTPS URL datatypes, structured-property ordering, and `og:image:alt` as a protocol-level recommendation).
+8. Implement strict OGP DTO profile (only 4 required) and formalize remaining supported optional properties (determiner, locale, site_name, HTTP/HTTPS URL datatypes, exact top-to-bottom structured-property ordering semantics for multiple images, and `og:image:alt` as a protocol-level recommendation).
 9. Decide how heuristic warnings participate in scores.
 10. Align dedicated social builders and legacy `MetaTagsDTO` path.
 
@@ -1863,11 +1704,14 @@ Add explicit boundary cases including at minimum:
 ### Google Robots.txt and Provider Constraints
 
 - file size limit behavior (500 KiB boundary) as a documented provider document-level constraint.
-- Google robots `Sitemap:` deterministic rules (valid absolute URLs).
+- characterization tests for current ASCII-only `FILTER_VALIDATE_URL` Sitemap behavior.
+- Google robots `Sitemap:` Unicode sitemap paths acceptable to Google.
+- Google robots `Sitemap:` deterministic rules (valid absolute URLs, multiplicity, cross-host, group-independence).
 - Google-specific robots path cases (leading `/` handling).
 
 ### Open Graph Protocol
-- supported OGP lexical/structural contracts (e.g., HTTP/HTTPS URL datatypes, `og:locale` format, integer constraints for dimensions, proper property grouping).
+- supported OGP lexical/structural contracts (e.g., HTTP/HTTPS URL datatypes, `og:locale` format, `og:site_name`, integer constraints for dimensions).
+- proper top-to-bottom property grouping for multiple arrays (characterization for multiple-image ordering and non-regression for first image/property ordering).
 - explicit distinction for the `og:image:alt` protocol-level recommendation vs validity.
 
 ## 9.3 Provider profile tests
@@ -1892,12 +1736,14 @@ Add explicit boundary cases including at minimum:
 
 ### Google News
 
-- 1,000 entries valid
-- 1,001 invalid/issue
+- one News entry per URL valid.
+- multiple News entries on one URL provider-invalid/diagnostic.
+- 1,000 total News entries boundary (valid) distinct from per-URL cardinality.
+- 1,001 total News entries boundary (invalid/issue).
 - all four documented publication-date forms
 - invalid arbitrary date
-- valid/invalid language cases
-- exact two-day-window boundary using explicit caller-supplied reference time
+- valid/invalid language cases (including `zh-cn`/`zh-tw` exceptions).
+- exact two-day-window boundary using explicit caller-supplied reference time.
 
 Examples:
 
@@ -2023,6 +1869,13 @@ The target is:
 
 > one implementation source of truth per domain, provider-neutral core contracts, explicit provider profiles, explicit heuristics, deterministic validation, and documentation that accurately states what the library can and cannot prove.
 
+### Execution Authority Rule
+
+This Audit document serves as the **baseline execution authority** for all remediation stacks. A future implementer must be able to execute Stacks 0 to 8 entirely based on the rules encoded in this document, referencing external official sources only for verification, without needing to reinvent classifications, deduce unwritten behaviors, or restart standard research from scratch.
+
+- **Freshness verification:** Time-variable provider facts can undergo freshness verification during Stack implementation.
+- **Source updates:** Freshness verification does not mean reopening decisions or conducting broad standard research without evidence of source alteration. If the official authoritative provider source has genuinely changed after the date of this audit, the change must be explicitly documented and the contract amended before execution proceeds.
+
 No production behavior should be changed merely because it "looks more strict."
 
 A behavior change is justified only when the audit classifies it, its authoritative source is recorded, its compatibility impact is understood, and its non-target behavior is protected by tests.
@@ -2040,6 +1893,9 @@ All provider facts should be rechecked again when the corresponding remediation 
 
 - PHP `strlen` function documentation
   https://www.php.net/manual/en/function.strlen.php
+
+- PHP Filter Constants (FILTER_VALIDATE_URL)
+  https://www.php.net/manual/en/filter.constants.php
 
 - RFC 9309 — Robots Exclusion Protocol  
   https://www.rfc-editor.org/rfc/rfc9309.html
