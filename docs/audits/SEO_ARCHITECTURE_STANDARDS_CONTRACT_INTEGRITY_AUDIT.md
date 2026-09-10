@@ -259,7 +259,10 @@ Host/path rules must not become unconditional same-host DTO rejection.
 - URLs contained inside one URL sitemap must belong to the applicable single-host/site scope defined by the protocol.
 - Cross-submission does **not** mean one sitemap may freely mix URLs from unrelated hosts.
 - Cross-submission allows a sitemap file to be submitted/hosted in a different location when the required ownership/authority relationship is established.
-- Sitemap index host/site restrictions must be documented separately and accurately.
+- A Sitemap Index may reference only Sitemap files on the same site as the Sitemap Index.
+- This rule is separate from URL-sitemap cross-submission behavior.
+- Cross-submission must not be interpreted as permission for a Sitemap Index to freely reference unrelated external Sitemap hosts.
+- Host/submission checks require document/submission context and must not be forced into a single-entry DTO constructor.
 
 Keep these concerns outside single-entry DTO validation because they require document/submission context.
 
@@ -394,9 +397,10 @@ Current Google documentation includes constraints such as:
 - `video:publication_date` documented forms:
   - `YYYY-MM-DD`
   - `YYYY-MM-DDThh:mm:ssTZD`
-- At least one of `video:content_loc` or `video:player_loc` must be supplied (existing behavior that must be characterized and preserved unless an intentional contract change is later justified).
 - `video:content_loc` must not be the same URL as the parent page `<loc>`.
 - `video:player_loc` must not be the same URL as the parent page `<loc>`.
+
+Also, at least one of `video:content_loc` or `video:player_loc` must be supplied (existing behavior that must be characterized and preserved unless an intentional contract change is later justified).
 
 Also classify provider requirements concerning:
 
@@ -524,9 +528,25 @@ The News policy should be explicit. The two-day rule must remain deterministic: 
 RFC 9309 defines:
 
 - `product-token = identifier / "*"`
-- identifier grammar follows RFC 9309.
+- `identifier` contains one or more characters from:
+  - `-`
+  - `A-Z`
+  - `_`
+  - `a-z`
+- Digits are not part of the RFC 9309 `identifier` grammar.
+- `*` is the separate product-token alternative.
 - Empty Allow/Disallow pattern is valid.
-- A non-empty path pattern begins with `/`.
+- The published ABNF defines the non-empty `path-pattern` beginning with `/`.
+- The RFC's own examples also demonstrate wildcard patterns such as: `Disallow: *.gif$`
+- The RFC explains `*` wildcard matching in a way that supports that example.
+- RFC Editor Errata 7995 reports this inconsistency and proposes allowing `/` or `*` at the start.
+- Errata 7995 is currently reported errata, not an incorporated normative replacement for the RFC text.
+- Do not instruct the remediation to implement unconditional slash-only rejection.
+- Do not classify a leading `*` pattern as definitely invalid solely from the published ABNF.
+- Explicitly document the RFC text/example inconsistency.
+- Treat this as a contract decision requiring compatibility-safe handling.
+- Characterization tests must capture existing wildcard behavior before tightening validation.
+- Any future accepted grammar must preserve supported wildcard semantics deliberately rather than accidentally rejecting them.
 - raw `#` starts comment semantics;
 - raw `#` is not an ordinary literal path-pattern character;
 - literal `#` in a path is represented using percent encoding such as `%23`;
@@ -558,7 +578,7 @@ Introduce RFC-aware validation with explicit rules for:
 
 - valid product-token grammar.
 - valid empty Allow/Disallow pattern.
-- slash-prefixed path pattern.
+- wildcard path characterization including leading `*` before any slash-only rejection is considered.
 - raw `#` comment semantics.
 - literal `#` in a path is represented using percent encoding such as `%23`.
 - CR/LF and other forbidden control characters in rule values.
@@ -1661,16 +1681,15 @@ Add explicit boundary cases including at minimum:
 
 ### Robots
 
-- valid `*`.
-- valid identifier.
-- invalid product-token case.
-- valid empty Allow/Disallow pattern.
-- valid slash path.
-- raw `#` comment behavior.
-- encoded `%23` literal-path case.
-- CR/LF in Allow/Disallow.
-- CR/LF in rule comments.
-- CR/LF in top-level document comments.
+- valid `*` product-token.
+- valid RFC identifier.
+- invalid identifier containing digits.
+- empty Allow/Disallow.
+- ordinary slash-path cases.
+- wildcard path characterization including leading `*`.
+- raw `#`.
+- `%23`.
+- CR/LF injection cases.
 
 ## 9.3 Provider profile tests
 
