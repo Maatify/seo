@@ -248,12 +248,13 @@ Before refactoring:
 
 Sitemaps.org defines base sitemap constraints including:
 
-- URL sitemap maximum: 50,000 `<url>` entries.
-- Sitemap index maximum: 50,000 `<sitemap>` entries.
-- 50 MB uncompressed size limit where defined by the protocol.
-- Each required `<loc>` value inside a `<url>` entry must be a protocol-qualified page URL and must be less than 2,048 characters (only where the protocol actually defines it).
-- Sitemap location / host scope constrains which URLs it can describe.
-- Cross-submission / cross-host behavior where ownership or submission evidence permits it.
+- Maximum 50,000 `<url>` entries.
+- Maximum uncompressed size: 50 MB (52,428,800 bytes).
+- The required page URL `<loc>` inside a `<url>` entry must be less than 2,048 characters.
+- Sitemap index maximum 50,000 `<sitemap>` entries.
+- Sitemap index maximum uncompressed size: 50 MB (52,428,800 bytes).
+
+Host/path rules must not become unconditional same-host DTO rejection. Cross-submission/cross-host behavior can depend on ownership/submission context.
 
 Not all of these constraints belong at the same validation level. The page URL `<loc>` lexical/length rule is entry-level; count, byte-size, and location/context rules are document-level or host/submission-context-level.
 
@@ -381,17 +382,31 @@ Do not remove constructor parameters or output support in a compatibility-breaki
 
 Current Google documentation includes constraints such as:
 
-- `description` maximum length.
-- duration range.
-- publication-date formats.
-- requirement for `content_loc` or `player_loc`.
-- relationship between `content_loc` / `player_loc` and the parent page `<loc>`.
-- provider requirements around video resource format/accessibility.
-- thumbnail requirements relevant to `thumbnail_loc`.
+- `video:description`: maximum 2,048 characters.
+- `video:duration`: 1..28,800 seconds.
+- `video:publication_date` documented forms:
+  - `YYYY-MM-DD`
+  - `YYYY-MM-DDThh:mm:ssTZD`
+- At least one of:
+  - `video:content_loc`
+  - `video:player_loc`
+  must be supplied.
+- `video:content_loc` must not be the same URL as the parent page `<loc>`.
+- `video:player_loc` must not be the same URL as the parent page `<loc>`.
 
-The current DTO only enforces `duration > 0`, so values above 28800 are accepted.
+Also classify provider requirements concerning:
 
-The current title/description checks are non-empty checks, not full provider eligibility checks.
+- supported video resource formats,
+- crawlability/accessibility,
+- thumbnail requirements.
+
+Every rule must be classified as one of:
+
+1. deterministic entry validation,
+2. document/context validation,
+3. external/provider-evidence condition.
+
+Do not represent crawlability, remote accessibility, indexing state, or similar external facts as something an offline DTO validator can prove.
 
 ### Safe target
 
@@ -445,10 +460,16 @@ This is accepted by the DTO but is not a valid Google News publication date.
 
 Google documents:
 
-- publication language should use ISO 639 language codes, with documented Chinese exceptions.
-- publication date must use supported W3C date forms.
+- publication language follows Google's documented language rules and documented Chinese exceptions.
+- publication date must use supported W3C date forms:
+  - `YYYY-MM-DD`
+  - `YYYY-MM-DDThh:mmTZD`
+  - `YYYY-MM-DDThh:mm:ssTZD`
+  - `YYYY-MM-DDThh:mm:ss.sTZD`
 - a News sitemap may contain at most 1,000 `<news:news>` entries.
-- News sitemap metadata should only be retained for articles created within the last two days; older URLs may remain in a general sitemap, but their `<news:news>` metadata should be removed.
+- News sitemap metadata applies to articles created within the last 2 days; older URLs may remain in a general sitemap, but their `<news:news>` metadata should be removed.
+- `news:publication/news:name` represents the publication name used by Google News.
+- `news:title` represents the article title according to the current Google News sitemap contract.
 
 The current Google News sitemap reference lists the currently supported News sitemap tags and no longer lists the repository's optional `news:access`, `news:genres`, `news:keywords`, or `news:stock_tickers` fields. Absence from the current reference is not, by itself, sufficient evidence to delete public compatibility fields, but their provider status must be explicitly classified before remediation.
 
@@ -492,11 +513,19 @@ The News policy should be explicit. The two-day rule must remain deterministic: 
 RFC 9309 defines:
 
 - `product-token = identifier / "*"`
-- identifier characters are letters, `_`, and `-`.
-- rule paths are `path-pattern / empty-pattern`.
-- an empty pattern is valid.
-- path patterns begin with `/`.
-- control characters are excluded from path patterns.
+- identifier grammar follows RFC 9309.
+- Empty Allow/Disallow pattern is valid.
+- A non-empty path pattern begins with `/`.
+- Raw `#` starts comment semantics.
+- Raw `#` is not an ordinary literal path-pattern character.
+- If a literal `#` is intended inside the path, use its percent-encoded representation such as `%23` according to protocol encoding rules.
+- CR/LF and forbidden control characters must not be allowed to alter rendered robots.txt structure.
+
+The CR/LF protection must explicitly cover:
+
+- Allow/Disallow values,
+- rule comments,
+- top-level document comments.
 
 ### Confirmed mismatch
 
@@ -995,7 +1024,7 @@ The runtime architecture should allow provider eligibility rules to evolve witho
 
 ---
 
-## F-17 — Previous preliminary assumptions about Course / Book deprecation must NOT be used as remediation input
+## F-17 — State actual Course / Book provider status
 
 **Decision:** `CORRECTION` / `KEEP` until current provider evidence says otherwise  
 **Risk:** High if ignored  
@@ -1007,36 +1036,26 @@ A preliminary review previously risked overgeneralizing older Google structured-
 
 The re-check for this audit found current official evidence that makes blanket removal/deprecation claims unsafe.
 
-### Current official evidence
+### Course
 
-As of this audit:
+- Google's older **Course Info** search appearance was removed and its documentation was removed because that search appearance no longer appears in Google Search.
+- Google's current **Course List** structured-data documentation still exists.
+- Therefore a blanket statement that Course structured data is unsupported by Google is incorrect.
 
-- Google has a current Course list structured-data guide.
-- Google has a current Book structured-data guide.
-- Google's current documentation updates include removal of a Book deprecation banner because a feature still uses the markup.
-- Google's current supported structured-data gallery remains the correct source for currently surfaced Google Search features.
+### Book
 
-Explicitly distinguish current provider evidence for concepts such as:
+- Current Book / Book Actions documentation still exists.
+- Book Actions are not equivalent to a generic normal rich-result contract available to every page.
+- They involve provider-specific participation, feed, and eligibility requirements.
+- Generic Schema.org Book vocabulary support must remain separate from Google Book Actions eligibility.
 
-- Course Info versus Course List.
-- Book / Book Actions and any eligibility/provider restrictions.
-- Schema.org vocabulary support versus Google Search feature support.
-
-Do not treat the Search Gallery as the sole source for every Google provider capability.
-
-Provider-status verification should use, as applicable:
+Provider-status evidence hierarchy must use, as applicable:
 
 - feature-specific current documentation,
 - Google Search documentation updates,
-- supported-feature gallery.
+- Search Gallery.
 
-### Audit rule
-
-No builder may be deleted, deprecated, or marked "unsupported by Google" from memory or an old announcement alone.
-
-Provider status must be checked against current official documentation at the time of remediation.
-
-This is a direct example of the safety principle behind this audit.
+Do not treat Search Gallery as the sole authority for every provider capability.
 
 ---
 
@@ -1600,24 +1619,24 @@ Add explicit boundary cases including at minimum:
 
 ### Sitemap core
 
-- 50,000 / 50,001 URL entries.
-- 50,000 / 50,001 sitemap-index entries.
-- uncompressed-size boundary.
-- page URL `<loc>` length boundary.
-- host/submission-context cases.
+- 50,000 valid / 50,001 invalid/issue URL entries.
+- 50,000 valid / 50,001 invalid/issue sitemap-index entries.
+- uncompressed-size boundary at 52,428,800 bytes, over-boundary case.
+- page URL `<loc>` length boundary: 2,047 characters valid at this protocol length boundary, 2,048 characters invalid because the protocol requires less than 2,048.
+- host/submission cases must validate explicit context behavior rather than unconditional same-host rejection.
 
 ### Robots
 
 - valid `*`.
 - valid identifier.
-- invalid identifier containing digits if treated as RFC product-token input.
+- invalid product-token case.
 - valid empty Allow/Disallow pattern.
 - valid slash path.
-- raw `#`.
-- percent-encoded literal path case where applicable.
+- raw `#` comment behavior.
+- encoded `%23` literal-path case.
 - CR/LF in Allow/Disallow.
 - CR/LF in rule comments.
-- CR/LF in document comments.
+- CR/LF in top-level document comments.
 
 ## 9.3 Provider profile tests
 
@@ -1625,22 +1644,27 @@ Add explicit boundary cases including at minimum:
 
 ### Google Image
 
-- 1,000 / 1,001 images per URL.
+- 1,000 images valid
+- 1,001 images invalid/issue
 
 ### Google Video
 
-- description length boundary.
-- duration boundaries.
-- `content_loc` / `player_loc` relationship to parent `<loc>`.
-- deterministic checks versus external-evidence-only conditions.
+- Description: 2,048 valid, 2,049 invalid/issue.
+- Duration: 1 valid, 28,800 valid, 28,801 invalid/issue.
+- both `content_loc` and `player_loc` missing.
+- `content_loc == parent <loc>`.
+- `player_loc == parent <loc>`.
+- deterministic locally provable cases.
+- external-evidence-only cases.
 
 ### Google News
 
-- 1,000 / 1,001 entries.
-- every documented accepted publication-date form.
-- invalid arbitrary date.
-- language cases.
-- two-day-window validation using explicit reference time.
+- 1,000 entries valid
+- 1,001 invalid/issue
+- all four documented publication-date forms
+- invalid arbitrary date
+- valid/invalid language cases
+- exact two-day-window boundary using explicit caller-supplied reference time
 
 Examples:
 
