@@ -249,6 +249,18 @@ Before refactoring:
 Sitemaps.org defines base sitemap constraints including:
 
 - Maximum 50,000 `<url>` entries.
+- The `lastmod` value must follow the W3C Datetime format (which allows omitting the time portion, e.g. YYYY-MM-DD). Fractional seconds are supported by the protocol.
+- **Current library behavior comparison:**
+  - `SitemapUrlDTO::isValidLastmod()` explicitly enforces regex `Y-m-d` or `ATOM` strict formats, and actively rejects malformed string lengths.
+  - `Shared\DTO\Sitemap\SitemapIndexEntryDTO` correctly applies the same `isValidLastmod` check.
+  - `Web\Sitemap\DTO\SitemapIndexEntryDTO` also applies the `isValidLastmod` check.
+  - However, standard ATOM (`Y-m-d\TH:i:sP`) does not natively include fractional seconds, meaning the current implementation safely rejects them to guarantee deterministic W3C-compliant output.
+- In a URL sitemap, `<url><lastmod>` identifies the time the page content was last modified, not the time the sitemap was generated.
+- In a Sitemap Index, `<sitemap><lastmod>` identifies the time the linked sitemap file itself was last modified.
+
+Google Provider additions:
+- Google does not use `priority` or `changefreq`.
+- Google uses `lastmod` only if it is consistently and verifiably accurate.
 - Maximum uncompressed size: 50 MB (52,428,800 bytes).
 - The required page URL `<loc>` inside a `<url>` entry must be less than 2,048 characters.
 - Sitemap index maximum 50,000 `<sitemap>` entries.
@@ -292,16 +304,17 @@ The architecture needs separate levels:
 1. **Entry-level**
    - URL shape
    - page URL `<loc>` length below 2,048 characters
-   - URL URI/IRI escaping rules
-   - lastmod lexical format
-   - changefreq vocabulary
-   - priority limits (0.0 to 1.0)
+   - URL values must follow the applicable URI/IRI escaping requirements documented by the protocol.
+   - `lastmod` lexical format (W3C Datetime).
+   - `changefreq` vocabulary.
+   - `priority` limits (0.0 to 1.0).
 
-2. **Document-level**
+2. **Document-level / Context validation**
    - URL count max 50,000
    - Uncompressed size max 50 MB
    - Sitemap Index count max 50,000
    - Sitemap Index Uncompressed size max 50 MB
+   - Content semantic validation: `lastmod` represents the page's actual modification time (in `<url>`) or the sitemap's generation time (in `<sitemap>`).
 
 3. **Serialization/output guarantees**
    - Sitemap XML must be UTF-8 encoded.
@@ -314,6 +327,8 @@ The architecture needs separate levels:
    - Sitemap Index same-site restriction remains separate from cross-submission.
 
 5. **Provider extension validation**
+   - Google ignores `priority` and `changefreq`.
+   - Google `lastmod` accuracy requirements.
    - Google Image
    - Google Video
    - Google News
@@ -422,9 +437,9 @@ Current Google documentation includes constraints such as:
   - `YYYY-MM-DDThh:mm:ssTZD`
 - `video:content_loc` vs `video:player_loc`:
   - At least one of `video:content_loc` or `video:player_loc` must be present.
-  - `video:content_loc` must be a supported media format.
+  - `video:content_loc` must be a supported video file format. Google explicitly supports: `.3g2`, `.3gp2`, `.3gp`, `.3gpp`, `.asf`, `.avi`, `.divx`, `.f4v`, `.flv`, `.m2v`, `.m3u8`, `.m4v`, `.mkv`, `.mov`, `.mp4`, `.mpe`, `.mpeg`, `.mpg`, `.ogv`, `.qvt`, `.ram`, `.rm`, `.vob`, `.webm`, `.wmv`, `.xap`.
   - Both must not be the same URL as the parent page `<loc>`.
-  - The resources must be accessible to Googlebot.
+  - The resources must be accessible to Googlebot (Googlebot must not be blocked by robots.txt or login requirements, and must be able to fetch the file).
 
 The current DTO enforces part of the contract (such as non-empty title/description, minimum duration, basic URL shapes, and requiring at least one of `contentLoc` or `playerLoc`), but does not enforce all additional Google Video constraints documented above.
 
@@ -532,6 +547,22 @@ Do not silently change a generic date helper into a News-specific parser if that
 
 The News policy should be explicit. The two-day rule must remain deterministic: Do not permit a future validator to call hidden `now()` / system time internally. The architecture must require caller-supplied reference time/context for time-relative validation.
 
+### Classification of Rules
+
+1. **Deterministic lexical/local validation:**
+   - `news:publication_date` W3C Datetime lexical shape constraints.
+   - `news:publication/news:language` ISO 639 code formatting (including Google's `zh-cn`/`zh-tw` exceptions).
+
+2. **Document/Context validation:**
+   - 1,000-entry limit per News sitemap.
+   - Two-day window rule (requires caller-supplied deterministic reference time).
+
+3. **External/Provider-evidence (Content Semantics):**
+   - `news:publication_date` representing original article publish time (not sitemap generation time).
+   - `news:publication/news:name` exactly matching Google News publication name.
+   - `news:title` semantics (excluding author, publication, date).
+   (These are content semantics and must not become fake offline validation).
+
 ---
 
 
@@ -613,15 +644,24 @@ Introduce RFC-aware validation with explicit rules for:
 - CR/LF safety for rule comments.
 - CR/LF safety for top-level comments.
 
-### Google robots.txt document constraints
+### Google robots.txt parsing rules
 
-Google's provider-level behavior for robots.txt documents includes additional constraints:
-- Must be UTF-8 encoded plain text.
+Google's provider-level behavior for robots.txt includes additional rules:
+- Must be a UTF-8 encoded plain text file.
 - File size limit is currently 500 kibibytes (kiB) (Google parses up to this limit and ignores the rest).
+- The `Sitemap:` field is case-insensitive, but its value is case-sensitive.
+- `Sitemap:` takes an absolute URL.
+- Multiple `Sitemap:` fields are allowed.
+- The `Sitemap:` field is independent of user-agent groups.
+- `Sitemap:` URLs can be cross-host (e.g., pointing to a CDN).
+- An empty Allow/Disallow rule path (e.g., `Allow:` or `Disallow:`) means the rule is ignored.
+- The path value must start with `/` to designate the root. (Note: Google requires a leading `/`, which differs from the RFC's `identifier` flexibility. Treat this as a Google parsing rule constraint).
 
 **Classification:**
-- UTF-8 encoded plain text constraint: **Serialization/output responsibility**
+- UTF-8 encoded plain text file constraint: **Serialization/output responsibility**
 - File size limit (500 KiB): **Google provider document-level constraint** (The library can measure the generated document size deterministically and warn if it exceeds 500 KiB, but actual HTTP/file delivery remains the host's responsibility).
+- `Sitemap:` absolute URL, multiplicity, cross-host, case-sensitivity: **Provider behavior**
+- Empty path ignorance & leading `/`: **Google provider parsing rules** (to be modeled as explicit provider behavior, distinct from RFC 9309 rules).
 
 The current renderer is line-oriented, so injection prevention must be an explicit contract rather than an implied generic string check.
 
@@ -913,7 +953,19 @@ The repository has two social metadata paths:
 
 Do not immediately change the legacy validator and thereby alter all existing scores and reports.
 
-First establish an explicit OGP-conformance validator/profile.
+First establish an explicit OGP-conformance validator/profile that enforces the protocol's basic required properties: `og:title`, `og:type`, `og:image`, `og:url`.
+
+Additionally, the audit of the OGP provider contract must fully cover the capabilities actually exposed by `OpenGraphBuilder` and `SocialImage`, including:
+- `og:determiner`: enum of (a, an, the, "", auto)
+- `og:locale`: format `language_TERRITORY`
+- URL datatypes (validating shape)
+- audio/video URL semantics
+- `og:image:secure_url`: requires `https://`
+- `og:image:type`: MIME type
+- `og:image:width`: integer
+- `og:image:height`: integer
+- `og:image:alt`: string
+- structured-property ordering semantics with respect to the root property (e.g., `og:image` properties must be grouped sequentially after the root `og:image` tag).
 
 Then decide how the legacy `SeoMetaValidator` should migrate to that profile.
 
@@ -1564,11 +1616,11 @@ Add layered validation.
 - thumbnail contract classification (URL shape vs external image format, dimensions, stability, accessibility, and transparency).
 
 #### Google News
-- language contract.
-- exact date forms.
-- publication-name semantics.
-- title semantics.
-- 1,000-entry limit.
+- language contract (ISO 639 formatting, including Google's `zh-cn`/`zh-tw` exceptions).
+- exact date forms (W3C Datetime).
+- publication-name semantics (exactly matching Google News publication name).
+- title semantics (excluding author, publication, date).
+- 1,000-entry limit per News sitemap.
 - two-day metadata window with explicit reference time.
 - legacy optional-field provider-status classification.
 
@@ -1593,8 +1645,9 @@ Stop mixing heuristic recommendations with protocol validity.
 5. Make an explicit decision on title/description measurement units (bytes, code points, etc.).
 6. Add characterization tests for ASCII and Arabic/Unicode title/description lengths before altering `strlen()` usage.
 7. Declare Twitter/X provider conformance out of scope until an official-source revalidation is conducted.
-8. Decide how heuristic warnings participate in scores.
-9. Align dedicated social builders and legacy `MetaTagsDTO` path.
+8. Implement strict OGP DTO profile (only 4 required) and formalize remaining supported optional properties (determiner, locale, image details, structured-property ordering, etc.).
+9. Decide how heuristic warnings participate in scores.
+10. Align dedicated social builders and legacy `MetaTagsDTO` path.
 
 ### Critical constraint
 
