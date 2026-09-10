@@ -140,9 +140,12 @@ Each finding uses one or more of these decisions:
 - **KEEP** — current behavior or architecture is valid and should be protected.
 - **FIX** — current implementation is incorrect or internally inconsistent.
 - **ADD** — capability is missing and should be introduced additively.
-- **RECLASSIFY** — capability may remain, but its meaning or layer is currently wrong.
+- **RECLASSIFY** — a capability remains, but its meaning or layer is currently wrong and must be corrected.
 - **DEPRECATE** — preserve compatibility but clearly move away from the capability over time.
 - **DOC-FIX** — documentation, example, or changelog claim is incorrect or stale.
+- **CORRECTION** — a recorded fact, example, or earlier classification (in the repository, prior review, or this audit's drafting) is demonstrably wrong and must be corrected with the authoritative evidence recorded here.
+- **EVIDENCE BOUNDARY** — the authoritative source is intentionally open-ended or context-dependent, so the library must **not** convert the gap into a fabricated local pass/fail. Behavior is limited to deterministic local rules plus explicit caller/provider-supplied evidence states, and an `unknown`/evidence-gap state must never be promoted into a pass or failure.
+- **DEFER** — a capability or contract is explicitly moved to a **separately approved future contract**. A `DEFER` decision grants an implementation stack **no authority** to implement, approximate, or expand the deferred capability during this remediation. The table uses the scoped forms **DEFER MEMBERSHIP**, **DEFER PROVIDER PROFILE**, and **DEFER EXPANSION** to name the exact deferred surface.
 
 Risk levels:
 
@@ -220,7 +223,7 @@ Do **not**:
 
 Introduce one internal canonical sitemap normalization / serialization path.
 
-Existing public classes should initially remain façades over that path.
+Existing public classes must initially remain façades over that path.
 
 Before refactoring:
 
@@ -230,13 +233,29 @@ Before refactoring:
 4. Capture namespace behavior and exception types.
 5. Make the internal engine produce equivalent output for all behavior not intentionally changed.
 
+### Canonical extended-DTO serialization decision — fixed by this audit
+
+The extended-DTO divergence is a **known behavior** with a fixed remediation outcome. It is **not** `unknown / needs decision` and must not be left to Stack 3 or to characterization:
+
+- The canonical serialization path emits the **full sitemap element set** for a URL entry: `loc`, `lastmod`, `changefreq`, `priority`, and all extended children carried by `SitemapUrlDTO` — `alternates` (hreflang), `images`, `videos`, and `news`.
+- The canonical path conditionally declares the `xhtml`, `image`, `video`, and `news` namespaces on the `<urlset>` root/entry **exactly when** the corresponding extended data is present, mirroring `SitemapXmlStringRenderer`'s current behavior. The `SitemapGeneratorService` must obtain the same behavior after delegation.
+- Both public entry points (`SitemapGeneratorService` and `SitemapXmlStringRenderer`) delegate to this one canonical engine, so **both produce identical extended-DTO output** for equivalent input.
+- `SitemapGeneratorService` dropping `images`, `videos`, and `news` is the **intentional correction**. It is the observable defect this finding fixes; it is not a documented limitation to preserve.
+- **Compatibility is preserved** for every input whose meaning is not intentionally corrected:
+  - DTO-only service input that contains no extended data continues to produce equivalent core-only XML.
+  - Raw-array input normalization and exception types of `SitemapXmlStringRenderer` remain characterized and stable, except for bugs the audit explicitly corrects (for example namespace/extension handling inconsistencies).
+  - `SitemapGeneratorService` continues to accept typed `SitemapUrlDTO` input only; accepting raw arrays there is **not** introduced by this remediation.
+- `SitemapGenerationResultDTO`'s serialized shape (`xml`, `entry_count`, `type`) is unchanged. `entry_count` refers to the number of URL entries, not to a count of extended children.
+- After the canonical path exists, one XML-writing implementation must render every sitemap structure, and no duplicated validation rule may remain between the two public façades.
+
 ### Acceptance criteria for later remediation
 
 - One XML-writing implementation for equivalent sitemap structures.
 - No duplicated validation rules between public façades.
 - Existing public APIs remain callable.
 - Intentional differences in accepted input shapes are documented, not accidental.
-- Extended DTO data cannot silently disappear through one entry point unless that limitation is explicitly part of the public contract.
+- **Extended DTO data (`images`, `videos`, `news`, `alternates`) never silently disappears through any entry point after the canonical path is in place.** The Stack 3 stop condition in this audit forbids shipping an entry point whose extended data is dropped.
+- `SitemapGeneratorService` and `SitemapXmlStringRenderer` produce identical extended-child XML for equivalent `SitemapUrlDTO` input.
 
 ---
 
@@ -362,6 +381,23 @@ Do not force document-context or host-context rules into a single-entry DTO.
 
 That would either require hidden global state or create fake validation that cannot actually prove the rule.
 
+### Exact measurement contract for numeric textual boundaries
+
+The two authoritative sources state "less than 2,048 characters" (Sitemaps.org, for the page `<loc>`) and "a maximum of 2,048 characters" (Google Video, for `video:description`). **Neither source defines the unit** as UTF-8 bytes, Unicode code points, or grapheme clusters, and neither defines preprocessing/normalization for the length check. This unit is therefore an **EVIDENCE BOUNDARY**: the library must not silently pick a unit as if the source backed it. To keep the boundary deterministic and authorization-complete (no implementation-time choice), the audit fixes a library measurement policy:
+
+- **Unit: UTF-8 bytes**, measured with the library-native `strlen()` on the value **as supplied** to the validating entry point.
+  - Rationale: this matches the library's existing fixed byte-measurement compatibility contract for text-length boundaries (F-12 preserves `strlen()` byte measurement for title/description heuristics), keeps the measurement idiom uniform across the library, and requires no `mbstring`/PCRE-unicode dependency. It is also the conservative deterministic upper-bound check: any value accepted on bytes is necessarily accepted on code points or graphemes for the same threshold, so the byte check never under-enforces the source's "characters" reading.
+  - The byte policy applies until an authoritative source defines a different unit or a separate contract amendment replaces it. It must not be re-derived during Stack 4.
+
+- **Measurement point — `<loc>`:** the length is measured **before** URI/IRI normalization and before percent-encoding. The authored `loc` value as supplied is the input; percent-encoding is a serialization/output operation applied later and is not expanded for length counting.
+  - Rationale: a URL length limit that Sitemaps.org ties to the `loc` value the publisher authors is most deterministically verified at input time, whereas percent-encoding expansion depends on output-time mechanics. URI/IRI escaping correctness is still validated separately as its own serialization guarantee; it does not re-trigger the length boundary.
+  - Boundary: `strlen(loc) < 2048` — 2,047 bytes valid, 2,048 bytes invalid (protocol requires *less than* 2,048).
+
+- **Measurement point — `video:description`:** the length is measured on the description value **as supplied** to the video validator/entry point, before any XML escaping/CDATA wrapping.
+  - Boundary: `strlen(description) <= 2048` — 2,048 bytes valid, 2,049 bytes invalid.
+
+- These policies are part of the audit authority. Stack 4 must implement exactly these boundaries with the corresponding tests and must not substitute `mb_strlen`, grapheme counting, post-encoding measurement, or a different unit. (The title/description heuristic measurement is covered separately by F-12.)
+
 ---
 
 ## F-03 — Deprecated Google Image sitemap fields remain first-class without clear status
@@ -409,11 +445,11 @@ This is **not** a justification for deleting the public fields immediately.
 The safe conclusion is:
 
 - They are no longer current Google-effective sitemap fields.
-- They may remain for backward compatibility.
+- They remain for backward compatibility in this remediation.
 - They must not be documented as current Google indexing enhancements.
-- New examples should not encourage them as recommended Google output.
-- The Google Image profile must also model the 1,000-images-per-URL limit and cross-domain verification context.
-- A future deprecation path can be considered separately.
+- New examples must not encourage them as recommended Google output.
+- The Google Image profile must model the 1,000-images-per-URL limit and cross-domain verification context.
+- Any future deprecation is **explicitly deferred** out of this remediation: it is not a Stack 4 implementer decision and requires its own approved compatibility/migration contract before the public fields are removed, renamed, or re-stricted.
 
 ### What must not be done
 
@@ -568,6 +604,7 @@ The source says **"last two days"** and does not define an exact `48 hours`, cal
 - `publicationDate` lexical validity alone must never be treated as proof that an article is within or outside Google's freshness window.
 - A host/caller that possesses authoritative freshness evidence may supply that state; the library must process it deterministically and must not call `now()`, read a global/system clock, or invent the provider boundary.
 - `unknown` must remain an evidence gap/diagnostic state, not be converted into a fabricated provider pass or failure.
+- The three freshness states are delivered through the GDC-01 companion surface. They are off-legacy-result and off-score exactly like every other new provider diagnostic; they never change `is_valid`, `has_warnings`, `errors`/`warnings`/`info`, or the calculated score.
 - If Google later publishes exact boundary semantics, changing this policy requires an explicit contract amendment rather than an implementation-time interpretation.
 
 ### Legacy fields
@@ -594,7 +631,7 @@ The repository still exposes `news:access`, `news:genres`, `news:keywords`, and 
 
 ### Compatibility-safe target
 
-The current `SitemapUrlDTO::$news` list is a public contract and must not be broken casually. Characterize it first. A Google News provider profile should classify more than one News entry under a URL as provider-invalid/diagnostic while preserving the existing list API until an explicit migration decision is made.
+The current `SitemapUrlDTO::$news` list is a public contract and must not be broken casually. Characterize it first. A Google News provider profile must classify more than one News entry under a URL as provider-invalid/diagnostic through the GDC-01 companion surface while preserving the existing list API until an explicit migration decision is made.
 
 Correct the canonical example so it uses a valid documented publication date.
 
@@ -655,8 +692,8 @@ The compatibility decision is fixed by this audit and must not be delegated to S
 - Existing public `RobotsRuleDTO` / rendering compatibility for a non-empty path beginning with `*` is preserved during this remediation; the constructor must not start throwing solely because the first character is `*`, and the renderer must not silently rewrite the value.
 - The generic RFC 9309 conformance profile follows the **published ABNF** for normative conformance: an empty pattern is allowed and an ordinary non-empty conforming `path-pattern` begins with `/`.
 - Because RFC 9309's own Simple Example conflicts with that ABNF and Errata 7995 remains only `Reported`, a leading-`*` value is classified as a **non-fatal protocol compatibility diagnostic**, not as proven normative conformance and not as a constructor-level hard failure.
-- The diagnostic contract is fixed as origin `protocol`, profile `rfc9309`, warning severity, with stable code `robots_rfc9309_leading_wildcard_compatibility`.
-- The Google robots.txt profile remains separate: when validating against Google's documented present-path rule, a non-empty path that does not begin with `/` receives a provider diagnostic; it is still not rewritten by the generic builder/renderer.
+- The diagnostic contract is fixed as origin `protocol`, profile `rfc9309`, warning severity, with stable code `robots_rfc9309_leading_wildcard_compatibility`. The diagnostic is delivered through the GDC-01 companion surface; it never enters the legacy result and never affects scoring.
+- The Google robots.txt profile remains separate: when validating against Google's documented present-path rule, a non-empty path that does not begin with `/` receives the provider diagnostic `robots_google_present_path_leading_slash` (`warning`, origin `provider`, profile `google`) via the GDC-01 companion surface; it is still not rewritten by the generic builder/renderer and never enters the legacy result or score.
 - A future change in the RFC/errata status may change this classification only through an explicit audit/contract amendment with tests; an implementer must not silently adopt the proposed erratum as normative text.
 
 Therefore do **not**:
@@ -705,7 +742,7 @@ Google's own current example includes a Unicode Sitemap path. Therefore `FILTER_
 3. **Compatibility boundary**
    - preserve existing public APIs while characterizing current rejection/acceptance behavior before changing constructors;
    - preserve leading-`*` inputs as specified above while distinguishing compatibility from normative/provider conformance;
-   - replace the ASCII-only Sitemap URL assumption with a provider-compatible strategy rather than weakening all URL validation globally.
+   - the Google `Sitemap:` field must accept fully-qualified URLs with raw Unicode/non-URL-encoded paths, cross-host URLs, and multiple fields with no documented count limit. The internal mechanism (preg-based parsing, `parse_url` decomposition, or equivalent) is an ordinary implementation detail; the acceptance/classification behavior above is fixed and is not an implementation-time strategy choice. The generic (non-Google) URL validation contract must not be weakened globally as a side effect.
 
 ### What must not be done
 
@@ -817,7 +854,7 @@ Add typed support additively.
 
 Do not remove the existing raw `add()` escape hatch.
 
-The current remediation does not invent a constructor dependency between directives. The Google-profile diagnostic may warn when `indexifembedded` is present without `noindex`; the builder remains capable of representing the caller's directive set.
+This remediation does **not** invent a constructor dependency between directives. The fixed provider diagnostic is: when `indexifembedded` is present **without** `noindex`, the Google-profile validator emits the stable-code diagnostic `robots_meta_indexifembedded_without_noindex` with `warning` severity, origin `provider`, profile `google`. The diagnostic goes through the GDC-01 companion surface; it never enters the legacy result or score. The builder itself remains capable of representing the caller's directive set as authored.
 
 ---
 
@@ -842,10 +879,11 @@ The provider documentation is intentionally open-ended rather than an exhaustive
 The decision is fixed as follows:
 
 - `MetaRobotsBuilder::unavailableAfter(string $value)` remains a **raw compatibility builder** in this remediation. Its current ability to carry caller-provided text is preserved; Stack 2 must not narrow it to one locally invented date grammar.
-- A Google provider-validation path may locally identify an empty/whitespace-only value as lacking the required date value, but it must not claim that a non-empty arbitrary string is recognized merely because it was supplied.
+- The Google provider-validation path **does** locally flag an empty/whitespace-only value as lacking the required date value (stable code `robots_meta_unavailable_after_missing`, `warning`, origin `provider`, profile `google`); it must not claim that a non-empty arbitrary string is recognized merely because it was supplied.
 - Recognition of a non-empty value uses explicit caller/provider evidence with exactly three semantic states: `recognized`, `unrecognized`, or `unknown`.
 - `recognized` means the caller supplies authoritative evidence that the value is accepted as a broadly recognized format in its context; `unrecognized` means the caller supplies evidence that it is not provider-recognizable; `unknown` means the library does not possess evidence either way.
 - `unknown` is an evidence-gap diagnostic, not a fabricated pass or failure.
+- All `unavailable_after` diagnostics above (missing value, and the recognized/unrecognized/unknown evidence states) are delivered through the GDC-01 companion surface; none of them enters the legacy result and none affects scoring.
 - No hidden network request, global clock, locale-dependent parsing, or "try a few formats and call the remainder invalid" behavior may be used to turn Google's open-ended statement into a closed local grammar.
 - If Google later publishes an exhaustive grammar, adopting it requires an explicit contract amendment; it is not an implementation-time choice.
 
@@ -970,6 +1008,50 @@ Do not call title/description heuristics Google limits.
 
 ---
 
+## GDC-01 — Global diagnostics contract for all new protocol/provider/context diagnostics (Stacks 2/4/5/6)
+
+**Decision:** fixed contract  
+**Risk:** High if violated  
+**Area:** Validation / diagnostics architecture
+
+This is the single contract that decides where every **new** diagnostic introduced by Stacks 2, 4, 5, and 6 lands and what it may affect. It applies to provider diagnostics, protocol-conformance diagnostics, and context/evidence diagnostics that did not exist as a `SeoValidationIssueDTO` before this remediation.
+
+### Decision
+
+For each new diagnostic produced by the remediation:
+
+1. **Container.** New diagnostics do **not** enter the legacy `SeoValidationResultDTO` as part of its `errors`, `warnings`, `info`, or `issues` collections. They are emitted through the additive **companion classification surface** introduced by F-12: a companion/profile diagnostics collection distinct from the legacy result, each entry pairing a stable machine identifier (`code`), `severity`, `message`, optional `field`, `origin`, `profile`, and — where applicable — an explicit evidence state (`recognized` / `unrecognized` / `within_window` / `outside_window` / `unknown`, per the contract that defines it).
+
+2. **`is_valid` is never changed by a new diagnostic.** `SeoValidationResultDTO::is_valid` continues to mean "no legacy error-severity issues". New provider/protocol/context diagnostics cannot turn a legacy-valid result into an invalid one.
+
+3. **Legacy collections are never mutated by a new diagnostic.** A new diagnostic must not be appended to the legacy `errors`, `warnings`, `info`, or `issues` series, and must not reuse or shadow an existing legacy issue code.
+
+4. **Scoring is never changed by a new diagnostic.** `SeoValidationScoreCalculator` continues to consume only the legacy issue severity contract exactly as it does today. New companion diagnostics contribute **no** deduction, not even a zero-point placeholder, and must not alter existing `error_count`, `warning_count`, `info_count`, `is_healthy`, grade, or score.
+
+5. **Relationship to legacy issues.** Where a new diagnostic concerns the same subject as an existing legacy issue, the companion record references the legacy issue via its stable code; the legacy issue itself remains in the legacy result unchanged. The two surfaces are correlated, never merged.
+
+6. **Single exception — pre-existing legacy issues.** Diagnostics that already existed before this remediation as `SeoValidationIssueDTO` objects (for example `missing_title`, `missing_og_title`, `missing_og_description`, `missing_og_image`, title/description length warnings) keep their current legacy placement, severity, code, and score participation under F-12. Reclassification adds companion origin/profile metadata only; it does not move them to the companion surface.
+
+### What legally belongs only in the companion surface
+
+Examples fixed by this audit:
+
+- F-06 leading-wildcard `robots_rfc9309_leading_wildcard_compatibility` (protocol/rfc9309 warning).
+- F-05 Google News freshness states `within_window`, `outside_window`, `unknown`.
+- F-10 `unavailable_after` recognizability states `recognized`, `unrecognized`, `unknown`.
+- F-09 `indexifembedded` without `noindex` provider diagnostic.
+- F-04 / F-05 / F-02 provider-content diagnostics that require caller-supplied evidence.
+- F-13 new `missing_og_type` and `missing_og_url` protocol diagnostics.
+- F-14 relative-canonical provider best-practice diagnostic.
+
+None of these may be plumbed into the legacy result or the score.
+
+### Consequence for implementers
+
+An implementation stack that produces, serializes, or scores a new diagnostic through the legacy `SeoValidationResultDTO` or `SeoValidationScoreCalculator` violates this contract, regardless of internal naming. Stack 5 must expose the companion surface additively without altering legacy serialized shapes, F-12 scoring, or `SeoMetaValidator::validate()`.
+
+---
+
 ## F-13 — Open Graph required-field model mismatches OGP and the exposed surface needs one explicit protocol contract
 
 **Decision:** `FIX` (Protocol Profiling)  
@@ -1016,11 +1098,29 @@ Structured properties must follow their root property. When another root propert
 
 Because `OpenGraphBuilder` supports multiple images and currently emits each image root followed by its structured image properties, ordering is part of the serialization contract that must be characterized and preserved during refactoring.
 
-### Safe target architecture
+### Fixed OGP migration contract
 
-First establish an explicit OGP-conformance profile for the four required properties and the optional properties the library actually exposes.
+This subsection fixes the executable outcome, replacing "characterize then migrate" with closed contracts. The OGP protocol profile recognizes four required basics — `og:title`, `og:type`, `og:image`, `og:url` — and treats `og:description` and `og:site_name` as optional. The mapping to the legacy validator and the companion surface is fixed as follows.
 
-Do not immediately change legacy score/report behavior. Characterize current issue codes and score impact first, then migrate the legacy `SeoMetaValidator` deliberately under the F-12 additive classification contract.
+**Fate of `missing_og_description`:**
+
+- `og:description` is optional under OGP, so the OGP protocol profile emits **no** issue for a missing description.
+- The legacy `SeoValidationIssueDTO` `missing_og_description` warning is a pre-existing legacy issue. Under F-12 and GDC-01 it **remains in the legacy result unchanged**: same code, `warning` severity, same message, and the same default 5-point warning score deduction — exactly as today.
+- It is reclassified (companion metadata only) as origin `heuristic`, profile `seo-default`, because it is a publisher recommendation, not an OGP protocol requirement. Reclassification must not move it to the companion surface, change its severity/code, or alter its score participation.
+
+**Issue contracts for missing OGP required basics:**
+
+- `og:title` and `og:image` already produce legacy warnings (`missing_og_title`, `missing_og_image`). Those pre-existing legacy issues stay in the legacy result and score under F-12 and GDC-01. Their companion classification is origin `protocol`, profile `ogp` — the missing property is a genuine OGP required basic even though it was historically reported as a warning. This is documentation/classification only; no legacy behavior changes.
+- Missing `og:type` and missing `og:url` are **new** diagnostics introduced by the OGP profile. Their contracts are fixed as:
+  - codes: `missing_og_type`, `missing_og_url`;
+  - severity: `warning` — matching the severity convention of the existing missing-OGP-basic warnings;
+  - origin: `protocol`; profile: `ogp`;
+  - container: **companion surface only**. Under GDC-01 they must **not** be appended to the legacy `errors`/`warnings`/`info`/`issues` collections, must **not** change `is_valid` or `has_warnings`, and must **not** produce any score deduction.
+- These new codes must not collide with any legacy code and must not be emitted by `SeoMetaValidator::validate()` into the legacy result.
+
+**Relationship to the legacy result and score:** unchanged for all pre-existing legacy issues; off-result and off-score for all new protocol diagnostics. `SeoMetaValidator::validate()` keeps returning the existing `SeoValidationResultDTO` contract; the OGP profile results are delivered through the companion surface (GDC-01) and the dedicated social builders.
+
+**What Stack 5 may not decide:** it may not drop `missing_og_description` from the legacy result, may not promote missing `og:type`/`og:url` to `error`, may not add these to scoring, and may not invent additional required or optional OGP fields beyond the surface documented in this finding.
 
 ---
 
@@ -1048,15 +1148,15 @@ Google supports relative canonical paths but explicitly recommends absolute URLs
 
 Relative canonical is not a universal syntax error.
 
-Therefore:
+The decision is fixed as follows — no implementer choice between validation and diagnostics:
 
-- keep generic builder compatibility.
-- add strict validation or diagnostics for Google best-practice usage.
+- keep generic builder compatibility. `CanonicalUrlBuilder::build()` behavior is unchanged.
+- add a provider/best-practice **diagnostic** (not a constructor exception and not a new strict-validity failure) for a relative canonical URL: stable code `canonical_relative_provider_best_practice`, `warning` severity, origin `provider`, profile `google`, delivered through the GDC-01 companion surface — never into the legacy result or score.
 - classify a relative canonical as provider/best-practice concern, not global protocol invalidity.
 
 ### What must not be done
 
-Do not change `CanonicalUrlBuilder::build()` to throw on relative paths without a migration strategy.
+Do not change `CanonicalUrlBuilder::build()` to throw on relative paths.
 
 That would break an intentional, tested public behavior for a recommendation rather than a universal validity rule.
 
@@ -1553,6 +1653,14 @@ If Stack 0 or any later stack records `unknown / needs decision` for a behavior 
 
 Ordinary internal details that cannot change an observable/contract outcome do not require an audit amendment.
 
+## AP-12 — New diagnostics are additive and never mutate legacy results or scores
+
+Every new protocol/provider/context diagnostic introduced by Stacks 2/4/5/6 is delivered through the GDC-01 companion surface. It must not change `SeoValidationResultDTO::is_valid`, must not be appended to the legacy `errors`/`warnings`/`info`/`issues` collections, and must not affect `SeoValidationScoreCalculator`. Pre-existing legacy issues keep their F-12 placement and score behavior already documented here.
+
+## AP-13 — Numeric textual boundaries use the fixed measurement policy
+
+Sitemap `<loc>` and Google Video `description` boundaries use the F-02 exact measurement contract: UTF-8 bytes via `strlen()` on the value as supplied, before URI/IRI normalization/percent-encoding or XML escaping. Stack 4 must not substitute `mb_strlen`, grapheme counting, or post-encoding measurement, and must not reinterpret the boundary as an implementer choice.
+
 ---
 
 # 7. Safe Remediation Order
@@ -1621,11 +1729,11 @@ Create the architecture distinction between:
 
 ### Fixed compatibility contract
 
-Use the F-12 classification contract: keep `SeoValidationIssueDTO`, `SeoValidationResultDTO`, their legacy serialization, `SeoMetaValidator::validate()`, and current scoring behavior compatible. Classification is additive companion metadata with the fixed origin vocabulary and stable profile identifiers defined in F-12.
+Use the F-12 classification contract and the GDC-01 global diagnostics contract: keep `SeoValidationIssueDTO`, `SeoValidationResultDTO`, their legacy serialization, `SeoMetaValidator::validate()`, and current scoring behavior compatible. Classification is additive companion metadata with the fixed origin vocabulary and stable profile identifiers defined in F-12; every **new** diagnostic defined by this audit is delivered through the GDC-01 companion surface and never mutates the legacy result or score.
 
 ### Important constraint
 
-This stack should avoid changing user-facing behavior where possible.
+This stack must avoid changing user-facing behavior.
 
 It establishes the vocabulary that later code uses; it must not use taxonomy work as a reason to reweight scores or silently change legacy serialized payloads.
 
@@ -1646,7 +1754,7 @@ Robots has:
 
 1. Characterize current `RobotsRuleDTO`, `RobotsTxtDTO`, renderer, ordering, and exception behavior.
 2. Implement the RFC 9309 product-token contract (`identifier` or `*`) and valid empty Allow/Disallow patterns.
-3. Apply the F-06 leading-`*` policy exactly: preserve existing builder/rendering compatibility; do not call it normative published-ABNF conformance; emit the fixed non-fatal RFC compatibility diagnostic; do not rewrite it; keep the Google-profile path diagnostic separate.
+3. Apply the F-06 leading-`*` policy exactly: preserve existing builder/rendering compatibility; do not call it normative published-ABNF conformance; emit the fixed non-fatal RFC compatibility diagnostic `robots_rfc9309_leading_wildcard_compatibility` (warning, origin `protocol`, profile `rfc9309`) through the GDC-01 companion surface; do not rewrite it; keep the Google-profile path diagnostic `robots_google_present_path_leading_slash` separate and also companion-only.
 4. Implement RFC path/comment semantics, including raw `#`, percent-encoded literal special characters, and matching/encoding boundaries relevant to generated output.
 5. Prevent CR/LF/control-character directive injection across rule values, rule comments, and top-level comments.
 6. Preserve `crawl-delay` as the existing non-standard compatibility extension; do not represent it as RFC or Google behavior and do not invent a new extension framework in this stack.
@@ -1659,16 +1767,16 @@ Robots has:
    - multiplicity without a documented limit;
    - cross-host Sitemap URLs;
    - independence from user-agent groups.
-8. Replace the Google-profile reliance on ASCII-only `FILTER_VALIDATE_URL` without weakening unrelated generic URL contracts.
+8. Replace the Google-profile reliance on ASCII-only `FILTER_VALIDATE_URL` with the F-06 fixed acceptance contract for the `Sitemap:` field; do not weaken unrelated generic URL contracts.
 9. Fix `max-snippet:-1` and `max-video-preview:-1`.
-10. Add typed `indexifembedded` support while preserving the raw escape hatch; dependency on `noindex` is a provider diagnostic rather than a builder construction barrier.
+10. Add typed `indexifembedded` support while preserving the raw escape hatch; emit `robots_meta_indexifembedded_without_noindex` (warning, origin `provider`, profile `google`, GDC-01 companion-only) when `noindex` is absent — never a builder construction barrier.
 11. Correct `noarchive` documentation.
-12. Implement F-10 exactly: keep `unavailableAfter()` raw-compatible; locally diagnose missing/empty value in the provider path; consume only explicit `recognized` / `unrecognized` / `unknown` evidence for non-empty provider recognizability; do not invent a closed date grammar.
+12. Implement F-10 exactly: keep `unavailableAfter()` raw-compatible; emit `robots_meta_unavailable_after_missing` for the provider-path missing/empty value; consume only explicit `recognized` / `unrecognized` / `unknown` evidence for non-empty provider recognizability; do not invent a closed date grammar; all `unavailable_after` diagnostics are GDC-01 companion-only.
 13. Update examples/tests/docs.
 
 ### Stop condition
 
-Do not move on while RFC 9309, Google robots.txt behavior, non-standard extensions, and Google robots-meta behavior remain conflated or while either the F-06 or F-10 fixed policy is replaced by an implementation-time interpretation.
+Do not move on while RFC 9309, Google robots.txt behavior, non-standard extensions, and Google robots-meta behavior remain conflated or while either the F-06 or F-10 fixed policy is replaced by an implementation-time interpretation. No Stack 2 diagnostic may appear in the legacy result or score; all must use the GDC-01 companion surface.
 
 ---
 
@@ -1680,15 +1788,16 @@ Remove duplicate serialization logic without removing public APIs.
 
 ### Order
 
-1. Characterize XML outputs.
+1. Characterize XML outputs (Stack 0 inventory feeds this).
 2. Introduce internal canonical serialization.
-3. Delegate both public paths.
+3. Delegate both public paths to it.
 4. Keep both public `SitemapIndexEntryDTO` namespace contracts callable; adapt each to the canonical internal representation rather than deleting/renaming one as part of this remediation.
-5. Confirm extended DTO data has deterministic behavior from each public entry point and stop under AP-11 if characterization exposes a material behavior whose preserve/change decision is not fixed by this audit.
+5. Implement the fixed F-01 decision for extended DTO data: the canonical path emits `alternates`, `images`, `videos`, and `news` exactly as `SitemapXmlStringRenderer` does today, conditionally declaring the corresponding namespaces, and **both** `SitemapGeneratorService` and `SitemapXmlStringRenderer` produce identical extended-child output for equivalent `SitemapUrlDTO` input. `SitemapGeneratorService` dropping extended children is the intentional correction, not a preserved limitation.
+6. `SitemapGenerationResultDTO` (`xml`, `entry_count`, `type`) is unchanged; `entry_count` counts URL entries only.
 
 ### Stop condition
 
-There must be one rule implementation for equivalent sitemap output, while both existing public index-entry DTO entry points remain available.
+There must be one rule implementation for equivalent sitemap output, while both existing public index-entry DTO entry points remain available. No public entry point may silently drop extended DTO data; `SitemapGeneratorService` and `SitemapXmlStringRenderer` must produce identical extended-child XML for equivalent DTO input. If characterization exposes behavior whose preserve/change decision is not fixed by this audit, assert the AP-11 gate and stop that path.
 
 ---
 
@@ -1704,7 +1813,7 @@ Add layered validation without collapsing protocol, provider, content-context, a
 - URL sitemap count limit: 50,000 URLs.
 - Sitemap Index count limit: 50,000 Sitemaps.
 - uncompressed byte-size limits: 50 MB (52,428,800 bytes).
-- page `<loc>` must be less than 2,048 characters.
+- page `<loc>` must be less than 2,048 characters; measured as UTF-8 bytes of the value as supplied (`strlen(loc) < 2048`), before URI/IRI normalization/percent-encoding, per the F-02 exact measurement contract.
 - host/site/submission-context rules.
 - cross-submission semantics.
 - UTF-8 encoding requirements.
@@ -1719,19 +1828,20 @@ Add layered validation without collapsing protocol, provider, content-context, a
 - `priority` is ignored by Google.
 - `changefreq` is ignored by Google.
 - `lastmod` is useful to Google only when consistently/verifiably accurate and tied to significant page modification.
-- These are Google-provider semantics/diagnostics; they must not redefine generic Sitemap protocol validity.
+- These are Google-provider semantics/diagnostics delivered through the GDC-01 companion surface; they must not redefine generic Sitemap protocol validity and must not change the legacy result or score.
 
 #### Google Image
 - current/deprecated field classification.
 - 1,000-images-per-URL limit.
 - cross-domain Search Console verification context.
 - external crawlability context.
+- provider diagnostics here are GDC-01 companion-only.
 
 #### Google Video
 - characterize current DTO and raw-array behavior.
 - required title/description/thumbnail plus content/player presence.
 - title host-page match as a provider recommendation.
-- description max 2,048 characters and host-page consistency semantics.
+- description max 2,048 characters, measured as UTF-8 bytes of the value as supplied (`strlen(description) <= 2048`) before XML escaping/CDATA wrapping, per the F-02 exact measurement contract; host-page consistency is a provider/context diagnostic.
 - duration 1..28,800.
 - exact two publication-date forms represented by the provider documentation.
 - parent `<loc>` inequality.
@@ -1743,8 +1853,9 @@ Add layered validation without collapsing protocol, provider, content-context, a
 - thumbnail formats: BMP, GIF, JPEG, PNG, WebP, SVG, AVIF.
 - thumbnail minimum 60x30, stable URL, Googlebot/Googlebot Images accessibility, and transparency requirement.
 - deterministic/context rules separated from remote format/accessibility evidence.
-- title/description XML escaping/CDATА output semantics.
+- title/description XML escaping/CDATA output semantics.
 - watch-page/video indexing eligibility kept outside Sitemap DTO validity.
+- all Video provider/context diagnostics are GDC-01 companion-only.
 
 #### Google News
 - four exact publication-date forms.
@@ -1752,16 +1863,17 @@ Add layered validation without collapsing protocol, provider, content-context, a
 - language contract: two/three-letter ISO 639 plus `zh-cn` / `zh-tw` exceptions.
 - publication-name exact-match semantics and parenthetical omission rule.
 - title semantics.
-- one News entry per URL provider cardinality, while preserving the public list contract until migration is deliberate.
+- one News entry per URL provider cardinality, while preserving the public list contract until migration is deliberate; the multi-entry diagnostic is GDC-01 companion-only.
 - 1,000 total News entries per Sitemap.
 - "last two days" is a context/evidence diagnostic only: consume caller-supplied `within_window` / `outside_window` / `unknown` evidence and do not derive a hard boundary from `publicationDate` plus a clock/reference time.
 - no hidden `now()`/global time and no invented `48 hours` or calendar-day arithmetic.
 - legacy optional News-field provider-status classification.
 - canonical example correction for `publicationDate: 'as-provided'`.
+- all News provider/context diagnostics are GDC-01 companion-only.
 
 ### Critical constraint
 
-Document/context and remote-evidence rules must not be forced into single-entry constructors when the required evidence is unavailable. Provider diagnostics must not become fake offline proof.
+Document/context and remote-evidence rules must not be forced into single-entry constructors when the required evidence is unavailable. Provider diagnostics must not become fake offline proof. All new Stack 4 diagnostics are delivered through the GDC-01 companion surface; none changes the legacy result or score.
 
 ---
 
@@ -1773,20 +1885,20 @@ Stop mixing heuristic recommendations with protocol validity.
 
 ### Order
 
-1. Introduce additive issue origin/profile classification exactly under the F-12 contract; do not alter legacy `SeoValidationIssueDTO` / `SeoValidationResultDTO` serialized shapes or `SeoMetaValidator::validate()` return contract.
-2. Establish OGP protocol validation.
+1. Introduce additive issue origin/profile classification exactly under the F-12 contract, with new diagnostics delivered through the GDC-01 companion surface; do not alter legacy `SeoValidationIssueDTO` / `SeoValidationResultDTO` serialized shapes or `SeoMetaValidator::validate()` return contract.
+2. Establish OGP protocol validation under the fixed F-13 OGP migration contract.
 3. Preserve legacy issue/score behavior: current title/description length issue codes and warning severity remain unchanged, and warning issues continue to flow through the existing score calculator.
 4. Reclassify title/description length warnings as origin `heuristic`, profile `seo-default` without changing their observable compatibility behavior.
 5. Preserve `strlen()` byte measurement as the title/description heuristic measurement unit for this remediation; do not substitute code-point or grapheme measurement.
 6. Add characterization tests for ASCII and Arabic/Unicode title/description lengths that lock the current byte-based thresholds before refactoring validation architecture.
 7. Declare Twitter/X provider conformance out of scope until an official-source revalidation is conducted.
-8. Implement the OGP profile for the four required basics and the current exposed optional surface: determiner, locale, site_name, HTTP/HTTPS URL datatype, audio/video root URLs, image structured properties, multiple-image array preference/order, root/structured-property association, and `og:image:alt` as a protocol-level recommendation.
+8. Implement the OGP profile for the four required basics and the current exposed optional surface: determiner, locale, site_name, HTTP/HTTPS URL datatype, audio/video root URLs, image structured properties, multiple-image array preference/order, root/structured-property association, and `og:image:alt` as a protocol-level recommendation. Emit the new `missing_og_type` / `missing_og_url` protocol diagnostics (`warning`, origin `protocol`, profile `ogp`) as GDC-01 companion-only; keep the pre-existing `missing_og_title`, `missing_og_image`, and `missing_og_description` legacy issues in the legacy result and score unchanged, with `missing_og_description` reclassified as origin `heuristic`, profile `seo-default`.
 9. Keep heuristic warnings participating in scores exactly as current warnings do, including the existing default 5-point warning penalty; any future scoring change requires a separate explicit contract change.
 10. Align dedicated social builders and legacy `MetaTagsDTO` path without adding origin/profile keys to legacy JSON payloads.
 
 ### Critical constraint
 
-Do not change existing score math, heuristic score participation, issue severity/codes, title/description byte measurement, or the existing validation result serialization while changing semantic categories.
+Do not change existing score math, heuristic score participation, issue severity/codes, title/description byte measurement, or the existing validation result serialization while changing semantic categories. Do not route any new OGP diagnostic into the legacy result or score (GDC-01).
 
 ---
 
@@ -1794,8 +1906,8 @@ Do not change existing score math, heuristic score participation, issue severity
 
 ### Canonical
 
-- keep generic relative behavior.
-- add provider best-practice diagnostics for absolute canonical URLs.
+- keep generic relative behavior; `CanonicalUrlBuilder::build()` is unchanged.
+- add the provider best-practice diagnostic `canonical_relative_provider_best_practice` (`warning`, origin `provider`, profile `google`) for a relative canonical URL, delivered through the GDC-01 companion surface — never into the legacy result or score, and never as a builder exception.
 
 ### Hreflang
 
@@ -1803,7 +1915,7 @@ Do not change existing score math, heuristic score participation, issue severity
 - use conventional BCP 47 casing when normalization is performed, without treating casing alone as provider invalidity.
 - preserve `x-default`.
 - validate deterministically knowable Google structural rules from supplied data, including fully-qualified alternate URLs.
-- add cluster-level self-reference, reciprocal-link, and alternate-set consistency validation.
+- add cluster-level self-reference, reciprocal-link, and alternate-set consistency validation; cluster diagnostics are GDC-01 companion-only.
 - **do not implement ISO 639-1 / ISO 3166-1 / ISO 15924 membership tables in this remediation** and do not claim full provider code-membership validation; that requires the separate versioned standards-data contract defined by F-15.
 - preserve deterministic behavior and host ownership; no crawling is introduced.
 
@@ -1942,6 +2054,18 @@ A material `unknown / needs decision` blocks the affected production change unti
 
 This applies in particular to hreflang ISO membership tables and Google structured-data eligibility matrices. Those capabilities require their explicit future contracts before runtime enforcement.
 
+## ADR-13
+
+**Do not let new diagnostics hit the legacy result or score.**
+
+Every new protocol/provider/context diagnostic introduced by Stacks 2/4/5/6 is delivered through the GDC-01 companion surface. It must not change `is_valid`, must not be appended to legacy `errors`/`warnings`/`info`/`issues`, and must not alter `SeoValidationScoreCalculator` output. The single exception is pre-existing legacy issues, which keep their F-12 placement and score behavior.
+
+## ADR-14
+
+**Do not substitute a different unit for the fixed numeric boundaries.**
+
+Sitemap `<loc>` (`< 2048`) and Google Video `description` (`<= 2048`) use UTF-8 byte measurement via `strlen()` on the value as supplied, per the F-02 exact measurement contract. `mb_strlen`, grapheme counting, and post-encoding/post-escaping measurement are prohibited as unit substitutes.
+
 ---
 
 # 9. Test Strategy Required for the Remediation
@@ -1953,7 +2077,7 @@ The test strategy must cover the contracts introduced by the findings, not only 
 Add characterization tests before changing public behavior for:
 
 - exact XML from base Sitemap DTO input.
-- exact XML from extended Sitemap DTO input.
+- exact XML from extended Sitemap DTO input through **both** `SitemapGeneratorService` and `SitemapXmlStringRenderer`, capturing the current image/video/news-drop divergence and namespace behavior before unification.
 - raw-array Sitemap normalization.
 - both Sitemap Index DTO namespaces.
 - current fractional-second `lastmod` rejection.
@@ -1962,6 +2086,7 @@ Add characterization tests before changing public behavior for:
 - current `RobotsTxtDTO` ASCII-only `FILTER_VALIDATE_URL` Sitemap behavior.
 - robots directive order and replacement semantics.
 - Open Graph multiple-image root/structured-property order and first-image preference.
+- current missing-OGP-basic warning codes and severity (`missing_og_title`, `missing_og_description`, `missing_og_image`) and their legacy score participation, before the OGP migration contract is applied.
 - canonical relative and absolute output.
 - current validation issue codes and score propagation.
 - current `SeoValidationIssueDTO` and `SeoValidationResultDTO` serialized shapes before additive classification work.
@@ -1980,10 +2105,12 @@ Purpose: prove locally deterministic protocol behavior without silently importin
 - 50,000 URL entries boundary and 50,001 over-boundary issue.
 - 50,000 Sitemap Index entries boundary and 50,001 over-boundary issue.
 - uncompressed-size boundary at 52,428,800 bytes and over-boundary case.
-- page URL `<loc>` length: 2,047 boundary valid, 2,048 invalid because protocol requires less than 2,048.
+- page URL `<loc>` length: measured as UTF-8 bytes of the value as supplied (`strlen`), before URI/IRI normalization/percent-encoding; 2,047 bytes valid, 2,048 bytes invalid because protocol requires less than 2,048.
+- a percent-encoded or normalized variant of a `<loc>` is **not** re-measured after escaping; escaping correctness is asserted separately from the length boundary.
 - host/submission checks use explicit document context rather than unconditional same-host constructor rejection.
 - UTF-8 serialization.
 - XML entity escaping and URI/IRI escaping behavior.
+- extended DTO parity: equivalent `SitemapUrlDTO` input produces identical `image:*`/`video:*`/`news:*`/`xhtml:link` output through `SitemapGeneratorService` and `SitemapXmlStringRenderer` after Stack 3, with namespaces declared conditionally.
 - valid `lastmod`: `YYYY-MM-DD`.
 - valid `lastmod`: `YYYY-MM-DDThh:mm:ssZ` and `YYYY-MM-DDThh:mm:ss±hh:mm`.
 - valid `lastmod`: fractional-second dateTime with one or more fractional digits and required `Z`/offset.
@@ -1998,7 +2125,8 @@ Purpose: prove locally deterministic protocol behavior without silently importin
 - empty Allow/Disallow pattern.
 - ordinary `/` path cases.
 - existing leading-`*` path remains constructible/renderable for compatibility.
-- leading-`*` receives `robots_rfc9309_leading_wildcard_compatibility` as a warning with origin `protocol` / profile `rfc9309`, rather than being represented as published-ABNF conformance or converted into a constructor exception.
+- leading-`*` receives `robots_rfc9309_leading_wildcard_compatibility` as a warning with origin `protocol` / profile `rfc9309`, delivered via the GDC-01 companion surface (not the legacy result, not scoring), rather than being represented as published-ABNF conformance or converted into a constructor exception.
+- non-empty leading-`*` additionally surfaces `robots_google_present_path_leading_slash` only under the Google profile (origin `provider`, profile `google`, GDC-01 companion-only); no silent rewrite is performed.
 - raw `#` comment behavior.
 - percent-encoded literal special-character cases such as `%23` where applicable.
 - CR/LF/control-character injection cases across values and comments.
@@ -2006,7 +2134,10 @@ Purpose: prove locally deterministic protocol behavior without silently importin
 ### Open Graph Protocol
 
 - four required basics.
-- `og:description` remains optional at protocol-validity level.
+- `og:description` remains optional at protocol-validity level; the OGP profile emits **no** missing-description conformance issue.
+- legacy `missing_og_description` warning remains a legacy `SeoValidationIssueDTO` (warning, heuristic origin, `seo-default` profile) that keeps its legacy result placement and default 5-point score deduction unchanged.
+- pre-existing `missing_og_title` / `missing_og_image` legacy warnings stay in the legacy result and score, with companion origin `protocol` / profile `ogp`.
+- new `missing_og_type` and `missing_og_url` are `warning`-severity protocol diagnostics (origin `protocol`, profile `ogp`) delivered only through the GDC-01 companion surface: they must not appear in legacy `errors`/`warnings`/`info`/`issues`, must not change `is_valid`/`has_warnings`, and must not affect the calculated score.
 - determiner enum.
 - locale shape.
 - HTTP/HTTPS URL datatype.
@@ -2034,7 +2165,8 @@ Purpose: prove locally deterministic protocol behavior without silently importin
 
 Deterministic/provider-input cases:
 
-- description: 2,048 accepted; 2,049 provider-invalid/issue.
+- description: measured as UTF-8 bytes via `strlen()` on the value as supplied, before XML escaping; 2,048 bytes accepted; 2,049 bytes provider-invalid/issue.
+- ASCII and Arabic/Unicode description inputs lock the byte-based 2,048 boundary so that `mb_strlen`/grapheme substitution cannot silently change it.
 - duration: 1 accepted; 28,800 accepted; 28,801 provider-invalid/issue.
 - both `content_loc` and `player_loc` missing.
 - `content_loc == parent <loc>`.
@@ -2066,7 +2198,7 @@ Do **not** create offline tests that claim a URL extension proves the actual rem
 
 - 500 KiB document boundary classification.
 - Google Allow/Disallow present-path leading `/` cases.
-- non-empty leading-`*` remains generic-compatible but is distinguishable as a Google provider-path diagnostic; no silent rewrite.
+- non-empty leading-`*` remains generic-compatible but is distinguishable as the Google provider-path diagnostic `robots_google_present_path_leading_slash` (GDC-01 companion-only); no silent rewrite.
 - `Sitemap:` fully-qualified URL.
 - raw Unicode/non-URL-encoded Sitemap path accepted according to Google's documented contract.
 - multiple Sitemap fields.
@@ -2078,12 +2210,13 @@ Do **not** create offline tests that claim a URL extension proves the actual rem
 - `max-snippet:-1`.
 - `max-video-preview:-1`.
 - values below `-1` invalid for those helpers.
-- `indexifembedded` with `noindex` semantics represented as a provider diagnostic while raw representation remains possible.
-- `unavailable_after` empty/missing provider value is locally diagnosable.
+- `indexifembedded` helper emits `robots_meta_indexifembedded_without_noindex` (warning, origin `provider`, profile `google`, GDC-01 companion-only) when `noindex` is absent; raw representation remains possible and no builder construction error occurs.
+- `unavailable_after` empty/missing provider value is locally diagnosable as `robots_meta_unavailable_after_missing` (GDC-01 companion-only).
 - non-empty `unavailable_after` with caller evidence `recognized` is processed deterministically as recognized.
 - non-empty `unavailable_after` with caller evidence `unrecognized` is processed deterministically as unrecognized.
 - non-empty `unavailable_after` with evidence `unknown` remains an evidence gap rather than being parsed through an invented exhaustive grammar.
 - no hidden network/clock/locale behavior is used to infer recognizability.
+- none of the robots-meta diagnostics above appears in the legacy result or affects scoring (GDC-01).
 
 ### Hreflang
 
@@ -2099,6 +2232,21 @@ Do **not** create offline tests that claim a URL extension proves the actual rem
 - missing self-reference.
 - missing return link.
 - inconsistent alternate set across supplied localized URLs.
+
+### Canonical
+
+- relative canonical output remains generic-compatible and identical to current behavior.
+- a relative canonical produces `canonical_relative_provider_best_practice` (warning, origin `provider`, profile `google`) through the GDC-01 companion surface; it never throws and never changes the legacy result or score.
+
+### Global diagnostics contract (GDC-01)
+
+Tightest contract coverage across Stacks 2/4/5/6 — asserted for every new diagnostic (Robots, Sitemap, OGP, canonical, hreflang):
+
+- the legacy `SeoValidationResultDTO` serialized shape (`is_valid`, `has_warnings`, `errors`, `warnings`, `info`, `issues`) is byte-stable when only new companion diagnostics are present.
+- `is_valid` is `true` and `has_warnings` is `false` in the legacy result even when a new `warning`-severity companion diagnostic is present.
+- `SeoValidationScoreCalculator` output (score, grade, counts, `is_healthy`) is unchanged by the presence of new companion diagnostics.
+- each new diagnostic carries the fixed origin/profile/evidence-state metadata and a stable, non-colliding code.
+- no new diagnostic reuses or shadows a legacy issue code.
 
 ### Structured Data boundary
 
@@ -2126,6 +2274,10 @@ Unifying Sitemap serialization must not silently drop image/video/news/alternate
 Open Graph validation changes must not reorder multiple images or detach structured image properties from their root image.
 
 Reclassifying title/description length issues as heuristics must not change their `strlen()` byte thresholds, warning severity/codes, existing score deductions, or legacy issue/result serialized payloads.
+
+The OGP migration must not remove or re-severity `missing_og_title`, `missing_og_description`, or `missing_og_image` in the legacy result, and must not add `missing_og_type` / `missing_og_url` to the legacy result or score.
+
+Applying the measurement contract must not change any non-length validation (URL shape, URI/IRI escaping, `lastmod` lexical forms) and must not rebase the boundary to a different unit.
 
 Structured-data documentation/classification work must not introduce new lexical/provider eligibility failures or scoring changes.
 
@@ -2226,6 +2378,8 @@ This audit is the **baseline execution authority** for remediation Stacks 0 thro
 - **Provider freshness:** time-variable provider facts already inside the approved remediation scope receive a targeted freshness check against the authoritative URLs recorded here.
 - **No automatic reopening:** a freshness check is not permission to reopen settled architecture or perform broad provider research. If an authoritative source has materially changed after the audit date, record the changed evidence and amend the relevant contract explicitly before implementing against it.
 - **Evidence boundaries:** remote/provider facts that the library cannot prove offline remain explicit caller/host/provider evidence boundaries.
+- **GDC-01 global diagnostics contract:** every new protocol/provider/context diagnostic introduced by Stacks 2/4/5/6 is delivered through the companion surface and must not mutate the legacy result, `is_valid`, `errors`/`warnings`/`info`/`issues`, or `SeoValidationScoreCalculator`. Pre-existing legacy issues keep their documented F-12 placement and score behavior. This is part of the execution authority, not an implementation preference.
+- **Measurement policy:** numeric textual boundaries (Sitemap `<loc>` < 2048, Google Video `description` <= 2048) are UTF-8 bytes via `strlen()` on the value as supplied, per the F-02 exact measurement contract; Stack 4 must not substitute another unit.
 - **Unknown-decision gate:** a material `unknown / needs decision` discovered by characterization blocks the affected production change until an approved contract amendment resolves it.
 - **Future-contract boundaries:** hreflang ISO membership registries, complete Google structured-data capability/eligibility profiles, Twitter/X provider conformance, and the F-18 lexical/enumeration expansion are not implementation discretion under this audit. They are separate future contracts.
 
