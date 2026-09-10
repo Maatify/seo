@@ -411,10 +411,11 @@ Current Google documentation includes constraints such as:
   - should be consistent with the description shown on the page (no strict exact literal match required).
 - `video:thumbnail_loc`:
   - must be a valid URL.
-  - supported formats include BMP, GIF, JPEG, PNG, WebP, and SVG.
+  - supported formats include BMP, GIF, JPEG, PNG, WebP, SVG, and AVIF.
   - minimum dimensions: 60x30 pixels.
+  - transparency: At least 80% of the thumbnail's pixels must have an alpha (transparency) value greater than 250.
   - the URL must be stable.
-  - Google expects the thumbnail to be accessible/crawlable.
+  - Google expects the thumbnail to be accessible/crawlable by Googlebot and Googlebot Images.
 - `video:duration`: 1..28,800 seconds.
 - `video:publication_date` documented forms:
   - `YYYY-MM-DD`
@@ -448,7 +449,7 @@ The DTO does not enforce these limits.
    - Consistency between `video:title`/`video:description` and the on-page visible content.
    - Crawlability, accessibility, and indexing state of `content_loc` or `player_loc`.
    - Actual remote MIME/file format of `content_loc`.
-   - Actual remote image format, transparency, dimensions, and stability of `thumbnail_loc`.
+   - Actual remote image format, transparency (at least 80% with alpha > 250), dimensions, stability, and crawlability of `thumbnail_loc`.
    (These must not be converted into fake offline validation).
 
 ### Safe target architecture
@@ -1560,7 +1561,7 @@ Add layered validation.
 - parent `<loc>` relationship.
 - deterministic versus external/provider-evidence rules.
 - video title/description serialization semantics (XML/CDATA escaping).
-- thumbnail contract classification (URL shape vs external image dimensions/stability).
+- thumbnail contract classification (URL shape vs external image format, dimensions, stability, accessibility, and transparency).
 
 #### Google News
 - language contract.
