@@ -383,20 +383,28 @@ That would either require hidden global state or create fake validation that can
 
 ### Exact measurement contract for numeric textual boundaries
 
-The two authoritative sources state "less than 2,048 characters" (Sitemaps.org, for the page `<loc>`) and "a maximum of 2,048 characters" (Google Video, for `video:description`). **Neither source defines the unit** as UTF-8 bytes, Unicode code points, or grapheme clusters, and neither defines preprocessing/normalization for the length check. This unit is therefore an **EVIDENCE BOUNDARY**: the library must not silently pick a unit as if the source backed it. To keep the boundary deterministic and authorization-complete (no implementation-time choice), the audit fixes a library measurement policy:
+The two authoritative sources state "less than 2,048 characters" (Sitemaps.org, for the page `<loc>`) and "a maximum of 2,048 characters" (Google Video, for `video:description`). **Neither source defines the unit** as UTF-8 bytes, Unicode code points, or grapheme clusters, and neither defines preprocessing/normalization for the length check. The audit therefore separates, for each limit, what the source proves from what the library does.
 
-- **Unit: UTF-8 bytes**, measured with the library-native `strlen()` on the value **as supplied** to the validating entry point.
-  - Rationale: this matches the library's existing fixed byte-measurement compatibility contract for text-length boundaries (F-12 preserves `strlen()` byte measurement for title/description heuristics), keeps the measurement idiom uniform across the library, and requires no `mbstring`/PCRE-unicode dependency. It is also the conservative deterministic upper-bound check: any value accepted on bytes is necessarily accepted on code points or graphemes for the same threshold, so the byte check never under-enforces the source's "characters" reading.
+**Source-backed protocol/provider rule:**
+
+- `<loc>`: the sitemaps.org protocol rule is "the page URL must be less than 2,048 characters." The unit is a **character** quantity; the source does not fix whether that means UTF-8 bytes, Unicode code points, or grapheme clusters, and does not define measurement relative to percent-encoding/normalization.
+- `video:description`: the Google Video rule is "a maximum of 2,048 characters," with the same unit and normalization gap.
+- Because the unit is undefined by the authoritative source, exceeding a *byte* threshold cannot be asserted as a proven violation of the source's *character* rule. That would be an overclaim.
+
+**Library deterministic policy (EVIDENCE BOUNDARY):**
+
+- The unit is an **EVIDENCE BOUNDARY** under this audit's vocabulary: the source is intentionally open-ended on the unit, so the library must not fabricate a byte-equals-characters equivalence while claiming source backing.
+- To keep the boundary deterministic and authorization-complete (no implementation-time choice), the audit fixes a **library measurement policy**: measure **UTF-8 bytes** with the library-native `strlen()` on the value **as supplied** to the validating entry point.
+  - Rationale: this matches the library's existing fixed byte-measurement compatibility contract for text-length boundaries (F-12 preserves `strlen()` byte measurement for title/description heuristics), keeps the measurement idiom uniform across the library, and requires no `mbstring`/PCRE-unicode dependency.
+  - Conservativeness: a UTF-8 string of `n` bytes contains **at most** `n` Unicode code points and therefore at most `n` graphemes. The byte measure consequently never rejects a value that the character rule would accept: any value below the byte threshold is necessarily below the character threshold too. A value that exceeds the byte threshold may still satisfy the character rule (a multi-byte string can have fewer characters than bytes), so the library argues upward from the safe side and represents exactly that shade of uncertainty instead of claiming a proven violation.
   - The byte policy applies until an authoritative source defines a different unit or a separate contract amendment replaces it. It must not be re-derived during Stack 4.
-
-- **Measurement point — `<loc>`:** the length is measured **before** URI/IRI normalization and before percent-encoding. The authored `loc` value as supplied is the input; percent-encoding is a serialization/output operation applied later and is not expanded for length counting.
-  - Rationale: a URL length limit that Sitemaps.org ties to the `loc` value the publisher authors is most deterministically verified at input time, whereas percent-encoding expansion depends on output-time mechanics. URI/IRI escaping correctness is still validated separately as its own serialization guarantee; it does not re-trigger the length boundary.
-  - Boundary: `strlen(loc) < 2048` — 2,047 bytes valid, 2,048 bytes invalid (protocol requires *less than* 2,048).
-
-- **Measurement point — `video:description`:** the length is measured on the description value **as supplied** to the video validator/entry point, before any XML escaping/CDATA wrapping.
-  - Boundary: `strlen(description) <= 2048` — 2,048 bytes valid, 2,049 bytes invalid.
-
-- These policies are part of the audit authority. Stack 4 must implement exactly these boundaries with the corresponding tests and must not substitute `mb_strlen`, grapheme counting, post-encoding measurement, or a different unit. (The title/description heuristic measurement is covered separately by F-12.)
+- **Measurement point — `<loc>`:** the length is measured **before** URI/IRI normalization and before percent-encoding, on the authored `loc` value **as supplied**. The source does not define whether the limit applies to the authored or the encoded form; the audit fixes the input-time point as part of the library deterministic policy, **without** claiming source backing for that choice. Percent-encoding is treated as a serialization/output operation checked separately by its own escaping guarantee; it does not re-trigger the length boundary, and no claim is made that the authoritative source intends the encoded or unencoded form.
+- **Measurement point — `video:description`:** the length is measured on the description value **as supplied** to the video validator/entry point, before any XML escaping/CDATA wrapping. The same input-time policy and the same no-claim-about-encoded-form caveat apply.
+- **Boundaries and emitted diagnostics:**
+  - `<loc>`: `strlen(loc) < 2048` — a value of 2,047 bytes is **provably within** the source rule; a value of 2,048 or more bytes emits `sitemap_loc_length_exceeds_measure_boundary` (warning, GDC-01 companion-only), which is a **library conservative-policy warning**, not a claim of a proven protocol violation.
+  - `video:description`: `strlen(description) <= 2048` — a value of 2,048 bytes is **provably within** the source rule; a value of 2,049 or more bytes emits `google_video_description_length_exceeds_measure_boundary` (warning, GDC-01 companion-only), a **library conservative-policy warning**, not a claim of a proven provider violation.
+- These policies are part of the audit authority. Stack 4 must implement exactly these boundaries with the corresponding tests and must not substitute `mb_strlen`, grapheme counting, post-encoding measurement, or a different unit, and must not re-word the emitted diagnostics as proven protocol/provider violations. (The title/description heuristic measurement is covered separately by F-12.)
+- **Same principle for other textual limits whose unit is not source-defined:** any numeric textual boundary in this remediation whose unit the authoritative source does not fix must receive the same two-part treatment (source rule as stated + explicit library deterministic policy) with the length-check diagnostic worded as a library policy boundary. GDC-01 machine contracts already encode this for the only two such boundaries in remediation scope.
 
 ---
 
@@ -1020,7 +1028,7 @@ This is the single contract that decides where every **new** diagnostic introduc
 
 For each new diagnostic produced by the remediation:
 
-1. **Container.** New diagnostics do **not** enter the legacy `SeoValidationResultDTO` as part of its `errors`, `warnings`, `info`, or `issues` collections. They are emitted through the additive **companion classification surface** introduced by F-12: a companion/profile diagnostics collection distinct from the legacy result, each entry pairing a stable machine identifier (`code`), `severity`, `message`, optional `field`, `origin`, `profile`, and — where applicable — an explicit evidence state (`recognized` / `unrecognized` / `within_window` / `outside_window` / `unknown`, per the contract that defines it).
+1. **Container.** New diagnostics do **not** enter the legacy `SeoValidationResultDTO` as part of its `errors`, `warnings`, `info`, or `issues` collections. They are emitted through the additive **companion classification surface** introduced by F-12: a companion/profile diagnostics collection distinct from the legacy result, each entry being a `SeoCompanionDiagnosticDTO` (the fixed entry type defined in the public access contract below) pairing a stable machine identifier (`code`), `severity`, `message`, optional `field`, `origin`, `profile`, an optional `evidence_state` chosen only from the states its defining contract fixes, and an optional `related_legacy_code`.
 
 2. **`is_valid` is never changed by a new diagnostic.** `SeoValidationResultDTO::is_valid` continues to mean "no legacy error-severity issues". New provider/protocol/context diagnostics cannot turn a legacy-valid result into an invalid one.
 
@@ -1032,9 +1040,121 @@ For each new diagnostic produced by the remediation:
 
 6. **Single exception — pre-existing legacy issues.** Diagnostics that already existed before this remediation as `SeoValidationIssueDTO` objects (for example `missing_title`, `missing_og_title`, `missing_og_description`, `missing_og_image`, title/description length warnings) keep their current legacy placement, severity, code, and score participation under F-12. Reclassification adds companion origin/profile metadata only; it does not move them to the companion surface.
 
+### Public access contract — fixed surface (Stack 1 / Stack 5 deliverable)
+
+This subsection fixes the consumer-facing shape of the companion surface so implementation never chooses a method, service, DTO, or result shape. Stack 1 and Stack 5 must implement exactly this contract, no more and no less.
+
+- **Unified result type.** Every profile validator introduced by this audit returns the **same** concrete result type: `Maatify\Seo\Web\Validation\DTO\SeoCompanionValidationResultDTO`. There is exactly one result type for the companion surface; per-profile result variants, per-profile subclasses, and alternative result containers are **not** introduced.
+- **Entry type.** Each companion diagnostic is `Maatify\Seo\Web\Validation\DTO\SeoCompanionDiagnosticDTO` with exactly these fields:
+  - `code` — non-empty stable string, fixed per the machine-contract tables below (Stacks 2/4/6) and the fixed F-13 OGP contracts;
+  - `severity` — one of `error` / `warning` / `info`, fixed per code;
+  - `message` — non-empty;
+  - `field` — `?string`: the sitemap tag, meta field, or attribute the diagnostic concerns, or `null` for document/context-level diagnostics;
+  - `origin` — one of the F-12 fixed vocabulary: `protocol` / `provider` / `heuristic` / `content-quality`;
+  - `profile` — a stable profile identifier from the fixed set used by this audit (`sitemaps`, `google`, `ogp`, `rfc9309`, `seo-default`);
+  - `evidence_state` — `?string`, present **only** for evidence/context diagnostics and matching exactly one of the states its defining contract fixes (for example `recognized`/`unrecognized`/`unknown`, `within_window`/`outside_window`/`unknown`, `accurate`/`inaccurate`/`unknown`, `original`/`not_original`/`unknown`, `matched`/`mismatched`/`unknown`, `accessible`/`inaccessible`/`unknown`, `relevant`/`irrelevant`/`unknown`, `verified`/`unverified`/`unknown`, `verified_host`/`unverified_host`/`unknown`);
+  - `related_legacy_code` — `?string`: the stable legacy `SeoValidationIssueDTO` code this companion record concerns, when the same subject already has a legacy issue (correlation metadata only; it never moves the legacy issue).
+  - Construction rules mirror the legacy DTO: empty `code` or `message` and unknown `severity`, `origin`, `profile`, or `evidence_state` values are construction errors. `evidence_state` values are scoped per code: a state not listed for that code is invalid for it.
+- **Correlation with the legacy result.** `SeoCompanionValidationResultDTO` exposes a nullable `legacy` property holding the `SeoValidationResultDTO` that was paired with the profile run, and `null` when the profile validator was invoked standalone. Correlation is therefore available both per-entry (`related_legacy_code`) and at the container level (`legacy`). The companion result never replaces the legacy result and never borrows its fields.
+- **Invocation surface.** `SeoMetaValidator::validate()` is unchanged and continues to return `SeoValidationResultDTO`. An additive `SeoMetaValidator::validateWithCompanion(...): SeoCompanionValidationResultDTO` is the single public method that returns both surfaces for the web/meta/OGP path, embedding the identical legacy result under `legacy`. Every other profile validator added by the remediation exposes a public `validate(): SeoCompanionValidationResultDTO` entry point that returns the same unified type; Stack 5 does not design an alternative result type, an alternative method contract, or an alternative legacy-pairing mechanism.
+- **Serialization shape.** `SeoCompanionValidationResultDTO` implements `\JsonSerializable` and its `toArray()`/JSON shape is fixed:
+
+  ```json
+  {
+    "legacy": null,
+    "diagnostics": [
+      {
+        "code": "sitemap_url_count_exceeds_limit",
+        "severity": "error",
+        "message": "...",
+        "field": "urlset",
+        "origin": "protocol",
+        "profile": "sitemaps",
+        "evidence_state": null,
+        "related_legacy_code": null
+      }
+    ]
+  }
+  ```
+
+  Keys are snake_case; the `code`/`severity`/`origin`/`profile`/`evidence_state` vocabularies are preserved verbatim. When a profile run is paired with the legacy validator, `legacy` contains the exact `SeoValidationResultDTO` shape emitted today (`is_valid`, `has_warnings`, `errors`, `warnings`, `info`, `issues`). `SeoCompanionValidationResultDTO` carries **no** `is_valid`, `has_warnings`, score, grade, or health fields. Consumers may derive their own aggregates, but no derived aggregate may be fed back into `SeoValidationScoreCalculator`.
+- **Unified profile surface.** Profile validators (Google base Sitemap, Google Image, Google Video, Google News, Google robots.txt, robots meta, RFC 9309, canonical, hreflang cluster, OGP) emit exactly the companion entries fixed in the machine-contract tables below and in the fixed F-13 OGP contracts. A profile validator must not add a code, severity, origin, profile, field, or evidence state not listed in this audit.
+
+### Fixed machine contracts for all new diagnostics
+
+Every stable `code`, `severity`, `origin`, `profile`, `field`, and `evidence_state` below is part of GDC-01. A diagnostic absent from these tables and from the fixed F-13 OGP contracts may not be introduced by an implementation stack. All rows are GDC-01 companion-only: none enters the legacy result, `is_valid`, `has_warnings`, or `SeoValidationScoreCalculator`. Severity convention: `error` is reserved for provable protocol-invalid conditions (Stack 4 protocol rules); provider contract violations and conservative library-policy boundaries are `warning`; status/recommendation/evidence-gap entries are `info`. The pre-existing legacy missing-OGP warnings keep their fixed legacy severity as documented in F-13.
+
+#### Stack 4 — Sitemap core (protocol rules profile `sitemaps`; the cross-submission row is provider profile `google`)
+
+| Code | Severity | Origin | Profile | Field | Evidence state | Contract |
+|---|---|---|---|---|---|---|
+| `sitemap_url_count_exceeds_limit` | error | protocol | `sitemaps` | `urlset` | — | URL sitemap exceeds 50,000 URLs (sitemaps.org source-backed limit). |
+| `sitemap_index_count_exceeds_limit` | error | protocol | `sitemaps` | `sitemapindex` | — | Sitemap Index exceeds 50,000 sitemap entries (sitemaps.org source-backed limit). |
+| `sitemap_document_size_exceeds_boundary` | error | protocol | `sitemaps` | `urlset` | — | Uncompressed document exceeds 52,428,800 bytes (50 MB), a byte-defined sitemaps.org limit. |
+| `sitemap_lastmod_invalid_lexical` | error | protocol | `sitemaps` | `lastmod` | — | `lastmod` fails the fixed F-02 lexical forms (including year-only, year-month, hour/minute-only, zone-less dateTime). |
+| `sitemap_loc_length_exceeds_measure_boundary` | warning | protocol | `sitemaps` | `loc` | — | EVIDENCE BOUNDARY + conservative library policy (F-02 exact measurement contract): byte measure regards a value ≥ 2,048 bytes as exceed-the-library-boundary. **Not** labeled a proven violation of the source's unit-undefined character limit. |
+| `sitemap_url_duplicated_across_submissions` | warning | provider | `google` | `loc` | — | Same URL present in multiple caller-supplied sitemap documents; deterministically knowable from supplied data. |
+
+#### Stack 4 — Google base Sitemap (provider profile `google`)
+
+| Code | Severity | Origin | Profile | Field | Evidence state | Contract |
+|---|---|---|---|---|---|---|
+| `google_sitemap_priority_ignored` | info | provider | `google` | `priority` | — | Google ignores `priority`; protocol-valid field, not a validity failure. |
+| `google_sitemap_changefreq_ignored` | info | provider | `google` | `changefreq` | — | Google ignores `changefreq`; protocol-valid field, not a validity failure. |
+| `google_sitemap_lastmod_accuracy` | warning / info | provider | `google` | `lastmod` | `accurate` / `inaccurate` / `unknown` | Caller-supplied evidence only; `inaccurate` → warning, `accurate` → info, `unknown` → info (evidence gap). |
+| `google_sitemap_host_context` | warning / info | provider | `google` | `null` | `verified_host` / `unverified_host` / `unknown` | Caller-supplied Search Console verification evidence; `unverified_host` → warning, `verified_host` → info, `unknown` → info (evidence gap). |
+
+#### Stack 4 — Google Image (provider profile `google`)
+
+| Code | Severity | Origin | Profile | Field | Evidence state | Contract |
+|---|---|---|---|---|---|---|
+| `google_image_count_exceeds_limit` | warning | provider | `google` | `image` | — | Exceeds 1,000 `image:image` entries per URL (Google provider limit). |
+| `google_image_cross_domain_verification` | warning / info | provider | `google` | `image` | `verified` / `unverified` / `unknown` | Cross-domain hosting requires Search Console verification (F-03); `unverified` → warning, `verified` → info, `unknown` → info (evidence gap). |
+| `google_image_crawlability_context` | warning / info | provider | `google` | `image` | `accessible` / `inaccessible` / `unknown` | External crawlability evidence (F-03); `inaccessible` → warning, `accessible` → info, `unknown` → info (evidence gap). |
+
+#### Stack 4 — Google Video (provider profile `google`)
+
+| Code | Severity | Origin | Profile | Field | Evidence state | Contract |
+|---|---|---|---|---|---|---|
+| `google_video_title_missing` | warning | provider | `google` | `title` | — | Required per Google Video contract (F-04). |
+| `google_video_description_missing` | warning | provider | `google` | `description` | — | Required per Google Video contract (F-04). |
+| `google_video_thumbnail_loc_missing` | warning | provider | `google` | `thumbnail_loc` | — | Required per Google Video contract (F-04). |
+| `google_video_content_or_player_loc_missing` | warning | provider | `google` | `content_loc` | — | At least one of `content_loc`/`player_loc` required (F-04). |
+| `google_video_description_length_exceeds_measure_boundary` | warning | provider | `google` | `description` | — | EVIDENCE BOUNDARY + conservative library policy (F-02): byte measure regards a value > 2,048 bytes as exceed-the-library-boundary. **Not** labeled a proven violation of the source's unit-undefined character maximum. |
+| `google_video_duration_out_of_range` | warning | provider | `google` | `duration` | — | Outside 1..28,800 seconds (F-04). |
+| `google_video_publication_date_invalid` | warning | provider | `google` | `publication_date` | — | Fails the two documented date forms (F-04). |
+| `google_video_media_loc_equals_parent_loc` | warning | provider | `google` | `content_loc` / `player_loc` | — | `content_loc` or `player_loc` equals the parent page `<loc>` (F-04). |
+| `google_video_data_url_unsupported` | warning | provider | `google` | `content_loc` | — | Data URLs are unsupported for video URLs (F-04). |
+| `google_video_relevance_context` | warning / info | provider | `google` | `null` | `relevant` / `irrelevant` / `unknown` | Do-not-list-unrelated-video requirement (F-04); `irrelevant` → warning, `relevant` → info, `unknown` → info (evidence gap). |
+| `google_video_title_host_page_match` | warning / info | provider | `google` | `title` | `matches` / `differs` / `unknown` | Title should match host page (recommendation, F-04); `differs` → warning, `matches` → info, `unknown` → info (evidence gap). |
+| `google_video_content_loc_preference` | info | provider | `google` | `content_loc` | — | `content_loc` preferred when available (recommendation, F-04). |
+
+#### Stack 4 — Google News (provider profile `google`)
+
+| Code | Severity | Origin | Profile | Field | Evidence state | Contract |
+|---|---|---|---|---|---|---|
+| `google_news_multiple_entries_per_url` | warning | provider | `google` | `news` | — | More than one `<news:news>` under a single URL (F-05 provider cardinality). |
+| `google_news_document_count_exceeds_limit` | warning | provider | `google` | `news` | — | More than 1,000 `<news:news>` entries in one document (F-05 provider limit). |
+| `google_news_publication_date_invalid` | warning | provider | `google` | `publication_date` | — | Fails the four documented date forms (F-05). |
+| `google_news_language_invalid` | warning | provider | `google` | `language` | — | Fails the 2/3-letter ISO 639 lexical form including the `zh-cn`/`zh-tw` exceptions (F-05). |
+| `google_news_publication_name_parenthetical` | warning | provider | `google` | `name` | — | Parenthetical content present in `news:name` (locally decidable, F-05). |
+| `google_news_original_publication_evidence` | warning / info | provider | `google` | `publication_date` | `original` / `not_original` / `unknown` | Publication date claims original first-publication time (F-05); `not_original` → warning, `original` → info, `unknown` → info (evidence gap). |
+| `google_news_name_exact_match_evidence` | warning / info | provider | `google` | `name` | `matched` / `mismatched` / `unknown` | Exact Google News publication-name identity (F-05); `mismatched` → warning, `matched` → info, `unknown` → info (evidence gap). |
+| `google_news_freshness_evidence` | warning / info | provider | `google` | `null` | `within_window` / `outside_window` / `unknown` | "Last two days" rule (F-05); `outside_window` → warning, `within_window` → info, `unknown` → info (evidence gap); no local clock arithmetic. |
+
+#### Stack 6 — Canonical and Hreflang (provider profile `google`)
+
+| Code | Severity | Origin | Profile | Field | Evidence state | Contract |
+|---|---|---|---|---|---|---|
+| `canonical_relative_provider_best_practice` | warning | provider | `google` | `href` | — | Relative canonical (F-14); never a builder exception. |
+| `hreflang_self_reference_missing` | warning | provider | `google` | `href` | — | A URL's own localized version missing from its supplied alternate set (F-15). |
+| `hreflang_reciprocal_link_missing` | warning | provider | `google` | `href` | — | Missing return/reciprocal link in the supplied cluster (F-15). |
+| `hreflang_alternate_set_inconsistent` | warning | provider | `google` | `href` | — | Inconsistent alternate sets across supplied localized URLs (F-15). |
+| `hreflang_url_not_fully_qualified` | warning | provider | `google` | `href` | — | Alternate URL not fully qualified where the Google profile requires it (F-15). |
+
 ### What legally belongs only in the companion surface
 
-Examples fixed by this audit:
+Examples fixed by this audit (the complete, normative list is the machine-contract tables above plus the fixed F-13 OGP contracts):
 
 - F-06 leading-wildcard `robots_rfc9309_leading_wildcard_compatibility` (protocol/rfc9309 warning).
 - F-05 Google News freshness states `within_window`, `outside_window`, `unknown`.
@@ -1048,7 +1168,7 @@ None of these may be plumbed into the legacy result or the score.
 
 ### Consequence for implementers
 
-An implementation stack that produces, serializes, or scores a new diagnostic through the legacy `SeoValidationResultDTO` or `SeoValidationScoreCalculator` violates this contract, regardless of internal naming. Stack 5 must expose the companion surface additively without altering legacy serialized shapes, F-12 scoring, or `SeoMetaValidator::validate()`.
+An implementation stack that produces, serializes, or scores a new diagnostic through the legacy `SeoValidationResultDTO` or `SeoValidationScoreCalculator` violates this contract, regardless of internal naming. Stack 5 must expose the companion surface additively without altering legacy serialized shapes, F-12 scoring, or `SeoMetaValidator::validate()`, and must return the single unified result type `SeoCompanionValidationResultDTO` from every profile validator without introducing per-profile result variants or an alternative legacy-pairing mechanism. New diagnostic codes, severities, origins, profiles, fields, or evidence states other than those fixed in the tables above (and in F-13) are out of contract.
 
 ---
 
@@ -1115,7 +1235,9 @@ This subsection fixes the executable outcome, replacing "characterize then migra
   - codes: `missing_og_type`, `missing_og_url`;
   - severity: `warning` — matching the severity convention of the existing missing-OGP-basic warnings;
   - origin: `protocol`; profile: `ogp`;
-  - container: **companion surface only**. Under GDC-01 they must **not** be appended to the legacy `errors`/`warnings`/`info`/`issues` collections, must **not** change `is_valid` or `has_warnings`, and must **not** produce any score deduction.
+  - `field`: `og:type` for `missing_og_type`, `og:url` for `missing_og_url`;
+  - `evidence_state`: `null` (not evidence/context diagnostics); `related_legacy_code`: `null`;
+  - container: **companion surface only** (`SeoCompanionDiagnosticDTO` in `SeoCompanionValidationResultDTO`). Under GDC-01 they must **not** be appended to the legacy `errors`/`warnings`/`info`/`issues` collections, must **not** change `is_valid` or `has_warnings`, and must **not** produce any score deduction.
 - These new codes must not collide with any legacy code and must not be emitted by `SeoMetaValidator::validate()` into the legacy result.
 
 **Relationship to the legacy result and score:** unchanged for all pre-existing legacy issues; off-result and off-score for all new protocol diagnostics. `SeoMetaValidator::validate()` keeps returning the existing `SeoValidationResultDTO` contract; the OGP profile results are delivered through the companion surface (GDC-01) and the dedicated social builders.
@@ -1655,11 +1777,11 @@ Ordinary internal details that cannot change an observable/contract outcome do n
 
 ## AP-12 — New diagnostics are additive and never mutate legacy results or scores
 
-Every new protocol/provider/context diagnostic introduced by Stacks 2/4/5/6 is delivered through the GDC-01 companion surface. It must not change `SeoValidationResultDTO::is_valid`, must not be appended to the legacy `errors`/`warnings`/`info`/`issues` collections, and must not affect `SeoValidationScoreCalculator`. Pre-existing legacy issues keep their F-12 placement and score behavior already documented here.
+Every new protocol/provider/context diagnostic introduced by Stacks 2/4/5/6 is delivered through the GDC-01 companion surface: a `SeoCompanionDiagnosticDTO` entry inside the unified `SeoCompanionValidationResultDTO` (GDC-01 public access contract). It must not change `SeoValidationResultDTO::is_valid`, must not be appended to the legacy `errors`/`warnings`/`info`/`issues` collections, and must not affect `SeoValidationScoreCalculator`. Pre-existing legacy issues keep their F-12 placement and score behavior already documented here.
 
 ## AP-13 — Numeric textual boundaries use the fixed measurement policy
 
-Sitemap `<loc>` and Google Video `description` boundaries use the F-02 exact measurement contract: UTF-8 bytes via `strlen()` on the value as supplied, before URI/IRI normalization/percent-encoding or XML escaping. Stack 4 must not substitute `mb_strlen`, grapheme counting, or post-encoding measurement, and must not reinterpret the boundary as an implementer choice.
+Sitemap `<loc>` and Google Video `description` boundaries follow the F-02 exact measurement contract exactly as two separate things: the **source-backed rule** (a unit-undefined character limit in each source) and the **library deterministic policy** (an explicitly labeled EVIDENCE BOUNDARY converting it to UTF-8 bytes via `strlen()` on the value as supplied, before URI/IRI normalization/percent-encoding or XML escaping). A value **below** the byte threshold is provably within the source rule; a value **at/above** it emits `sitemap_loc_length_exceeds_measure_boundary` / `google_video_description_length_exceeds_measure_boundary` as a conservative library-policy warning, never as a claim of a proven protocol/provider violation. Stack 4 must not substitute `mb_strlen`, grapheme counting, or post-encoding measurement, and must not reinterpret the boundary as an implementer choice. Any other textual limit whose unit the source does not fix must receive the same two-part treatment.
 
 ---
 
@@ -1810,66 +1932,68 @@ Add layered validation without collapsing protocol, provider, content-context, a
 ### Required coverage
 
 #### Base sitemap
-- URL sitemap count limit: 50,000 URLs.
-- Sitemap Index count limit: 50,000 Sitemaps.
-- uncompressed byte-size limits: 50 MB (52,428,800 bytes).
-- page `<loc>` must be less than 2,048 characters; measured as UTF-8 bytes of the value as supplied (`strlen(loc) < 2048`), before URI/IRI normalization/percent-encoding, per the F-02 exact measurement contract.
-- host/site/submission-context rules.
-- cross-submission semantics.
+- URL sitemap count limit: 50,000 URLs; over-limit emits `sitemap_url_count_exceeds_limit` (error, GDC-01 companion-only).
+- Sitemap Index count limit: 50,000 Sitemaps; over-limit emits `sitemap_index_count_exceeds_limit` (error, GDC-01 companion-only).
+- uncompressed byte-size limits: 50 MB (52,428,800 bytes); over-limit emits `sitemap_document_size_exceeds_boundary` (error, GDC-01 companion-only).
+- page `<loc>`: the sitemaps.org source rule is "less than 2,048 characters" without a defined unit. The F-02 exact measurement contract separates that source rule from the library deterministic policy (EVIDENCE BOUNDARY): measure UTF-8 bytes of the value as supplied (`strlen(loc) < 2048`), before URI/IRI normalization/percent-encoding, and emit `sitemap_loc_length_exceeds_measure_boundary` (warning, GDC-01 companion-only) as a conservative library-policy boundary — never worded as a proven protocol violation.
+- host/site/submission-context rules: modeled as the caller-supplied evidence diagnostic `google_sitemap_host_context` per the GDC-01 machine-contract table; no offline host verification is fabricated.
+- cross-submission semantics: same URL in multiple caller-supplied sitemap documents deterministically emits `sitemap_url_duplicated_across_submissions` (warning, GDC-01 companion-only).
 - UTF-8 encoding requirements.
 - XML entity escaping and URL URI/IRI escaping requirements.
 - `lastmod` must implement exactly these library protocol-profile forms: `YYYY-MM-DD`, `YYYY-MM-DDThh:mm:ssTZD`, and `YYYY-MM-DDThh:mm:ss.sTZD` with one-or-more fractional digits; dateTime requires `Z` or `±hh:mm` timezone designator.
-- year-only, year-month, hour/minute-only, zone-less dateTime, and malformed forms are out of contract.
+- year-only, year-month, hour/minute-only, zone-less dateTime, and malformed forms are out of contract and emit `sitemap_lastmod_invalid_lexical` (error, GDC-01 companion-only).
 - fractional-second characterization and intentional correction of the current helper mismatch.
 - URL-sitemap vs Sitemap-Index `lastmod` semantics.
 - verification of XMLWriter UTF-8 and serialization guarantees.
 
+All Base-sitemap code/severity/origin/profile/field contracts are fixed in the GDC-01 machine-contract tables; Stack 4 must not alter them.
+
 #### Google base Sitemap behavior
-- `priority` is ignored by Google.
-- `changefreq` is ignored by Google.
-- `lastmod` is useful to Google only when consistently/verifiably accurate and tied to significant page modification.
+- `priority` is ignored by Google → `google_sitemap_priority_ignored` (info, GDC-01 companion-only).
+- `changefreq` is ignored by Google → `google_sitemap_changefreq_ignored` (info, GDC-01 companion-only).
+- `lastmod` is useful to Google only when consistently/verifiably accurate and tied to significant page modification → `google_sitemap_lastmod_accuracy` evidence diagnostic with `accurate`/`inaccurate`/`unknown` states (GDC-01 companion-only).
 - These are Google-provider semantics/diagnostics delivered through the GDC-01 companion surface; they must not redefine generic Sitemap protocol validity and must not change the legacy result or score.
 
 #### Google Image
 - current/deprecated field classification.
-- 1,000-images-per-URL limit.
-- cross-domain Search Console verification context.
-- external crawlability context.
+- 1,000-images-per-URL limit → `google_image_count_exceeds_limit` (warning, GDC-01 companion-only).
+- cross-domain Search Console verification context → `google_image_cross_domain_verification` evidence diagnostic (GDC-01 companion-only).
+- external crawlability context → `google_image_crawlability_context` evidence diagnostic (GDC-01 companion-only).
 - provider diagnostics here are GDC-01 companion-only.
 
 #### Google Video
 - characterize current DTO and raw-array behavior.
-- required title/description/thumbnail plus content/player presence.
-- title host-page match as a provider recommendation.
-- description max 2,048 characters, measured as UTF-8 bytes of the value as supplied (`strlen(description) <= 2048`) before XML escaping/CDATA wrapping, per the F-02 exact measurement contract; host-page consistency is a provider/context diagnostic.
-- duration 1..28,800.
-- exact two publication-date forms represented by the provider documentation.
-- parent `<loc>` inequality.
-- host-page relevance requirement.
-- `content_loc` preference as a provider recommendation, not validity.
+- required title/description/thumbnail plus content/player presence → `google_video_title_missing`, `google_video_description_missing`, `google_video_thumbnail_loc_missing`, `google_video_content_or_player_loc_missing` (warning, GDC-01 companion-only).
+- title host-page match as a provider recommendation → `google_video_title_host_page_match` evidence diagnostic.
+- description: Google's source rule is "a maximum of 2,048 characters" without a defined unit. The F-02 exact measurement contract separates that rule from the library deterministic policy (EVIDENCE BOUNDARY): measure UTF-8 bytes of the value as supplied (`strlen(description) <= 2048`) before XML escaping/CDATA wrapping, and emit `google_video_description_length_exceeds_measure_boundary` (warning, GDC-01 companion-only) as a conservative library-policy boundary — never worded as a proven provider violation; host-page consistency is `google_video_relevance_context`/`google_video_title_host_page_match` evidence diagnostics.
+- duration 1..28,800 → `google_video_duration_out_of_range` (warning, GDC-01 companion-only).
+- exact two publication-date forms represented by the provider documentation → `google_video_publication_date_invalid` (warning, GDC-01 companion-only).
+- parent `<loc>` inequality → `google_video_media_loc_equals_parent_loc` (warning, GDC-01 companion-only).
+- host-page relevance requirement → `google_video_relevance_context` evidence diagnostic.
+- `content_loc` preference as a provider recommendation, not validity → `google_video_content_loc_preference` (info, GDC-01 companion-only).
 - supported file-type list exactly as documented, without invented extension aliases.
-- Data URLs unsupported.
+- Data URLs unsupported → `google_video_data_url_unsupported` (warning, GDC-01 companion-only).
 - protocol evidence handled exactly as documented: HTTP/FTP explicitly named, HTTPS demonstrated by Google's own examples, streaming protocols unsupported; no false claim that Google literally publishes `HTTP/HTTPS/FTP only`.
 - thumbnail formats: BMP, GIF, JPEG, PNG, WebP, SVG, AVIF.
 - thumbnail minimum 60x30, stable URL, Googlebot/Googlebot Images accessibility, and transparency requirement.
 - deterministic/context rules separated from remote format/accessibility evidence.
 - title/description XML escaping/CDATA output semantics.
 - watch-page/video indexing eligibility kept outside Sitemap DTO validity.
-- all Video provider/context diagnostics are GDC-01 companion-only.
+- all Video provider/context diagnostics are GDC-01 companion-only; code/severity/origin/profile/field contracts are fixed in the GDC-01 machine-contract tables.
 
 #### Google News
-- four exact publication-date forms.
-- publication date means original first publication time, not Sitemap-addition time.
-- language contract: two/three-letter ISO 639 plus `zh-cn` / `zh-tw` exceptions.
-- publication-name exact-match semantics and parenthetical omission rule.
+- four exact publication-date forms → `google_news_publication_date_invalid` (warning, GDC-01 companion-only).
+- publication date means original first publication time, not Sitemap-addition time → `google_news_original_publication_evidence` evidence diagnostic.
+- language contract: two/three-letter ISO 639 plus `zh-cn` / `zh-tw` exceptions → `google_news_language_invalid` (warning, GDC-01 companion-only).
+- publication-name exact-match semantics and parenthetical omission rule → `google_news_publication_name_parenthetical` (locally decidable) and `google_news_name_exact_match_evidence`.
 - title semantics.
-- one News entry per URL provider cardinality, while preserving the public list contract until migration is deliberate; the multi-entry diagnostic is GDC-01 companion-only.
-- 1,000 total News entries per Sitemap.
-- "last two days" is a context/evidence diagnostic only: consume caller-supplied `within_window` / `outside_window` / `unknown` evidence and do not derive a hard boundary from `publicationDate` plus a clock/reference time.
+- one News entry per URL provider cardinality, while preserving the public list contract until migration is deliberate → `google_news_multiple_entries_per_url` (warning, GDC-01 companion-only).
+- 1,000 total News entries per Sitemap → `google_news_document_count_exceeds_limit` (warning, GDC-01 companion-only).
+- "last two days" is a context/evidence diagnostic only → `google_news_freshness_evidence` consuming caller-supplied `within_window` / `outside_window` / `unknown` evidence; do not derive a hard boundary from `publicationDate` plus a clock/reference time.
 - no hidden `now()`/global time and no invented `48 hours` or calendar-day arithmetic.
 - legacy optional News-field provider-status classification.
 - canonical example correction for `publicationDate: 'as-provided'`.
-- all News provider/context diagnostics are GDC-01 companion-only.
+- all News provider/context diagnostics are GDC-01 companion-only; code/severity/origin/profile/field contracts are fixed in the GDC-01 machine-contract tables.
 
 ### Critical constraint
 
@@ -1885,7 +2009,7 @@ Stop mixing heuristic recommendations with protocol validity.
 
 ### Order
 
-1. Introduce additive issue origin/profile classification exactly under the F-12 contract, with new diagnostics delivered through the GDC-01 companion surface; do not alter legacy `SeoValidationIssueDTO` / `SeoValidationResultDTO` serialized shapes or `SeoMetaValidator::validate()` return contract.
+1. Introduce additive issue origin/profile classification exactly under the F-12 contract, delivering every new diagnostic as a `SeoCompanionDiagnosticDTO` entry in the unified `SeoCompanionValidationResultDTO` and exposing them through the GDC-01 public access contract (`SeoMetaValidator::validateWithCompanion()` / per-profile `validate()`), with no alteration to legacy `SeoValidationIssueDTO` / `SeoValidationResultDTO` serialized shapes or to `SeoMetaValidator::validate()` return contract.
 2. Establish OGP protocol validation under the fixed F-13 OGP migration contract.
 3. Preserve legacy issue/score behavior: current title/description length issue codes and warning severity remain unchanged, and warning issues continue to flow through the existing score calculator.
 4. Reclassify title/description length warnings as origin `heuristic`, profile `seo-default` without changing their observable compatibility behavior.
@@ -1907,15 +2031,15 @@ Do not change existing score math, heuristic score participation, issue severity
 ### Canonical
 
 - keep generic relative behavior; `CanonicalUrlBuilder::build()` is unchanged.
-- add the provider best-practice diagnostic `canonical_relative_provider_best_practice` (`warning`, origin `provider`, profile `google`) for a relative canonical URL, delivered through the GDC-01 companion surface — never into the legacy result or score, and never as a builder exception.
+- add the provider best-practice diagnostic `canonical_relative_provider_best_practice` (`warning`, origin `provider`, profile `google`, field `href`) for a relative canonical URL, delivered through the GDC-01 companion surface — never into the legacy result or score, and never as a builder exception.
 
 ### Hreflang
 
 - unify Web and Sitemap hreflang parsing / normalization semantics.
 - use conventional BCP 47 casing when normalization is performed, without treating casing alone as provider invalidity.
 - preserve `x-default`.
-- validate deterministically knowable Google structural rules from supplied data, including fully-qualified alternate URLs.
-- add cluster-level self-reference, reciprocal-link, and alternate-set consistency validation; cluster diagnostics are GDC-01 companion-only.
+- validate deterministically knowable Google structural rules from supplied data, including fully-qualified alternate URLs → `hreflang_url_not_fully_qualified` (warning, GDC-01 companion-only).
+- add cluster-level validation with the fixed GDC-01 codes `hreflang_self_reference_missing`, `hreflang_reciprocal_link_missing`, and `hreflang_alternate_set_inconsistent` (all warning, origin `provider`, profile `google`, field `href`, GDC-01 companion-only).
 - **do not implement ISO 639-1 / ISO 3166-1 / ISO 15924 membership tables in this remediation** and do not claim full provider code-membership validation; that requires the separate versioned standards-data contract defined by F-15.
 - preserve deterministic behavior and host ownership; no crawling is introduced.
 
@@ -2062,9 +2186,15 @@ Every new protocol/provider/context diagnostic introduced by Stacks 2/4/5/6 is d
 
 ## ADR-14
 
-**Do not substitute a different unit for the fixed numeric boundaries.**
+**Do not substitute a different unit for the fixed numeric boundaries, and do not overclaim the source rule.**
 
-Sitemap `<loc>` (`< 2048`) and Google Video `description` (`<= 2048`) use UTF-8 byte measurement via `strlen()` on the value as supplied, per the F-02 exact measurement contract. `mb_strlen`, grapheme counting, and post-encoding/post-escaping measurement are prohibited as unit substitutes.
+Sitemap `<loc>` (`< 2048`) and Google Video `description` (`<= 2048`) are source-defined only as unit-undefined character limits. The audit converts them (F-02) to an explicitly labeled EVIDENCE BOUNDARY with UTF-8 byte measurement via `strlen()` on the value as supplied, as a conservative library policy. `mb_strlen`, grapheme counting, and post-encoding/post-escaping measurement are prohibited as unit substitutes. A value at/above the byte boundary emits the fixed library-policy warning codes and must not be reported as a proven violation of the source's character rule, because the source does not define the unit the rule uses.
+
+## ADR-15
+
+**One companion result type, one public access contract.**
+
+All new diagnostics flow through the unified `SeoCompanionValidationResultDTO` with `SeoCompanionDiagnosticDTO` entries, correlated to the legacy result via the embedded `legacy` property and per-entry `related_legacy_code`. Every profile validator returns this same type; custom per-profile result variants and alternative public methods are prohibited (GDC-01 public access contract).
 
 ---
 
@@ -2102,11 +2232,12 @@ Purpose: prove locally deterministic protocol behavior without silently importin
 
 ### Sitemap core
 
-- 50,000 URL entries boundary and 50,001 over-boundary issue.
-- 50,000 Sitemap Index entries boundary and 50,001 over-boundary issue.
-- uncompressed-size boundary at 52,428,800 bytes and over-boundary case.
-- page URL `<loc>` length: measured as UTF-8 bytes of the value as supplied (`strlen`), before URI/IRI normalization/percent-encoding; 2,047 bytes valid, 2,048 bytes invalid because protocol requires less than 2,048.
+- 50,000 URL entries boundary valid and 50,001 over-boundary emitting `sitemap_url_count_exceeds_limit` (error, GDC-01 companion-only).
+- 50,000 Sitemap Index entries boundary valid and 50,001 over-boundary emitting `sitemap_index_count_exceeds_limit` (error, GDC-01 companion-only).
+- uncompressed-size boundary at 52,428,800 bytes valid and the over-boundary case emitting `sitemap_document_size_exceeds_boundary` (error, GDC-01 companion-only).
+- page URL `<loc>` length under the F-02 two-part contract: the source rule is "less than 2,048 characters" with no defined unit; the library policy measures UTF-8 bytes of the value as supplied (`strlen`), before URI/IRI normalization/percent-encoding. Assert 2,047 bytes **provably within** the source rule, and 2,048+ bytes emitting `sitemap_loc_length_exceeds_measure_boundary` as a `warning` GDC-01 companion diagnostic whose message/state is worded as a conservative library-policy boundary, **not** as a proven protocol violation.
 - a percent-encoded or normalized variant of a `<loc>` is **not** re-measured after escaping; escaping correctness is asserted separately from the length boundary.
+- invalid `lastmod` forms (year-only, year-month, hour/minute-only, zone-less, malformed) emit `sitemap_lastmod_invalid_lexical` (error, GDC-01 companion-only).
 - host/submission checks use explicit document context rather than unconditional same-host constructor rejection.
 - UTF-8 serialization.
 - XML entity escaping and URI/IRI escaping behavior.
@@ -2152,47 +2283,47 @@ Purpose: prove locally deterministic protocol behavior without silently importin
 
 ### Google base Sitemap
 
-- `priority` and `changefreq` remain protocol-valid fields but are classified as ignored by Google, not as Google validity failures.
-- Google `lastmod` accuracy is represented as a provider/content diagnostic requiring appropriate evidence rather than inferred from lexical validity.
+- `priority` and `changefreq` remain protocol-valid fields but emit `google_sitemap_priority_ignored` / `google_sitemap_changefreq_ignored` (info, GDC-01 companion-only), not Google validity failures.
+- Google `lastmod` accuracy is represented as `google_sitemap_lastmod_accuracy` (provider/content diagnostic) consuming caller evidence `accurate`/`inaccurate`/`unknown` rather than inferred from lexical validity; `unknown` remains a gap.
 
 ### Google Image
 
 - 1,000 images valid.
-- 1,001 images provider-invalid/issue.
-- cross-domain verification remains an evidence/context condition rather than an offline network assertion.
+- 1,001 images emit `google_image_count_exceeds_limit` (warning, GDC-01 companion-only).
+- cross-domain verification remains the evidence/context diagnostic `google_image_cross_domain_verification` rather than an offline network assertion; `unknown` remains a gap.
 
 ### Google Video
 
 Deterministic/provider-input cases:
 
-- description: measured as UTF-8 bytes via `strlen()` on the value as supplied, before XML escaping; 2,048 bytes accepted; 2,049 bytes provider-invalid/issue.
+- description under the F-02 two-part contract: measured as UTF-8 bytes via `strlen()` on the value as supplied, before XML escaping. Assert 2,048 bytes **provably within** the source rule, and 2,049+ bytes emitting `google_video_description_length_exceeds_measure_boundary` as a `warning` GDC-01 companion diagnostic worded as a conservative library-policy boundary, **not** as a proven provider violation.
 - ASCII and Arabic/Unicode description inputs lock the byte-based 2,048 boundary so that `mb_strlen`/grapheme substitution cannot silently change it.
-- duration: 1 accepted; 28,800 accepted; 28,801 provider-invalid/issue.
-- both `content_loc` and `player_loc` missing.
-- `content_loc == parent <loc>`.
-- `player_loc == parent <loc>`.
-- both documented publication-date forms plus invalid input.
-- Data URL rejection.
+- duration: 1 accepted; 28,800 accepted; 28,801 emits `google_video_duration_out_of_range` (warning, GDC-01 companion-only).
+- both `content_loc` and `player_loc` missing emit `google_video_content_or_player_loc_missing` (warning, GDC-01 companion-only).
+- `content_loc == parent <loc>` / `player_loc == parent <loc>` emit `google_video_media_loc_equals_parent_loc` (warning, GDC-01 companion-only).
+- both documented publication-date forms plus invalid input emitting `google_video_publication_date_invalid` (warning, GDC-01 companion-only).
+- Data URL rejection emits `google_video_data_url_unsupported` (warning, GDC-01 companion-only).
 - HTTP, HTTPS, and FTP evidence cases must preserve the documented source nuance; do not create a test whose assertion falsely claims Google literally enumerates all three in one normative sentence.
-- title match and `content_loc` preference are recommendations/context diagnostics, not generic constructor validity failures.
+- title match (`google_video_title_host_page_match`) and `content_loc` preference (`google_video_content_loc_preference`) are recommendations/context diagnostics, not generic constructor validity failures.
+- missing required fields emit `google_video_title_missing`, `google_video_description_missing`, `google_video_thumbnail_loc_missing` (warning, GDC-01 companion-only).
 
 Do **not** create offline tests that claim a URL extension proves the actual remote video file type, thumbnail format/dimensions/transparency, Googlebot accessibility, resource stability, or watch-page indexing eligibility. If a future context validator accepts caller-supplied evidence for those facts, test the evidence-processing contract, not the network fact itself.
 
 ### Google News
 
 - one News entry per URL provider-valid.
-- multiple News entries under one URL provider-invalid/diagnostic while legacy list behavior remains characterized.
+- multiple News entries under one URL emit `google_news_multiple_entries_per_url` (warning, GDC-01 companion-only) while legacy list behavior remains characterized.
 - 1,000 total News entries boundary valid.
-- 1,001 total News entries provider-invalid/issue.
+- 1,001 total News entries emit `google_news_document_count_exceeds_limit` (warning, GDC-01 companion-only).
 - all four accepted publication-date forms.
-- invalid arbitrary date such as `as-provided`.
-- valid/invalid language cases including `zh-cn` and `zh-tw` according to the explicit Google News lexical contract recorded in F-05; do not generalize this into the deferred hreflang ISO-membership capability.
-- publication-name parenthetical rule where locally decidable.
-- freshness state `within_window` is processed as caller-supplied provider evidence without local age arithmetic.
-- freshness state `outside_window` is processed deterministically as provider-out-of-window evidence.
-- freshness state `unknown` remains an evidence gap/diagnostic and is not fabricated into a pass or failure.
+- invalid arbitrary date such as `as-provided` emits `google_news_publication_date_invalid` (warning, GDC-01 companion-only).
+- valid/invalid language cases including `zh-cn` and `zh-tw` according to the explicit Google News lexical contract recorded in F-05, emitting `google_news_language_invalid` (warning, GDC-01 companion-only); do not generalize this into the deferred hreflang ISO-membership capability.
+- publication-name parenthetical rule where locally decidable emits `google_news_publication_name_parenthetical` (warning, GDC-01 companion-only).
+- freshness state `within_window` is processed as caller-supplied provider evidence (`google_news_freshness_evidence`, info) without local age arithmetic.
+- freshness state `outside_window` is processed deterministically as provider-out-of-window evidence (`google_news_freshness_evidence`, warning).
+- freshness state `unknown` remains an evidence gap/diagnostic (`google_news_freshness_evidence`, info) and is not fabricated into a pass or failure.
 - lexical `publicationDate` plus a reference clock must not trigger an invented `48 hours`, calendar-day, or timezone boundary calculation; no hidden `now()`.
-- original-publication-time/name/title truth remains content/context evidence, not fake lexical proof.
+- original-publication-time/name/title truth remains content/context evidence (`google_news_original_publication_evidence`, `google_news_name_exact_match_evidence`), not fake lexical proof.
 
 ### Google robots.txt
 
@@ -2228,15 +2359,16 @@ Do **not** create offline tests that claim a URL extension proves the actual rem
 - equivalent conventional-casing normalization through Web and Sitemap entry points.
 - casing differences alone do not produce provider-invalidity.
 - no test claims that an unversioned local regex/list proves ISO 639-1 / ISO 3166-1 / ISO 15924 membership.
-- reciprocal cluster.
-- missing self-reference.
-- missing return link.
-- inconsistent alternate set across supplied localized URLs.
+- reciprocal cluster (no diagnostics).
+- missing self-reference emits `hreflang_self_reference_missing` (warning, GDC-01 companion-only).
+- missing return link emits `hreflang_reciprocal_link_missing` (warning, GDC-01 companion-only).
+- inconsistent alternate set across supplied localized URLs emits `hreflang_alternate_set_inconsistent` (warning, GDC-01 companion-only).
+- alternate URL not fully qualified emits `hreflang_url_not_fully_qualified` (warning, GDC-01 companion-only).
 
 ### Canonical
 
 - relative canonical output remains generic-compatible and identical to current behavior.
-- a relative canonical produces `canonical_relative_provider_best_practice` (warning, origin `provider`, profile `google`) through the GDC-01 companion surface; it never throws and never changes the legacy result or score.
+- a relative canonical produces `canonical_relative_provider_best_practice` (warning, origin `provider`, profile `google`, field `href`) through the GDC-01 companion surface; it never throws and never changes the legacy result or score.
 
 ### Global diagnostics contract (GDC-01)
 
@@ -2247,6 +2379,12 @@ Tightest contract coverage across Stacks 2/4/5/6 — asserted for every new diag
 - `SeoValidationScoreCalculator` output (score, grade, counts, `is_healthy`) is unchanged by the presence of new companion diagnostics.
 - each new diagnostic carries the fixed origin/profile/evidence-state metadata and a stable, non-colliding code.
 - no new diagnostic reuses or shadows a legacy issue code.
+- every profile validator returns the unified `SeoCompanionValidationResultDTO`; no per-profile result type or alternative container exists.
+- the unified type's JSON shape matches the GDC-01 serialization contract: snake_case keys, the exact legacy `SeoValidationResultDTO` shape embedded under `legacy` when paired (with `null` for standalone runs), and the fixed entry keys `code`/`severity`/`message`/`field`/`origin`/`profile`/`evidence_state`/`related_legacy_code`.
+- correlation assertions: a companion record's `related_legacy_code` references the legacy code for the same subject (for example `missing_og_description`), and the embedded `legacy` object is bit-for-bit equal to the standalone `SeoMetaValidator::validate()` result for the same input.
+- `SeoCompanionValidationResultDTO` exposes no `is_valid`/`has_warnings`/score/grade/health fields; derived aggregates never feed `SeoValidationScoreCalculator`.
+- construction guards: empty `code`/`message`, unknown `severity`/`origin`/`profile`, and an `evidence_state` not in the code's fixed state vocabulary each throw a construction error.
+- every code in the GDC-01 machine-contract tables and the fixed F-13 OGP contracts is asserted at least once on its fixed severity/origin/profile/field and (where applicable) evidence-state contract.
 
 ### Structured Data boundary
 
@@ -2277,7 +2415,7 @@ Reclassifying title/description length issues as heuristics must not change thei
 
 The OGP migration must not remove or re-severity `missing_og_title`, `missing_og_description`, or `missing_og_image` in the legacy result, and must not add `missing_og_type` / `missing_og_url` to the legacy result or score.
 
-Applying the measurement contract must not change any non-length validation (URL shape, URI/IRI escaping, `lastmod` lexical forms) and must not rebase the boundary to a different unit.
+Applying the measurement contract must not change any non-length validation (URL shape, URI/IRI escaping, `lastmod` lexical forms), must not rebase the boundary to a different unit, and must not re-word the over-boundary diagnostics (`sitemap_loc_length_exceeds_measure_boundary`, `google_video_description_length_exceeds_measure_boundary`) as proven protocol/provider character-limit violations.
 
 Structured-data documentation/classification work must not introduce new lexical/provider eligibility failures or scoring changes.
 
@@ -2378,8 +2516,8 @@ This audit is the **baseline execution authority** for remediation Stacks 0 thro
 - **Provider freshness:** time-variable provider facts already inside the approved remediation scope receive a targeted freshness check against the authoritative URLs recorded here.
 - **No automatic reopening:** a freshness check is not permission to reopen settled architecture or perform broad provider research. If an authoritative source has materially changed after the audit date, record the changed evidence and amend the relevant contract explicitly before implementing against it.
 - **Evidence boundaries:** remote/provider facts that the library cannot prove offline remain explicit caller/host/provider evidence boundaries.
-- **GDC-01 global diagnostics contract:** every new protocol/provider/context diagnostic introduced by Stacks 2/4/5/6 is delivered through the companion surface and must not mutate the legacy result, `is_valid`, `errors`/`warnings`/`info`/`issues`, or `SeoValidationScoreCalculator`. Pre-existing legacy issues keep their documented F-12 placement and score behavior. This is part of the execution authority, not an implementation preference.
-- **Measurement policy:** numeric textual boundaries (Sitemap `<loc>` < 2048, Google Video `description` <= 2048) are UTF-8 bytes via `strlen()` on the value as supplied, per the F-02 exact measurement contract; Stack 4 must not substitute another unit.
+- **GDC-01 global diagnostics contract:** every new protocol/provider/context diagnostic introduced by Stacks 2/4/5/6 is delivered through the companion surface (`SeoCompanionDiagnosticDTO` entries in the unified `SeoCompanionValidationResultDTO`) and must not mutate the legacy result, `is_valid`, `errors`/`warnings`/`info`/`issues`, or `SeoValidationScoreCalculator`. The public access contract (unified result type, entry fields, legacy correlation, serialization shape, profile surface) and the fixed machine contracts (code/severity/origin/profile/field/evidence state) are part of the execution authority; an implementation may not add or rename codes, severities, origins, profiles, fields, evidence states, or result types. Pre-existing legacy issues keep their documented F-12 placement and score behavior. This is part of the execution authority, not an implementation preference.
+- **Measurement policy:** the source-backed rules for Sitemap `<loc>` (< 2,048 characters) and Google Video `description` (<= 2,048 characters) are unit-undefined; the audit converts them under F-02 to an explicit EVIDENCE BOUNDARY with a conservative library policy of UTF-8 bytes via `strlen()` on the value as supplied. A value at/above the byte boundary emits the fixed warning codes and must never be labeled a proven protocol/provider violation. Stack 4 must not substitute another unit and must not restate the diagnostic as source-proven.
 - **Unknown-decision gate:** a material `unknown / needs decision` discovered by characterization blocks the affected production change until an approved contract amendment resolves it.
 - **Future-contract boundaries:** hreflang ISO membership registries, complete Google structured-data capability/eligibility profiles, Twitter/X provider conformance, and the F-18 lexical/enumeration expansion are not implementation discretion under this audit. They are separate future contracts.
 
