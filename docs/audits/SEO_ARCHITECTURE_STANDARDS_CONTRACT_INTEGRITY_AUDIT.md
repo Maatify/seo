@@ -16,6 +16,8 @@
 
 This audit establishes a safe, evidence-backed baseline before any remediation work is started.
 
+It is also the **execution authority for the remediation scope defined in this document**. Its job is not merely to identify findings: every material architecture, compatibility, standards, provider, evidence-boundary, and current-vs-future scope decision needed by Stacks 0 through 8 must be fixed here before production remediation proceeds. An implementation stack may choose ordinary internal coding details that do not alter these contracts, but it must not invent policy, reinterpret an unresolved standard, widen scope, or decide a public/observable behavior that this audit leaves materially open.
+
 The goal is not to "fix everything that looks old" and not to maximize the number of validation rules. The goal is to make the library architecturally trustworthy at a global-quality level while preserving valid public contracts and avoiding accidental breakage.
 
 The audit therefore separates four different questions that must not be conflated:
@@ -644,12 +646,24 @@ RFC Editor Errata 7995 has status **Reported** and proposes changing the ABNF to
 
 `path-pattern = ("/" / "*") *UTF8-char-noctl`
 
-The erratum is not an incorporated normative replacement for RFC 9309. Therefore:
+The erratum is not an incorporated normative replacement for RFC 9309.
 
-- do not claim that the published RFC normatively "allows leading `*`";
-- do not claim that Errata 7995 already changed the RFC;
-- characterize existing leading-wildcard behavior before tightening validation;
-- make any compatibility decision explicit rather than blindly implementing slash-only rejection at the generic layer.
+### Fixed library policy for leading `*`
+
+The compatibility decision is fixed by this audit and must not be delegated to Stack 2:
+
+- Existing public `RobotsRuleDTO` / rendering compatibility for a non-empty path beginning with `*` is preserved during this remediation; the constructor must not start throwing solely because the first character is `*`, and the renderer must not silently rewrite the value.
+- The generic RFC 9309 conformance profile follows the **published ABNF** for normative conformance: an empty pattern is allowed and an ordinary non-empty conforming `path-pattern` begins with `/`.
+- Because RFC 9309's own Simple Example conflicts with that ABNF and Errata 7995 remains only `Reported`, a leading-`*` value is classified as a **non-fatal protocol compatibility diagnostic**, not as proven normative conformance and not as a constructor-level hard failure.
+- The diagnostic contract is fixed as origin `protocol`, profile `rfc9309`, warning severity, with stable code `robots_rfc9309_leading_wildcard_compatibility`.
+- The Google robots.txt profile remains separate: when validating against Google's documented present-path rule, a non-empty path that does not begin with `/` receives a provider diagnostic; it is still not rewritten by the generic builder/renderer.
+- A future change in the RFC/errata status may change this classification only through an explicit audit/contract amendment with tests; an implementer must not silently adopt the proposed erratum as normative text.
+
+Therefore do **not**:
+
+- claim that the published RFC normatively allows leading `*`;
+- claim that Errata 7995 already changed the RFC;
+- reject or rewrite the existing compatibility input merely to make the constructor mirror the published ABNF.
 
 ### Google robots.txt profile
 
@@ -678,7 +692,7 @@ Google's own current example includes a Unicode Sitemap path. Therefore `FILTER_
    - product-token grammar;
    - empty Allow/Disallow patterns;
    - RFC path matching/encoding semantics;
-   - explicit treatment of the published leading-`*` inconsistency and Reported Errata 7995;
+   - the fixed leading-`*` compatibility policy above;
    - raw `#` / percent-encoded literal behavior;
    - CR/LF and forbidden-control protection across rule values, rule comments, and top-level comments.
 
@@ -690,6 +704,7 @@ Google's own current example includes a Unicode Sitemap path. Therefore `FILTER_
 
 3. **Compatibility boundary**
    - preserve existing public APIs while characterizing current rejection/acceptance behavior before changing constructors;
+   - preserve leading-`*` inputs as specified above while distinguishing compatibility from normative/provider conformance;
    - replace the ASCII-only Sitemap URL assumption with a provider-compatible strategy rather than weakening all URL validation globally.
 
 ### What must not be done
@@ -728,12 +743,13 @@ Other crawlers may implement non-standard extensions.
 
 Do not delete it automatically.
 
-Instead:
+For this remediation:
 
-- mark it as a non-standard crawler extension.
-- do not describe it as RFC conformance.
-- do not describe it as a Google-effective directive.
-- consider an extension mechanism so provider-specific directives do not become core protocol fields over time.
+- keep the existing public `crawlDelay` field and rendering behavior for compatibility;
+- classify and document it as a non-standard crawler extension;
+- do not describe it as RFC conformance;
+- do not describe it as a Google-effective directive;
+- do **not** introduce a new generic crawler-extension framework as part of Stack 2. Such a framework is a separate future contract change if later justified.
 
 ---
 
@@ -801,13 +817,13 @@ Add typed support additively.
 
 Do not remove the existing raw `add()` escape hatch.
 
-A future Google-profile validator may additionally warn if `indexifembedded` is used without `noindex`.
+The current remediation does not invent a constructor dependency between directives. The Google-profile diagnostic may warn when `indexifembedded` is present without `noindex`; the builder remains capable of representing the caller's directive set.
 
 ---
 
 ## F-10 — `unavailable_after` is accepted without date validation
 
-**Decision:** `ADD` / `RECLASSIFY`  
+**Decision:** `RECLASSIFY` + explicit evidence-boundary contract  
 **Risk:** Medium  
 **Area:** Google robots meta
 
@@ -819,16 +835,21 @@ A future Google-profile validator may additionally warn if `indexifembedded` is 
 
 Google requires a broadly recognized date/time format, including examples such as RFC 822, RFC 850, and ISO 8601. Invalid values are ignored.
 
-### Correct conclusion
+The provider documentation is intentionally open-ended rather than an exhaustive lexical grammar. A local validator therefore cannot truthfully claim that one finite parser proves every Google-recognizable value.
 
-The generic builder can remain permissive if it is intentionally a raw directive builder.
+### Fixed remediation contract
 
-However, a Google-conformance path must be able to distinguish:
+The decision is fixed as follows:
 
-- syntactically supplied directive
-- provider-recognizable value
+- `MetaRobotsBuilder::unavailableAfter(string $value)` remains a **raw compatibility builder** in this remediation. Its current ability to carry caller-provided text is preserved; Stack 2 must not narrow it to one locally invented date grammar.
+- A Google provider-validation path may locally identify an empty/whitespace-only value as lacking the required date value, but it must not claim that a non-empty arbitrary string is recognized merely because it was supplied.
+- Recognition of a non-empty value uses explicit caller/provider evidence with exactly three semantic states: `recognized`, `unrecognized`, or `unknown`.
+- `recognized` means the caller supplies authoritative evidence that the value is accepted as a broadly recognized format in its context; `unrecognized` means the caller supplies evidence that it is not provider-recognizable; `unknown` means the library does not possess evidence either way.
+- `unknown` is an evidence-gap diagnostic, not a fabricated pass or failure.
+- No hidden network request, global clock, locale-dependent parsing, or "try a few formats and call the remainder invalid" behavior may be used to turn Google's open-ended statement into a closed local grammar.
+- If Google later publishes an exhaustive grammar, adopting it requires an explicit contract amendment; it is not an implementation-time choice.
 
-Do not overfit validation to one date format when Google explicitly accepts multiple recognized formats.
+This preserves the generic builder while giving the provider layer deterministic semantics without overclaiming what the library can prove.
 
 ---
 
@@ -880,6 +901,8 @@ This finding is an example of why provider behavior must not be embedded as time
 
 Length violations produce warnings. `SeoValidationScoreCalculator` currently assigns warnings a default 5-point penalty, so these heuristic warnings participate in score deductions under the current contract.
 
+The current public validation payload is also part of the compatibility surface: `SeoValidationIssueDTO` exposes `code`, `severity`, `message`, and `field`, while `SeoValidationResultDTO` serializes those issue objects into its current `is_valid`, `has_warnings`, `errors`, `warnings`, `info`, and `issues` structure.
+
 ### Unicode Measurement Heuristics — compatibility decision
 
 The current validator uses `strlen()` to measure title and description length.
@@ -902,6 +925,20 @@ The scoring decision is also fixed for this remediation:
 - Reclassification adds origin/profile semantics; it does not silently remove these warnings from scoring, alter their severity, or introduce a new scoring weight.
 - Any future decision to exclude or differently weight heuristic issues is a separate scoring-contract change outside this remediation.
 
+### Issue origin/profile contract — fixed for remediation
+
+The architecture of classification is also fixed; Stack 5 must not redesign the legacy validation payload while adding origin/profile semantics:
+
+- Existing `SeoValidationIssueDTO` constructor/property semantics and its four-field `toArray()` / `jsonSerialize()` payload (`code`, `severity`, `message`, `field`) remain unchanged in this remediation.
+- Existing `SeoValidationResultDTO` construction and serialized shape remain unchanged. `SeoMetaValidator::validate()` must continue to return the existing result contract.
+- Origin/profile information is introduced **additively as companion classification metadata**, not by silently adding keys to the legacy serialized issue/result payloads.
+- The initial origin vocabulary is closed for this remediation to: `protocol`, `provider`, `heuristic`, `content-quality`.
+- `profile` is a separate nullable stable machine identifier. At minimum, the remediation uses `rfc9309`, `sitemaps`, `ogp`, `google`, and `seo-default` where those profiles apply. An issue's origin is not inferred from severity.
+- Existing title/description length issues are classified as origin `heuristic`, profile `seo-default` while retaining their existing issue codes/severity/score behavior.
+- OGP conformance issues use origin `protocol`, profile `ogp`; RFC 9309 conformance issues use origin `protocol`, profile `rfc9309`; Sitemap base-protocol issues use origin `protocol`, profile `sitemaps`; Google-specific diagnostics use origin `provider`, profile `google`.
+- The additive classification surface must pair each classification with its underlying `SeoValidationIssueDTO` without requiring consumers of the legacy result to migrate. Internal class naming is not a contract decision, but the separation and compatibility behavior above are mandatory.
+- The existing score calculator continues to consume the legacy issue severity contract; origin/profile metadata must not alter scoring in Stack 5.
+
 ### Current Google position
 
 Google explicitly states:
@@ -919,16 +956,7 @@ What is wrong is treating them as if they were part of a generic validity model 
 
 ### Safe target architecture
 
-The validation pipeline should distinguish issue origins such as:
-
-```text
-protocol
-provider
-heuristic
-content-quality
-```
-
-The exact API shape can be decided during remediation, but the semantic distinction must become real while the byte-measurement and scoring compatibility decisions above remain fixed.
+The validation pipeline distinguishes issue origins exactly as fixed above while preserving the legacy issue/result/score contracts.
 
 ### What must not be done
 
@@ -936,7 +964,9 @@ Do not simply delete title and description recommendations.
 
 Do not change their `strlen()` byte measurement, issue severity/codes, or current score participation as part of semantic reclassification.
 
-Do not call them Google limits.
+Do not add origin/profile keys to legacy issue/result JSON as a side effect of Stack 5.
+
+Do not call title/description heuristics Google limits.
 
 ---
 
@@ -990,7 +1020,7 @@ Because `OpenGraphBuilder` supports multiple images and currently emits each ima
 
 First establish an explicit OGP-conformance profile for the four required properties and the optional properties the library actually exposes.
 
-Do not immediately change legacy score/report behavior. Characterize current issue codes and score impact first, then migrate the legacy `SeoMetaValidator` deliberately.
+Do not immediately change legacy score/report behavior. Characterize current issue codes and score impact first, then migrate the legacy `SeoMetaValidator` deliberately under the F-12 additive classification contract.
 
 ---
 
@@ -1034,7 +1064,7 @@ That would break an intentional, tested public behavior for a recommendation rat
 
 ## F-15 — Hreflang has multiple normalization paths and lacks provider-aware cluster validation
 
-**Decision:** `RECLASSIFY` + `ADD`  
+**Decision:** `RECLASSIFY` + `ADD`, with code-set membership explicitly deferred  
 **Risk:** High  
 **Area:** International SEO
 
@@ -1095,18 +1125,28 @@ The casing difference is primarily a canonicalization/consistency issue, not suf
 The material architecture gaps are:
 
 - duplicate hreflang normalization/validation implementations;
-- permissive syntax that is not equivalent to provider-supported code validation;
+- permissive syntax that is not equivalent to provider-supported code membership;
 - absence of deterministic cluster-level checks for self-reference and reciprocal relationships.
 
 A single-link DTO cannot validate cluster rules such as reciprocity.
 
-### Safe target
+### Fixed source-of-truth and scope decision
+
+This remediation does **not** invent or silently embed an unversioned ISO language/region/script registry.
+
+- Stack 6 must unify parsing and normalization, apply conventional BCP 47 casing when normalizing, preserve `x-default`, enforce fully-qualified URL behavior where the Google profile requires it, and add deterministic cluster checks for self-reference/reciprocity/consistent alternate groups.
+- Syntax/casing alone must **not** be labeled proof that a language, region, or script code is an actually assigned/supported ISO member.
+- Full membership validation against ISO 639-1, ISO 3166-1 Alpha-2, and ISO 15924 requires a separately audited, versioned standards-data source with provenance, update policy, and licensing/distribution review. That registry capability is explicitly **outside the current remediation contract**.
+- Until that separate contract exists, the library must not ship a hand-maintained guessed list and must not classify a regex-shaped code as provider-valid or provider-invalid solely from an incomplete local registry.
+- If caller-supplied authoritative membership evidence is added later, it belongs to that separate contract; Stack 6 does not invent such an evidence API.
+
+### Safe target for this remediation
 
 Separate and unify:
 
 1. Shared hreflang parsing / normalization semantics used by Web and Sitemap entry points.
-2. Generic language-tag syntax where a generic contract is needed.
-3. Google provider-supported language/region/script validation.
+2. Generic language-tag syntax and conventional casing without pretending casing proves provider validity.
+3. Google-visible structural rules that are deterministically known from supplied data, including fully-qualified alternate URLs and `x-default` handling.
 4. Cluster integrity:
    - self-reference
    - reciprocal relationships
@@ -1117,15 +1157,17 @@ Separate and unify:
 
 Do not treat capitalization alone as a Google-invalidity error.
 
+Do not claim complete provider-supported code membership validation in Stack 6.
+
 Do not hide network crawling inside the DTO to prove reciprocity.
 
-The host or caller should supply cluster data / evidence to a deterministic validator.
+The host or caller should supply cluster data to a deterministic validator.
 
 ---
 
-## F-16 — Structured Data architecture correctly separates Schema.org from Google eligibility, but the implementation needs explicit provider profiles
+## F-16 — Structured Data architecture correctly separates Schema.org from Google eligibility, but provider eligibility profiles require a dedicated audited contract
 
-**Decision:** `KEEP` current principle + `ADD` provider model  
+**Decision:** `KEEP` current principle + `DEFER` Google eligibility profiles to a separate contract  
 **Risk:** High  
 **Area:** Structured Data
 
@@ -1171,11 +1213,19 @@ As a result, builders can exist for many Schema.org types while the library cann
 - Is support conditional on a carousel or page-level structure?
 - Is the feature active, changed, or provider-specific?
 
-### Safe target
+### Fixed remediation boundary
 
-Maintain a date-stamped provider capability matrix sourced from official documentation.
+A complete Google structured-data eligibility matrix is not present in this audit. Therefore this audit must **not** delegate creation of that provider contract to an implementation stack and must **not** authorize partial Google-eligibility validation based on implementer research.
 
-The runtime architecture should allow provider eligibility rules to evolve without changing generic Schema.org builders.
+For the current remediation:
+
+- Preserve generic Schema.org builders and the existing principle that generation does not guarantee Google eligibility.
+- Preserve the existing scoped semantic validator behavior except for the documentation/classification corrections explicitly authorized by F-18.
+- Do not add Google required/recommended-property eligibility rules, search-feature capability claims, or runtime Google structured-data profiles under this audit.
+- Do not delete or deprecate a generic builder because a Google search appearance is absent, changed, conditional, or not yet audited.
+- A future Google Structured Data Provider Profiles phase must first produce and approve a **date-stamped capability matrix** covering the library's relevant builders/features, required and recommended properties, composition rules, provider limitations, official sources, and verification dates. Only that approved matrix may become execution authority for runtime Google eligibility profiles.
+
+This is an explicit separate-future-contract decision, not work left for the Stack 7 implementer to decide.
 
 ---
 
@@ -1212,11 +1262,13 @@ Provider-status evidence hierarchy must use, as applicable:
 
 Do not treat Search Gallery as the sole authority for every provider capability.
 
+These observations protect generic compatibility but do not authorize Stack 7 to implement Course/Book Google eligibility rules; F-16 explicitly defers that provider-profile contract.
+
 ---
 
 ## F-18 — `JsonLdSemanticValidator` is scoped type/range validation, not complete semantic or lexical validation
 
-**Decision:** `RECLASSIFY` + incremental `ADD`  
+**Decision:** `RECLASSIFY`; lexical/provider expansion is a separate future contract  
 **Risk:** Medium  
 **Area:** Structured Data validation
 
@@ -1249,16 +1301,16 @@ A more precise description is:
 
 > scoped structural and property-range semantic validation for selected types.
 
-### Safe remediation choices
+### Fixed remediation scope
 
-Possible future steps include:
+For Stacks 0 through 8 under this audit:
 
-- lexical URL validation where appropriate.
-- date / datetime lexical validation.
-- enumeration validation where the provider/vocabulary contract is explicit.
-- provider-specific required-property checks in provider profiles.
+- preserve the existing runtime property-range behavior and existing validation/score compatibility;
+- correct documentation and classification so the validator is described as scoped structural/property-range validation rather than complete semantic/lexical proof;
+- do **not** add new lexical URL validation, Date/DateTime grammars, enumeration membership validation, or Google required-property eligibility checks under F-18;
+- each of those would create new validation errors and score/output changes and therefore requires a separately approved contract with exact vocabulary/provider rules and compatibility impact before implementation.
 
-These must be introduced incrementally because new errors change validation results and scores.
+The implementer has no discretion to pick one of those expansions during Stack 7.
 
 ---
 
@@ -1436,6 +1488,8 @@ Every provider capability matrix or provider validation profile should record:
 - recommended properties.
 - provider limitations.
 
+A provider matrix that does not yet exist is **not** delegated to an implementation stack by default. Provider-specific runtime rules require an approved evidence-backed contract first.
+
 ## AP-05 — Generic builders remain provider-neutral
 
 A Schema.org builder may remain valid even if Google changes a search feature.
@@ -1491,6 +1545,14 @@ A fix is incomplete if:
 - tests say another,
 - current normative docs say a third.
 
+## AP-11 — Unknown material behavior is a stop condition, not implementer discretion
+
+Characterization may legitimately discover repository behavior that this point-in-time audit could not observe in advance. That discovery does not transfer architecture authority to the implementer.
+
+If Stack 0 or any later stack records `unknown / needs decision` for a behavior that affects a public API, serialized output, validation result, score, standards/provider classification, compatibility promise, or remediation scope, production remediation for that behavior must stop. The evidence and decision must be added to this audit (or an explicitly succeeding normative contract), reviewed, and accepted before implementation proceeds.
+
+Ordinary internal details that cannot change an observable/contract outcome do not require an audit amendment.
+
 ---
 
 # 7. Safe Remediation Order
@@ -1536,7 +1598,13 @@ A behavior inventory that explicitly marks each behavior:
 - intentionally change
 - unknown / needs decision
 
-No production refactor should start until this inventory exists.
+### Mandatory decision gate
+
+`unknown / needs decision` is an inventory state, **not permission for the implementer to choose a policy**.
+
+If the unknown affects any material/observable contract listed in AP-11, that behavior is blocked from production remediation until the audit/contract is explicitly amended and accepted. Stack 0 may continue characterizing unrelated behavior, but a later stack must not cross that unresolved decision boundary.
+
+No production refactor should start until the relevant behavior inventory exists and every material behavior needed by that refactor is either `preserve` or `intentionally change` under an approved contract.
 
 ---
 
@@ -1549,12 +1617,17 @@ Create the architecture distinction between:
 - protocol/vocabulary
 - provider
 - heuristic
+- content-quality
+
+### Fixed compatibility contract
+
+Use the F-12 classification contract: keep `SeoValidationIssueDTO`, `SeoValidationResultDTO`, their legacy serialization, `SeoMetaValidator::validate()`, and current scoring behavior compatible. Classification is additive companion metadata with the fixed origin vocabulary and stable profile identifiers defined in F-12.
 
 ### Important constraint
 
 This stack should avoid changing user-facing behavior where possible.
 
-It establishes the vocabulary that later code uses.
+It establishes the vocabulary that later code uses; it must not use taxonomy work as a reason to reweight scores or silently change legacy serialized payloads.
 
 ---
 
@@ -1573,10 +1646,10 @@ Robots has:
 
 1. Characterize current `RobotsRuleDTO`, `RobotsTxtDTO`, renderer, ordering, and exception behavior.
 2. Implement the RFC 9309 product-token contract (`identifier` or `*`) and valid empty Allow/Disallow patterns.
-3. Preserve and explicitly resolve the RFC leading-`*` path inconsistency: characterize current behavior and treat Errata 7995 as Reported/proposed, not incorporated normative text.
+3. Apply the F-06 leading-`*` policy exactly: preserve existing builder/rendering compatibility; do not call it normative published-ABNF conformance; emit the fixed non-fatal RFC compatibility diagnostic; do not rewrite it; keep the Google-profile path diagnostic separate.
 4. Implement RFC path/comment semantics, including raw `#`, percent-encoded literal special characters, and matching/encoding boundaries relevant to generated output.
 5. Prevent CR/LF/control-character directive injection across rule values, rule comments, and top-level comments.
-6. Preserve `crawl-delay` as a non-standard extension; do not represent it as RFC or Google behavior.
+6. Preserve `crawl-delay` as the existing non-standard compatibility extension; do not represent it as RFC or Google behavior and do not invent a new extension framework in this stack.
 7. Add an explicit Google robots.txt profile for:
    - UTF-8/plain-text output;
    - 500 KiB document boundary;
@@ -1588,14 +1661,14 @@ Robots has:
    - independence from user-agent groups.
 8. Replace the Google-profile reliance on ASCII-only `FILTER_VALIDATE_URL` without weakening unrelated generic URL contracts.
 9. Fix `max-snippet:-1` and `max-video-preview:-1`.
-10. Add typed `indexifembedded` support while preserving the raw escape hatch.
+10. Add typed `indexifembedded` support while preserving the raw escape hatch; dependency on `noindex` is a provider diagnostic rather than a builder construction barrier.
 11. Correct `noarchive` documentation.
-12. Add provider-aware `unavailable_after` handling without pretending Google publishes one exhaustive date grammar.
+12. Implement F-10 exactly: keep `unavailableAfter()` raw-compatible; locally diagnose missing/empty value in the provider path; consume only explicit `recognized` / `unrecognized` / `unknown` evidence for non-empty provider recognizability; do not invent a closed date grammar.
 13. Update examples/tests/docs.
 
 ### Stop condition
 
-Do not move on while RFC 9309, Google robots.txt behavior, non-standard extensions, and Google robots-meta behavior remain conflated.
+Do not move on while RFC 9309, Google robots.txt behavior, non-standard extensions, and Google robots-meta behavior remain conflated or while either the F-06 or F-10 fixed policy is replaced by an implementation-time interpretation.
 
 ---
 
@@ -1610,12 +1683,12 @@ Remove duplicate serialization logic without removing public APIs.
 1. Characterize XML outputs.
 2. Introduce internal canonical serialization.
 3. Delegate both public paths.
-4. Reconcile duplicate `SitemapIndexEntryDTO` concepts through a compatibility strategy.
-5. Confirm extended DTO data has deterministic behavior from each public entry point.
+4. Keep both public `SitemapIndexEntryDTO` namespace contracts callable; adapt each to the canonical internal representation rather than deleting/renaming one as part of this remediation.
+5. Confirm extended DTO data has deterministic behavior from each public entry point and stop under AP-11 if characterization exposes a material behavior whose preserve/change decision is not fixed by this audit.
 
 ### Stop condition
 
-There must be one rule implementation for equivalent sitemap output.
+There must be one rule implementation for equivalent sitemap output, while both existing public index-entry DTO entry points remain available.
 
 ---
 
@@ -1700,20 +1773,20 @@ Stop mixing heuristic recommendations with protocol validity.
 
 ### Order
 
-1. Introduce issue origin/profile semantics.
+1. Introduce additive issue origin/profile classification exactly under the F-12 contract; do not alter legacy `SeoValidationIssueDTO` / `SeoValidationResultDTO` serialized shapes or `SeoMetaValidator::validate()` return contract.
 2. Establish OGP protocol validation.
 3. Preserve legacy issue/score behavior: current title/description length issue codes and warning severity remain unchanged, and warning issues continue to flow through the existing score calculator.
-4. Reclassify title/description length warnings as heuristics without changing their observable compatibility behavior.
+4. Reclassify title/description length warnings as origin `heuristic`, profile `seo-default` without changing their observable compatibility behavior.
 5. Preserve `strlen()` byte measurement as the title/description heuristic measurement unit for this remediation; do not substitute code-point or grapheme measurement.
 6. Add characterization tests for ASCII and Arabic/Unicode title/description lengths that lock the current byte-based thresholds before refactoring validation architecture.
 7. Declare Twitter/X provider conformance out of scope until an official-source revalidation is conducted.
 8. Implement the OGP profile for the four required basics and the current exposed optional surface: determiner, locale, site_name, HTTP/HTTPS URL datatype, audio/video root URLs, image structured properties, multiple-image array preference/order, root/structured-property association, and `og:image:alt` as a protocol-level recommendation.
 9. Keep heuristic warnings participating in scores exactly as current warnings do, including the existing default 5-point warning penalty; any future scoring change requires a separate explicit contract change.
-10. Align dedicated social builders and legacy `MetaTagsDTO` path.
+10. Align dedicated social builders and legacy `MetaTagsDTO` path without adding origin/profile keys to legacy JSON payloads.
 
 ### Critical constraint
 
-Do not change existing score math, heuristic score participation, issue severity/codes, or title/description byte measurement while changing semantic categories.
+Do not change existing score math, heuristic score participation, issue severity/codes, title/description byte measurement, or the existing validation result serialization while changing semantic categories.
 
 ---
 
@@ -1727,38 +1800,49 @@ Do not change existing score math, heuristic score participation, issue severity
 ### Hreflang
 
 - unify Web and Sitemap hreflang parsing / normalization semantics.
-- use canonical BCP 47 casing when normalization is performed, without treating casing alone as provider invalidity.
-- validate provider-supported language/region/script shape.
-- add cluster-level validation.
-- preserve deterministic behavior and host ownership.
+- use conventional BCP 47 casing when normalization is performed, without treating casing alone as provider invalidity.
+- preserve `x-default`.
+- validate deterministically knowable Google structural rules from supplied data, including fully-qualified alternate URLs.
+- add cluster-level self-reference, reciprocal-link, and alternate-set consistency validation.
+- **do not implement ISO 639-1 / ISO 3166-1 / ISO 15924 membership tables in this remediation** and do not claim full provider code-membership validation; that requires the separate versioned standards-data contract defined by F-15.
+- preserve deterministic behavior and host ownership; no crawling is introduced.
 
 ---
 
-## Stack 7 — Structured Data Profiles
+## Stack 7 — Structured Data Contract Boundary
 
 ### Goal
 
-Preserve generic builders while making provider support explicit.
+Preserve the valid Schema.org/provider separation and correct the library's claims without inventing a Google eligibility contract that this audit has not established.
 
-### Required output
+### Required work in this remediation
 
-A current Google structured-data capability matrix containing at minimum:
+- Preserve existing generic structured-data builders.
+- Preserve current `JsonLdSemanticValidator` runtime/property-range behavior and legacy issue/score compatibility.
+- Update normative documentation so the validator is described precisely as scoped structural/property-range semantic validation.
+- Ensure documentation continues to state that Schema.org generation/conformance does not prove Google Search eligibility.
+- Preserve the Course/Book nuance recorded by F-17 and avoid blanket provider-deprecation claims.
+- Explicitly document that Google required/recommended-property eligibility profiles and a complete capability matrix are **not implemented by this remediation**.
 
-- Schema.org type.
-- library builder.
-- Google search feature, if applicable.
-- required properties.
-- recommended properties.
-- composition requirements.
-- known provider limitations.
-- official URL.
+### Explicit future-contract boundary
+
+A Google structured-data capability matrix and runtime provider profiles are a separate future phase. Before that phase can implement production behavior, its normative contract must be approved and must contain, for each relevant library builder/feature:
+
+- Schema.org type;
+- library builder;
+- Google search feature, if applicable;
+- required properties;
+- recommended properties;
+- composition requirements;
+- known provider limitations;
+- official URL;
 - verified date.
 
-### Important correction
+Likewise, new lexical URL/Date/DateTime/enumeration checks described in F-18 require their own exact vocabulary/compatibility contract before they can become validation errors.
 
-Do not use stale assumptions about Course, Book, Dataset, or other features.
+### Stop condition
 
-At implementation time, perform a targeted freshness check against the official URLs recorded by the capability matrix. Do not restart provider research or reopen settled architecture unless the authoritative source has materially changed.
+Stack 7 must not perform broad Google structured-data research, create an ad-hoc capability matrix, add partial eligibility rules, or tighten lexical validation. If such work is desired, stop and open the dedicated contract/audit first.
 
 ---
 
@@ -1778,6 +1862,7 @@ Make the repository tell one coherent story.
 - qualify validation depth.
 - establish normative-vs-historical docs hierarchy.
 - ensure README feature claims match actual code.
+- document the explicit future-contract boundaries from F-15, F-16, and F-18 so current docs do not imply capabilities that this remediation intentionally does not add.
 
 ---
 
@@ -1845,6 +1930,18 @@ Historical verification proves what was checked at that time, not current truth.
 
 Provider facts must be checked against the recorded authoritative source when freshness matters.
 
+## ADR-11
+
+**Do not let characterization transfer decision authority to the implementer.**
+
+A material `unknown / needs decision` blocks the affected production change until an approved contract amendment resolves it.
+
+## ADR-12
+
+**Do not implement an unaudited external vocabulary/provider data set as if it were a settled local contract.**
+
+This applies in particular to hreflang ISO membership tables and Google structured-data eligibility matrices. Those capabilities require their explicit future contracts before runtime enforcement.
+
 ---
 
 # 9. Test Strategy Required for the Remediation
@@ -1867,8 +1964,12 @@ Add characterization tests before changing public behavior for:
 - Open Graph multiple-image root/structured-property order and first-image preference.
 - canonical relative and absolute output.
 - current validation issue codes and score propagation.
+- current `SeoValidationIssueDTO` and `SeoValidationResultDTO` serialized shapes before additive classification work.
 - ASCII and Arabic/Unicode title/description strings that lock `strlen()` byte behavior at heuristic boundaries.
 - current title/description length warnings retaining warning severity and the existing default 5-point-per-warning score deduction.
+- current structured-data scoped property-range issue output before documentation/classification changes.
+
+If characterization discovers a material behavior not already classified `preserve` or `intentionally change`, assert the AP-11 decision gate rather than inventing the expected production behavior inside the test PR.
 
 ## 9.2 Formal protocol / vocabulary tests
 
@@ -1896,7 +1997,8 @@ Purpose: prove locally deterministic protocol behavior without silently importin
 - invalid identifier containing digits.
 - empty Allow/Disallow pattern.
 - ordinary `/` path cases.
-- leading-`*` path characterization kept explicit because of the published RFC/example inconsistency and Reported Errata 7995.
+- existing leading-`*` path remains constructible/renderable for compatibility.
+- leading-`*` receives `robots_rfc9309_leading_wildcard_compatibility` as a warning with origin `protocol` / profile `rfc9309`, rather than being represented as published-ABNF conformance or converted into a constructor exception.
 - raw `#` comment behavior.
 - percent-encoded literal special-character cases such as `%23` where applicable.
 - CR/LF/control-character injection cases across values and comments.
@@ -1913,6 +2015,7 @@ Purpose: prove locally deterministic protocol behavior without silently importin
 - multiple-image ordering and first-tag preference.
 - structured image properties remain attached to the correct root image by output order.
 - `og:image:alt` is surfaced as a protocol-level recommendation, not a required validity error.
+- OGP issues are classifiable as origin `protocol`, profile `ogp` without changing legacy issue/result JSON shapes.
 
 ## 9.3 Provider profile tests
 
@@ -1951,7 +2054,7 @@ Do **not** create offline tests that claim a URL extension proves the actual rem
 - 1,001 total News entries provider-invalid/issue.
 - all four accepted publication-date forms.
 - invalid arbitrary date such as `as-provided`.
-- valid/invalid language cases including `zh-cn` and `zh-tw`.
+- valid/invalid language cases including `zh-cn` and `zh-tw` according to the explicit Google News lexical contract recorded in F-05; do not generalize this into the deferred hreflang ISO-membership capability.
 - publication-name parenthetical rule where locally decidable.
 - freshness state `within_window` is processed as caller-supplied provider evidence without local age arithmetic.
 - freshness state `outside_window` is processed deterministically as provider-out-of-window evidence.
@@ -1963,6 +2066,7 @@ Do **not** create offline tests that claim a URL extension proves the actual rem
 
 - 500 KiB document boundary classification.
 - Google Allow/Disallow present-path leading `/` cases.
+- non-empty leading-`*` remains generic-compatible but is distinguishable as a Google provider-path diagnostic; no silent rewrite.
 - `Sitemap:` fully-qualified URL.
 - raw Unicode/non-URL-encoded Sitemap path accepted according to Google's documented contract.
 - multiple Sitemap fields.
@@ -1974,8 +2078,12 @@ Do **not** create offline tests that claim a URL extension proves the actual rem
 - `max-snippet:-1`.
 - `max-video-preview:-1`.
 - values below `-1` invalid for those helpers.
-- `indexifembedded` with `noindex` semantics.
-- `unavailable_after` provider-recognizable handling without inventing an exhaustive closed grammar.
+- `indexifembedded` with `noindex` semantics represented as a provider diagnostic while raw representation remains possible.
+- `unavailable_after` empty/missing provider value is locally diagnosable.
+- non-empty `unavailable_after` with caller evidence `recognized` is processed deterministically as recognized.
+- non-empty `unavailable_after` with caller evidence `unrecognized` is processed deterministically as unrecognized.
+- non-empty `unavailable_after` with evidence `unknown` remains an evidence gap rather than being parsed through an invented exhaustive grammar.
+- no hidden network/clock/locale behavior is used to infer recognizability.
 
 ### Hreflang
 
@@ -1984,11 +2092,21 @@ Do **not** create offline tests that claim a URL extension proves the actual rem
 - `zh-Hant`.
 - `zh-Hans-US`.
 - `x-default`.
-- equivalent normalization through Web and Sitemap entry points.
-- unsupported-but-regex-shaped language/region/script values.
+- equivalent conventional-casing normalization through Web and Sitemap entry points.
+- casing differences alone do not produce provider-invalidity.
+- no test claims that an unversioned local regex/list proves ISO 639-1 / ISO 3166-1 / ISO 15924 membership.
 - reciprocal cluster.
 - missing self-reference.
 - missing return link.
+- inconsistent alternate set across supplied localized URLs.
+
+### Structured Data boundary
+
+- existing generic builders remain callable regardless of whether a Google search feature has been audited.
+- existing `JsonLdSemanticValidator` property-range behavior remains compatible.
+- no new lexical URL/Date/DateTime/enumeration failures are introduced under this remediation.
+- no Google required/recommended-property eligibility failure is introduced without the future approved capability-matrix contract.
+- documentation/tests do not equate generic Schema.org support with Google eligibility.
 
 ## 9.4 Non-regression tests
 
@@ -2007,7 +2125,9 @@ Unifying Sitemap serialization must not silently drop image/video/news/alternate
 
 Open Graph validation changes must not reorder multiple images or detach structured image properties from their root image.
 
-Reclassifying title/description length issues as heuristics must not change their `strlen()` byte thresholds, warning severity/codes, or existing score deductions.
+Reclassifying title/description length issues as heuristics must not change their `strlen()` byte thresholds, warning severity/codes, existing score deductions, or legacy issue/result serialized payloads.
+
+Structured-data documentation/classification work must not introduce new lexical/provider eligibility failures or scoring changes.
 
 ---
 
@@ -2062,15 +2182,15 @@ The exact paths can be adjusted to repository conventions, but the authority lev
 | F-07 | crawl-delay presented like core REP behavior | RECLASSIFY | Medium |
 | F-08 | Meta robots rejects valid Google `-1` | FIX | High |
 | F-09 | `indexifembedded` missing | ADD | Medium |
-| F-10 | `unavailable_after` provider date semantics unchecked | ADD / RECLASSIFY | Medium |
+| F-10 | `unavailable_after` provider recognizability requires an explicit evidence boundary | RECLASSIFY / EVIDENCE BOUNDARY | Medium |
 | F-11 | `noarchive` Google meaning stale | KEEP / DOC-FIX | Low/Medium |
 | F-12 | SEO validity and heuristics conflated | RECLASSIFY / ADD | High |
 | F-13 | Open Graph required-field model mismatches OGP and needs explicit exposed-surface serialization contracts | FIX | High |
 | F-14 | Relative canonical must remain generic-compatible | KEEP / ADD profile | Medium |
-| F-15 | Hreflang has duplicate normalization paths and lacks provider-aware cluster validation | RECLASSIFY / ADD | High |
-| F-16 | Structured Data needs explicit provider profiles | KEEP principle / ADD | High |
+| F-15 | Hreflang normalization/cluster logic is fragmented; ISO code-membership registry is a separate future contract | RECLASSIFY / ADD / DEFER MEMBERSHIP | High |
+| F-16 | Structured Data provider separation is correct; Google eligibility profiles require a separate audited matrix | KEEP / DEFER PROVIDER PROFILE | High |
 | F-17 | Old Course/Book deprecation assumption is unsafe | CORRECTION | High |
-| F-18 | JSON-LD "semantic" validation is scoped, not complete lexical validation | RECLASSIFY / ADD | Medium |
+| F-18 | JSON-LD validator is scoped property-range validation; lexical/provider expansion is separate future work | RECLASSIFY / DEFER EXPANSION | Medium |
 | F-19 | CHANGELOG/docs/examples do not fully match current behavior | DOC-FIX | High |
 | F-20 | No explicit normative documentation hierarchy | ADD / RECLASSIFY | High |
 | F-21 | Twitter/X Cards provider contract not source-verified | ADD | Medium |
@@ -2096,26 +2216,28 @@ The safest remediation is a sequence of narrow contract-preserving stacks, each 
 
 The target is:
 
-> one implementation source of truth per domain, provider-neutral core contracts, explicit provider profiles, explicit heuristics, deterministic validation, and documentation that accurately states what the library can and cannot prove.
+> one implementation source of truth per domain, provider-neutral core contracts, explicit provider profiles where this audit has established them, explicit heuristics, deterministic validation, explicit evidence/future-contract boundaries, and documentation that accurately states what the library can and cannot prove.
 
 ### Execution Authority Rule
 
-This audit is the **baseline execution authority** for remediation Stacks 0 through 8. A fresh implementer must not need to reinvent classifications, infer unwritten provider rules, or restart a standards audit from scratch.
+This audit is the **baseline execution authority** for remediation Stacks 0 through 8. A fresh implementer must not need to reinvent classifications, infer unwritten provider rules, restart a standards audit from scratch, or choose among materially different contract outcomes.
 
 - **Repository freshness:** each implementation stack must inspect its then-current Draft HEAD before modifying production behavior, because repository state can change after this snapshot.
-- **Provider freshness:** time-variable provider facts receive a targeted freshness check against the authoritative URLs already recorded here.
+- **Provider freshness:** time-variable provider facts already inside the approved remediation scope receive a targeted freshness check against the authoritative URLs recorded here.
 - **No automatic reopening:** a freshness check is not permission to reopen settled architecture or perform broad provider research. If an authoritative source has materially changed after the audit date, record the changed evidence and amend the relevant contract explicitly before implementing against it.
 - **Evidence boundaries:** remote/provider facts that the library cannot prove offline remain explicit caller/host/provider evidence boundaries.
+- **Unknown-decision gate:** a material `unknown / needs decision` discovered by characterization blocks the affected production change until an approved contract amendment resolves it.
+- **Future-contract boundaries:** hreflang ISO membership registries, complete Google structured-data capability/eligibility profiles, Twitter/X provider conformance, and the F-18 lexical/enumeration expansion are not implementation discretion under this audit. They are separate future contracts.
 
 No production behavior should be changed merely because it "looks more strict."
 
-A behavior change is justified only when the audit classifies it, its authoritative source is recorded, its compatibility impact is understood, and its non-target behavior is protected by tests.
+A behavior change is justified only when the audit classifies it, its authoritative source is recorded where applicable, its compatibility impact is understood, and its non-target behavior is protected by tests.
 
 ---
 
 # 13. Authoritative External References
 
-The references below are the evidence baseline for this audit. During remediation, perform **targeted freshness verification** of time-variable provider facts; do not restart standards/provider research unless a recorded authoritative source has materially changed.
+The references below are the evidence baseline for this audit. During remediation, perform **targeted freshness verification** of time-variable provider facts already authorized here; do not restart standards/provider research or expand into an explicitly deferred contract unless its own audit is opened and approved.
 
 ## Standards / protocols
 
@@ -2228,6 +2350,8 @@ Primary repository evidence referenced during this audit:
 - `src/Web/Validation/SeoMetaValidator.php`
 - `src/Web/Validation/SeoValidationPreset.php`
 - `src/Web/Validation/JsonLd/JsonLdSemanticValidator.php`
+- `src/Web/Validation/DTO/SeoValidationIssueDTO.php`
+- `src/Web/Validation/DTO/SeoValidationResultDTO.php`
 - `src/Web/Social/OpenGraphBuilder.php`
 - `src/Web/Social/SocialImage.php`
 - `src/Shared/Service/MetaGeneratorService.php`
