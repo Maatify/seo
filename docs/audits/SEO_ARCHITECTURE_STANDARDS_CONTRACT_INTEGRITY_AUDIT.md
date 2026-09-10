@@ -254,7 +254,14 @@ Sitemaps.org defines base sitemap constraints including:
 - Sitemap index maximum 50,000 `<sitemap>` entries.
 - Sitemap index maximum uncompressed size: 50 MB (52,428,800 bytes).
 
-Host/path rules must not become unconditional same-host DTO rejection. Cross-submission/cross-host behavior can depend on ownership/submission context.
+Host/path rules must not become unconditional same-host DTO rejection.
+
+- URLs contained inside one URL sitemap must belong to the applicable single-host/site scope defined by the protocol.
+- Cross-submission does **not** mean one sitemap may freely mix URLs from unrelated hosts.
+- Cross-submission allows a sitemap file to be submitted/hosted in a different location when the required ownership/authority relationship is established.
+- Sitemap index host/site restrictions must be documented separately and accurately.
+
+Keep these concerns outside single-entry DTO validation because they require document/submission context.
 
 Not all of these constraints belong at the same validation level. The page URL `<loc>` lexical/length rule is entry-level; count, byte-size, and location/context rules are document-level or host/submission-context-level.
 
@@ -387,10 +394,7 @@ Current Google documentation includes constraints such as:
 - `video:publication_date` documented forms:
   - `YYYY-MM-DD`
   - `YYYY-MM-DDThh:mm:ssTZD`
-- At least one of:
-  - `video:content_loc`
-  - `video:player_loc`
-  must be supplied.
+- At least one of `video:content_loc` or `video:player_loc` must be supplied (existing behavior that must be characterized and preserved unless an intentional contract change is later justified).
 - `video:content_loc` must not be the same URL as the parent page `<loc>`.
 - `video:player_loc` must not be the same URL as the parent page `<loc>`.
 
@@ -402,9 +406,10 @@ Also classify provider requirements concerning:
 
 Every rule must be classified as one of:
 
-1. deterministic entry validation,
-2. document/context validation,
-3. external/provider-evidence condition.
+1. existing behavior to characterize,
+2. deterministic validation gap,
+3. document/context validation,
+4. external/provider-evidence condition.
 
 Do not represent crawlability, remote accessibility, indexing state, or similar external facts as something an offline DTO validator can prove.
 
@@ -468,8 +473,14 @@ Google documents:
   - `YYYY-MM-DDThh:mm:ss.sTZD`
 - a News sitemap may contain at most 1,000 `<news:news>` entries.
 - News sitemap metadata applies to articles created within the last 2 days; older URLs may remain in a general sitemap, but their `<news:news>` metadata should be removed.
-- `news:publication/news:name` represents the publication name used by Google News.
-- `news:title` represents the article title according to the current Google News sitemap contract.
+- `news:publication/news:name`:
+  - It must match exactly the publication name shown on articles in Google News.
+  - Parenthetical portions must be omitted where Google's documentation requires that behavior.
+- `news:title`:
+  - It represents the article title as it appears on the site.
+  - Do not include author name.
+  - Do not include publication name.
+  - Do not include publication date.
 
 The current Google News sitemap reference lists the currently supported News sitemap tags and no longer lists the repository's optional `news:access`, `news:genres`, `news:keywords`, or `news:stock_tickers` fields. Absence from the current reference is not, by itself, sufficient evidence to delete public compatibility fields, but their provider status must be explicitly classified before remediation.
 
@@ -516,10 +527,10 @@ RFC 9309 defines:
 - identifier grammar follows RFC 9309.
 - Empty Allow/Disallow pattern is valid.
 - A non-empty path pattern begins with `/`.
-- Raw `#` starts comment semantics.
-- Raw `#` is not an ordinary literal path-pattern character.
-- If a literal `#` is intended inside the path, use its percent-encoded representation such as `%23` according to protocol encoding rules.
-- CR/LF and forbidden control characters must not be allowed to alter rendered robots.txt structure.
+- raw `#` starts comment semantics;
+- raw `#` is not an ordinary literal path-pattern character;
+- literal `#` in a path is represented using percent encoding such as `%23`;
+- CR/LF must not be able to inject additional robots.txt directives.
 
 The CR/LF protection must explicitly cover:
 
@@ -549,7 +560,7 @@ Introduce RFC-aware validation with explicit rules for:
 - valid empty Allow/Disallow pattern.
 - slash-prefixed path pattern.
 - raw `#` comment semantics.
-- percent-encoded literal values where applicable.
+- literal `#` in a path is represented using percent encoding such as `%23`.
 - CR/LF and other forbidden control characters in rule values.
 - CR/LF safety for rule comments.
 - CR/LF safety for top-level comments.
@@ -1427,15 +1438,38 @@ There must be one rule implementation for equivalent sitemap output.
 
 Add layered validation.
 
-### Order
+### Required coverage
 
-1. Base sitemap entry/document policy, including `<loc>` length, URL count, byte size, and hosting context.
-2. Image provider status / deprecated-tag handling plus 1,000-image and cross-domain context rules.
-3. Video limits.
-4. News language/date rules plus 1,000-entry and two-day metadata-window rules.
-5. Explicit provider-status classification for legacy News optional fields.
-6. Correct examples.
-7. Clarify README claims.
+#### Base sitemap
+- URL sitemap count limit.
+- Sitemap-index count limit.
+- uncompressed byte-size limits.
+- page `<loc>` length rule.
+- host/site/submission-context rules.
+- cross-submission semantics.
+
+#### Google Image
+- current/deprecated field classification.
+- 1,000-images-per-URL limit.
+- cross-domain verification context.
+- external crawlability context.
+
+#### Google Video
+- existing content/player-presence behavior characterization.
+- description limit.
+- duration range.
+- publication-date forms.
+- parent `<loc>` relationship.
+- deterministic versus external/provider-evidence rules.
+
+#### Google News
+- language contract.
+- exact date forms.
+- publication-name semantics.
+- title semantics.
+- 1,000-entry limit.
+- two-day metadata window with explicit reference time.
+- legacy optional-field provider-status classification.
 
 ### Critical constraint
 
@@ -1656,6 +1690,7 @@ Add explicit boundary cases including at minimum:
 - `player_loc == parent <loc>`.
 - deterministic locally provable cases.
 - external-evidence-only cases.
+- publication-date tests for both documented accepted forms plus invalid input.
 
 ### Google News
 
