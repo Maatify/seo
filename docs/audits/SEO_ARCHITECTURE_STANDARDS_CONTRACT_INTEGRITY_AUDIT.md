@@ -253,6 +253,10 @@ Sitemaps.org defines base sitemap constraints including:
 - The required page URL `<loc>` inside a `<url>` entry must be less than 2,048 characters.
 - Sitemap index maximum 50,000 `<sitemap>` entries.
 - Sitemap index maximum uncompressed size: 50 MB (52,428,800 bytes).
+- Sitemap XML must be UTF-8 encoded.
+- XML data values must be entity-escaped.
+- URL values must follow the applicable URI/IRI escaping requirements documented by the protocol.
+- The default Sitemap location scope affects allowed URLs by protocol/scheme, host, port where applicable, and path scope derived from the Sitemap location.
 
 Host/path rules must not become unconditional same-host DTO rejection.
 
@@ -279,28 +283,37 @@ Not all of these constraints belong at the same validation level. The page URL `
 
 Therefore those rules **cannot safely be pushed into the DTO constructor**. Do not turn host/path rules into unconditional same-host constructor rejection.
 
+Furthermore, `XMLWriter` natively handles UTF-8 encoding and entity-escaping for values written via its API. However, this must be explicitly verified and documented as a **serialization/output guarantee** rather than assuming no tests are needed.
+
 ### Safe target
 
 The architecture needs separate levels:
 
-1. **Entry validation**
+1. **Entry-level**
    - URL shape
    - page URL `<loc>` length below 2,048 characters
+   - URL URI/IRI escaping rules
    - lastmod lexical format
    - changefreq vocabulary
-   - priority range
-   - child DTO shape
+   - priority limits (0.0 to 1.0)
 
-2. **Document validation**
-   - entry count
-   - output size
-   - sitemap index count
+2. **Document-level**
+   - URL count max 50,000
+   - Uncompressed size max 50 MB
+   - Sitemap Index count max 50,000
+   - Sitemap Index Uncompressed size max 50 MB
 
-3. **Host/submission context rules**
-   - document context
-   - cross-submission / cross-host behavior
+3. **Serialization/output guarantees**
+   - Sitemap XML must be UTF-8 encoded.
+   - XML data values must be entity-escaped.
+   - The library must verify `XMLWriter` provides these guarantees during serialization.
 
-4. **Provider extension validation**
+4. **Host/Location/Submission context**
+   - default Sitemap location scope affects allowed URLs: protocol/scheme, host, port where applicable, path scope derived from Sitemap location.
+   - cross-submission remains a separate authority/submission-context mechanism and must not be confused with freely mixing URL hosts.
+   - Sitemap Index same-site restriction remains separate from cross-submission.
+
+5. **Provider extension validation**
    - Google Image
    - Google Video
    - Google News
@@ -392,42 +405,47 @@ Do not remove constructor parameters or output support in a compatibility-breaki
 
 Current Google documentation includes constraints such as:
 
-- `video:description`: maximum 2,048 characters.
+- `video:title`: provider semantics apply; must be properly entity-escaped/CDATA wrapped if containing special characters.
+- `video:description`:
+  - maximum 2,048 characters.
+  - must be properly entity-escaped/CDATA wrapped.
+  - must match the description shown on the page.
+- `video:thumbnail_loc`: must be a valid URL pointing to a supported image format.
 - `video:duration`: 1..28,800 seconds.
 - `video:publication_date` documented forms:
   - `YYYY-MM-DD`
   - `YYYY-MM-DDThh:mm:ssTZD`
-- `video:content_loc` must not be the same URL as the parent page `<loc>`.
-- `video:player_loc` must not be the same URL as the parent page `<loc>`.
+- `video:content_loc` vs `video:player_loc`:
+  - At least one of `video:content_loc` or `video:player_loc` must be present.
+  - `video:content_loc` must be a supported media format (e.g., .mp4, .mpeg, .mkv).
+  - Both must not be the same URL as the parent page `<loc>`.
+  - The provider expects these resources to be accessible/crawlable.
 
-Also, at least one of `video:content_loc` or `video:player_loc` must be supplied (existing behavior that must be characterized and preserved unless an intentional contract change is later justified).
+The DTO does not enforce these limits.
 
-Also classify provider requirements concerning:
+### Classification of Rules
 
-- supported video resource formats,
-- crawlability/accessibility,
-- thumbnail requirements.
+1. **Deterministic lexical/local validation:**
+   - `video:duration` limits.
+   - `video:description` maximum length.
+   - `video:publication_date` accepted forms.
+   - Requirement of either `video:content_loc` or `video:player_loc`.
+   - Inequality of `content_loc`/`player_loc` to parent `<loc>`.
+   - String escaping/CDATA requirements for `title` and `description`.
+   - `video:thumbnail_loc` URL shape.
 
-Every rule must be classified as one of:
+2. **Document/Context validation:**
+   - (N/A for these specific fields, mostly handled at lexical or external level)
 
-1. existing behavior to characterize,
-2. deterministic validation gap,
-3. document/context validation,
-4. external/provider-evidence condition.
+3. **External/Provider-evidence condition:**
+   - Match between `video:description` and the on-page visible description.
+   - Crawlability, accessibility, and indexing state of `content_loc` or `player_loc`.
+   - Validity of the actual video/image format returned by the URL.
+   (These must not be converted into fake offline validation).
 
-Do not represent crawlability, remote accessibility, indexing state, or similar external facts as something an offline DTO validator can prove.
+### Safe target architecture
 
-### Safe target
-
-Do not make every Google provider rule a universal `SitemapVideoDTO` constructor exception unless the DTO is explicitly defined as a Google Video DTO contract.
-
-A safer architecture is to make provider validation explicit and testable. Clearly distinguish:
-
-- locally deterministic validation,
-- document/context validation,
-- conditions that require external/provider evidence and therefore must not become fake offline validation.
-
-If the existing type remains specifically Google-oriented, then tightening can be justified, but the behavior change must be treated as intentional and covered by regression tests.
+Provider extensions should act as explicit decorators or context-aware validators on top of the base sitemap.
 
 ---
 
@@ -507,6 +525,32 @@ The News policy should be explicit. The two-day rule must remain deterministic: 
 
 ---
 
+
+## F-21 — Twitter/X Cards provider contract was not source-verified by this audit
+
+**Decision:** `ADD` (Out of Scope Statement)
+**Risk:** Medium
+**Area:** Social Metadata
+
+### Repository evidence
+
+The repository contains:
+- `src/Web/Social/TwitterCardBuilder.php`
+- Twitter validation inside `SeoMetaValidator`
+- Tests covering Twitter fields
+- README announcing Twitter Card support
+
+### Audit Scope Limitation
+
+The current audit reviewed Open Graph Protocol provider behavior, but did not independently verify Twitter/X Card rules against a current, official Twitter/X documentation source.
+
+### Safe Target
+
+- Twitter/X provider conformance was **not source-verified by this audit**.
+- Generic/current library compatibility for Twitter Cards remains preserved as-is.
+- Twitter/X provider-rule remediation is out of scope until a dedicated official-source revalidation is completed.
+- The documentation should reflect that Open Graph was audited, but Twitter/X Cards remain under historical implementation assumptions pending future review.
+
 ## F-06 — `robots.txt` DTO does not conform cleanly to RFC 9309 grammar
 
 **Decision:** `FIX`  
@@ -584,6 +628,16 @@ Introduce RFC-aware validation with explicit rules for:
 - CR/LF and other forbidden control characters in rule values.
 - CR/LF safety for rule comments.
 - CR/LF safety for top-level comments.
+
+### Google robots.txt document constraints
+
+Google's provider-level behavior for robots.txt documents includes additional constraints:
+- Must be UTF-8 encoded or plain text.
+- File size limit is currently 500 kibibytes (kiB) (Google parses up to this limit and ignores the rest).
+
+**Classification:**
+- UTF-8/plain-text constraints: **Renderer/output responsibility**
+- File size limit: **Host delivery responsibility** (The library can track size during generation, but HTTP enforcement is the host's job. A provider document validation check could optionally warn if the generated string exceeds 500 kiB).
 
 The current renderer is line-oriented, so injection prevention must be an explicit contract rather than an implied generic string check.
 
@@ -772,6 +826,16 @@ This finding is an example of why provider behavior must not be embedded as time
 - description 80..155
 
 Length violations produce warnings and those warnings can affect scoring.
+
+### Unicode Measurement Heuristics
+
+The current validator uses `strlen()` to measure title and description length.
+- The current behavior relies on a byte-length heuristic, which is not a Unicode-aware character count.
+- Arabic and other non-ASCII content may trigger length warnings differently than ASCII text with the same number of visible characters.
+- Remediation must explicitly define the unit of measurement (e.g., bytes, Unicode code points, or grapheme clusters).
+- Do not assume `mb_strlen()` or grapheme counting is the immediate solution before defining the public heuristic contract.
+- Characterization tests must cover both ASCII and Unicode/Arabic content before changing the measurement behavior.
+- Any change may impact issue generation and scoring, and thus must not be done as an undocumented side effect.
 
 ### Current Google position
 
@@ -1024,8 +1088,9 @@ This separation is architecturally correct and must be preserved.
 
 Google's own structured-data documentation states that:
 
-- Schema.org is the vocabulary source.
-- Google Search Central documentation is authoritative for Google Search behavior.
+- Schema.org is the primary vocabulary source for most structured data supported in Google Search.
+- Google Search Central feature-specific documentation is the authority on Google eligibility, required properties, recommendations, composition rules, and policies.
+- Google eligibility must not be inferred from Schema.org validity alone.
 - Google requires specific required properties for eligibility.
 - Schema.org may contain additional properties not required by Google.
 
@@ -1678,6 +1743,8 @@ Add explicit boundary cases including at minimum:
 - uncompressed-size boundary at 52,428,800 bytes, over-boundary case.
 - page URL `<loc>` length boundary: 2,047 characters valid at this protocol length boundary, 2,048 characters invalid because the protocol requires less than 2,048.
 - host/submission cases must validate explicit context behavior rather than unconditional same-host rejection.
+- UTF-8 encoding requirements.
+- XML entity-escaping and URL URI/IRI escaping requirements.
 
 ### Robots
 
@@ -1690,6 +1757,10 @@ Add explicit boundary cases including at minimum:
 - raw `#`.
 - `%23`.
 - CR/LF injection cases.
+
+### Google Robots.txt Document Constraints
+
+- file size limit behavior (500 kiB boundary) as a documented host responsibility or document-level heuristic.
 
 ## 9.3 Provider profile tests
 
@@ -1708,7 +1779,6 @@ Add explicit boundary cases including at minimum:
 - `content_loc == parent <loc>`.
 - `player_loc == parent <loc>`.
 - deterministic locally provable cases.
-- external-evidence-only cases.
 - publication-date tests for both documented accepted forms plus invalid input.
 
 ### Google News
@@ -1819,6 +1889,7 @@ The exact paths can be adjusted to repository conventions, but the authority lev
 | F-18 | JSON-LD "semantic" validation is scoped, not complete lexical validation | RECLASSIFY / ADD | Medium |
 | F-19 | CHANGELOG/docs/examples do not fully match current behavior | DOC-FIX | High |
 | F-20 | No explicit normative documentation hierarchy | ADD / RECLASSIFY | High |
+| F-21 | Twitter/X Cards provider contract not source-verified | ADD | Medium |
 
 ---
 
