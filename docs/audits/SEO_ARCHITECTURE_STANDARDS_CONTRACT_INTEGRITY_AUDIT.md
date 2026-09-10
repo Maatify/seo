@@ -248,12 +248,23 @@ Before refactoring:
 
 Sitemaps.org defines base sitemap constraints including:
 
-- URL sitemap maximum: 50,000 `<url>` entries.
-- Sitemap index maximum: 50,000 `<sitemap>` entries.
-- 50 MB uncompressed size limit where defined by the protocol.
-- Each required `<loc>` value inside a `<url>` entry must be a protocol-qualified page URL and must be less than 2,048 characters (only where the protocol actually defines it).
-- Sitemap location / host scope constrains which URLs it can describe.
-- Cross-submission / cross-host behavior where ownership or submission evidence permits it.
+- Maximum 50,000 `<url>` entries.
+- Maximum uncompressed size: 50 MB (52,428,800 bytes).
+- The required page URL `<loc>` inside a `<url>` entry must be less than 2,048 characters.
+- Sitemap index maximum 50,000 `<sitemap>` entries.
+- Sitemap index maximum uncompressed size: 50 MB (52,428,800 bytes).
+
+Host/path rules must not become unconditional same-host DTO rejection.
+
+- URLs contained inside one URL sitemap must belong to the applicable single-host/site scope defined by the protocol.
+- Cross-submission does **not** mean one sitemap may freely mix URLs from unrelated hosts.
+- Cross-submission allows a sitemap file to be submitted/hosted in a different location when the required ownership/authority relationship is established.
+- A Sitemap Index may reference only Sitemap files on the same site as the Sitemap Index.
+- This rule is separate from URL-sitemap cross-submission behavior.
+- Cross-submission must not be interpreted as permission for a Sitemap Index to freely reference unrelated external Sitemap hosts.
+- Host/submission checks require document/submission context and must not be forced into a single-entry DTO constructor.
+
+Keep these concerns outside single-entry DTO validation because they require document/submission context.
 
 Not all of these constraints belong at the same validation level. The page URL `<loc>` lexical/length rule is entry-level; count, byte-size, and location/context rules are document-level or host/submission-context-level.
 
@@ -381,17 +392,30 @@ Do not remove constructor parameters or output support in a compatibility-breaki
 
 Current Google documentation includes constraints such as:
 
-- `description` maximum length.
-- duration range.
-- publication-date formats.
-- requirement for `content_loc` or `player_loc`.
-- relationship between `content_loc` / `player_loc` and the parent page `<loc>`.
-- provider requirements around video resource format/accessibility.
-- thumbnail requirements relevant to `thumbnail_loc`.
+- `video:description`: maximum 2,048 characters.
+- `video:duration`: 1..28,800 seconds.
+- `video:publication_date` documented forms:
+  - `YYYY-MM-DD`
+  - `YYYY-MM-DDThh:mm:ssTZD`
+- `video:content_loc` must not be the same URL as the parent page `<loc>`.
+- `video:player_loc` must not be the same URL as the parent page `<loc>`.
 
-The current DTO only enforces `duration > 0`, so values above 28800 are accepted.
+Also, at least one of `video:content_loc` or `video:player_loc` must be supplied (existing behavior that must be characterized and preserved unless an intentional contract change is later justified).
 
-The current title/description checks are non-empty checks, not full provider eligibility checks.
+Also classify provider requirements concerning:
+
+- supported video resource formats,
+- crawlability/accessibility,
+- thumbnail requirements.
+
+Every rule must be classified as one of:
+
+1. existing behavior to characterize,
+2. deterministic validation gap,
+3. document/context validation,
+4. external/provider-evidence condition.
+
+Do not represent crawlability, remote accessibility, indexing state, or similar external facts as something an offline DTO validator can prove.
 
 ### Safe target
 
@@ -445,10 +469,22 @@ This is accepted by the DTO but is not a valid Google News publication date.
 
 Google documents:
 
-- publication language should use ISO 639 language codes, with documented Chinese exceptions.
-- publication date must use supported W3C date forms.
+- publication language follows Google's documented language rules and documented Chinese exceptions.
+- publication date must use supported W3C date forms:
+  - `YYYY-MM-DD`
+  - `YYYY-MM-DDThh:mmTZD`
+  - `YYYY-MM-DDThh:mm:ssTZD`
+  - `YYYY-MM-DDThh:mm:ss.sTZD`
 - a News sitemap may contain at most 1,000 `<news:news>` entries.
-- News sitemap metadata should only be retained for articles created within the last two days; older URLs may remain in a general sitemap, but their `<news:news>` metadata should be removed.
+- News sitemap metadata applies to articles created within the last 2 days; older URLs may remain in a general sitemap, but their `<news:news>` metadata should be removed.
+- `news:publication/news:name`:
+  - It must match exactly the publication name shown on articles in Google News.
+  - Parenthetical portions must be omitted where Google's documentation requires that behavior.
+- `news:title`:
+  - It represents the article title as it appears on the site.
+  - Do not include author name.
+  - Do not include publication name.
+  - Do not include publication date.
 
 The current Google News sitemap reference lists the currently supported News sitemap tags and no longer lists the repository's optional `news:access`, `news:genres`, `news:keywords`, or `news:stock_tickers` fields. Absence from the current reference is not, by itself, sufficient evidence to delete public compatibility fields, but their provider status must be explicitly classified before remediation.
 
@@ -492,11 +528,35 @@ The News policy should be explicit. The two-day rule must remain deterministic: 
 RFC 9309 defines:
 
 - `product-token = identifier / "*"`
-- identifier characters are letters, `_`, and `-`.
-- rule paths are `path-pattern / empty-pattern`.
-- an empty pattern is valid.
-- path patterns begin with `/`.
-- control characters are excluded from path patterns.
+- `identifier` contains one or more characters from:
+  - `-`
+  - `A-Z`
+  - `_`
+  - `a-z`
+- Digits are not part of the RFC 9309 `identifier` grammar.
+- `*` is the separate product-token alternative.
+- Empty Allow/Disallow pattern is valid.
+- The published ABNF defines the non-empty `path-pattern` beginning with `/`.
+- The RFC's own examples also demonstrate wildcard patterns such as: `Disallow: *.gif$`
+- The RFC explains `*` wildcard matching in a way that supports that example.
+- RFC Editor Errata 7995 reports this inconsistency and proposes allowing `/` or `*` at the start.
+- Errata 7995 is currently reported errata, not an incorporated normative replacement for the RFC text.
+- Do not instruct the remediation to implement unconditional slash-only rejection.
+- Do not classify a leading `*` pattern as definitely invalid solely from the published ABNF.
+- Explicitly document the RFC text/example inconsistency.
+- Treat this as a contract decision requiring compatibility-safe handling.
+- Characterization tests must capture existing wildcard behavior before tightening validation.
+- Any future accepted grammar must preserve supported wildcard semantics deliberately rather than accidentally rejecting them.
+- raw `#` starts comment semantics;
+- raw `#` is not an ordinary literal path-pattern character;
+- literal `#` in a path is represented using percent encoding such as `%23`;
+- CR/LF must not be able to inject additional robots.txt directives.
+
+The CR/LF protection must explicitly cover:
+
+- Allow/Disallow values,
+- rule comments,
+- top-level document comments.
 
 ### Confirmed mismatch
 
@@ -518,9 +578,9 @@ Introduce RFC-aware validation with explicit rules for:
 
 - valid product-token grammar.
 - valid empty Allow/Disallow pattern.
-- slash-prefixed path pattern.
+- wildcard path characterization including leading `*` before any slash-only rejection is considered.
 - raw `#` comment semantics.
-- percent-encoded literal values where applicable.
+- literal `#` in a path is represented using percent encoding such as `%23`.
 - CR/LF and other forbidden control characters in rule values.
 - CR/LF safety for rule comments.
 - CR/LF safety for top-level comments.
@@ -995,7 +1055,7 @@ The runtime architecture should allow provider eligibility rules to evolve witho
 
 ---
 
-## F-17 — Previous preliminary assumptions about Course / Book deprecation must NOT be used as remediation input
+## F-17 — State actual Course / Book provider status
 
 **Decision:** `CORRECTION` / `KEEP` until current provider evidence says otherwise  
 **Risk:** High if ignored  
@@ -1007,36 +1067,26 @@ A preliminary review previously risked overgeneralizing older Google structured-
 
 The re-check for this audit found current official evidence that makes blanket removal/deprecation claims unsafe.
 
-### Current official evidence
+### Course
 
-As of this audit:
+- Google's older **Course Info** search appearance was removed and its documentation was removed because that search appearance no longer appears in Google Search.
+- Google's current **Course List** structured-data documentation still exists.
+- Therefore a blanket statement that Course structured data is unsupported by Google is incorrect.
 
-- Google has a current Course list structured-data guide.
-- Google has a current Book structured-data guide.
-- Google's current documentation updates include removal of a Book deprecation banner because a feature still uses the markup.
-- Google's current supported structured-data gallery remains the correct source for currently surfaced Google Search features.
+### Book
 
-Explicitly distinguish current provider evidence for concepts such as:
+- Current Book / Book Actions documentation still exists.
+- Book Actions are not equivalent to a generic normal rich-result contract available to every page.
+- They involve provider-specific participation, feed, and eligibility requirements.
+- Generic Schema.org Book vocabulary support must remain separate from Google Book Actions eligibility.
 
-- Course Info versus Course List.
-- Book / Book Actions and any eligibility/provider restrictions.
-- Schema.org vocabulary support versus Google Search feature support.
-
-Do not treat the Search Gallery as the sole source for every Google provider capability.
-
-Provider-status verification should use, as applicable:
+Provider-status evidence hierarchy must use, as applicable:
 
 - feature-specific current documentation,
 - Google Search documentation updates,
-- supported-feature gallery.
+- Search Gallery.
 
-### Audit rule
-
-No builder may be deleted, deprecated, or marked "unsupported by Google" from memory or an old announcement alone.
-
-Provider status must be checked against current official documentation at the time of remediation.
-
-This is a direct example of the safety principle behind this audit.
+Do not treat Search Gallery as the sole authority for every provider capability.
 
 ---
 
@@ -1408,15 +1458,38 @@ There must be one rule implementation for equivalent sitemap output.
 
 Add layered validation.
 
-### Order
+### Required coverage
 
-1. Base sitemap entry/document policy, including `<loc>` length, URL count, byte size, and hosting context.
-2. Image provider status / deprecated-tag handling plus 1,000-image and cross-domain context rules.
-3. Video limits.
-4. News language/date rules plus 1,000-entry and two-day metadata-window rules.
-5. Explicit provider-status classification for legacy News optional fields.
-6. Correct examples.
-7. Clarify README claims.
+#### Base sitemap
+- URL sitemap count limit.
+- Sitemap-index count limit.
+- uncompressed byte-size limits.
+- page `<loc>` length rule.
+- host/site/submission-context rules.
+- cross-submission semantics.
+
+#### Google Image
+- current/deprecated field classification.
+- 1,000-images-per-URL limit.
+- cross-domain verification context.
+- external crawlability context.
+
+#### Google Video
+- existing content/player-presence behavior characterization.
+- description limit.
+- duration range.
+- publication-date forms.
+- parent `<loc>` relationship.
+- deterministic versus external/provider-evidence rules.
+
+#### Google News
+- language contract.
+- exact date forms.
+- publication-name semantics.
+- title semantics.
+- 1,000-entry limit.
+- two-day metadata window with explicit reference time.
+- legacy optional-field provider-status classification.
 
 ### Critical constraint
 
@@ -1600,24 +1673,23 @@ Add explicit boundary cases including at minimum:
 
 ### Sitemap core
 
-- 50,000 / 50,001 URL entries.
-- 50,000 / 50,001 sitemap-index entries.
-- uncompressed-size boundary.
-- page URL `<loc>` length boundary.
-- host/submission-context cases.
+- 50,000 valid / 50,001 invalid/issue URL entries.
+- 50,000 valid / 50,001 invalid/issue sitemap-index entries.
+- uncompressed-size boundary at 52,428,800 bytes, over-boundary case.
+- page URL `<loc>` length boundary: 2,047 characters valid at this protocol length boundary, 2,048 characters invalid because the protocol requires less than 2,048.
+- host/submission cases must validate explicit context behavior rather than unconditional same-host rejection.
 
 ### Robots
 
-- valid `*`.
-- valid identifier.
-- invalid identifier containing digits if treated as RFC product-token input.
-- valid empty Allow/Disallow pattern.
-- valid slash path.
+- valid `*` product-token.
+- valid RFC identifier.
+- invalid identifier containing digits.
+- empty Allow/Disallow.
+- ordinary slash-path cases.
+- wildcard path characterization including leading `*`.
 - raw `#`.
-- percent-encoded literal path case where applicable.
-- CR/LF in Allow/Disallow.
-- CR/LF in rule comments.
-- CR/LF in document comments.
+- `%23`.
+- CR/LF injection cases.
 
 ## 9.3 Provider profile tests
 
@@ -1625,22 +1697,28 @@ Add explicit boundary cases including at minimum:
 
 ### Google Image
 
-- 1,000 / 1,001 images per URL.
+- 1,000 images valid
+- 1,001 images invalid/issue
 
 ### Google Video
 
-- description length boundary.
-- duration boundaries.
-- `content_loc` / `player_loc` relationship to parent `<loc>`.
-- deterministic checks versus external-evidence-only conditions.
+- Description: 2,048 valid, 2,049 invalid/issue.
+- Duration: 1 valid, 28,800 valid, 28,801 invalid/issue.
+- both `content_loc` and `player_loc` missing.
+- `content_loc == parent <loc>`.
+- `player_loc == parent <loc>`.
+- deterministic locally provable cases.
+- external-evidence-only cases.
+- publication-date tests for both documented accepted forms plus invalid input.
 
 ### Google News
 
-- 1,000 / 1,001 entries.
-- every documented accepted publication-date form.
-- invalid arbitrary date.
-- language cases.
-- two-day-window validation using explicit reference time.
+- 1,000 entries valid
+- 1,001 invalid/issue
+- all four documented publication-date forms
+- invalid arbitrary date
+- valid/invalid language cases
+- exact two-day-window boundary using explicit caller-supplied reference time
 
 Examples:
 
@@ -1779,6 +1857,9 @@ All provider facts should be rechecked again when the corresponding remediation 
 
 - RFC 9309 — Robots Exclusion Protocol  
   https://www.rfc-editor.org/rfc/rfc9309.html
+
+- RFC 9309 Errata 7995 — path-pattern leading wildcard inconsistency
+  https://www.rfc-editor.org/errata/eid7995
 
 - RFC 5646 / BCP 47 — Tags for Identifying Languages  
   https://www.rfc-editor.org/rfc/rfc5646.html
