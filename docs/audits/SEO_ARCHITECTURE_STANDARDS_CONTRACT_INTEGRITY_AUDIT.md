@@ -257,14 +257,31 @@ Sitemaps.org defines base sitemap constraints including:
 - XML data values must be entity-escaped.
 - URL values must follow the applicable URI/IRI escaping requirements documented by the protocol.
 - The default Sitemap location scope affects allowed URLs by protocol/scheme, host, port where applicable, and path scope derived from the Sitemap location.
-- The `lastmod` value must follow the W3C Datetime contract used by the Sitemap protocol; a complete date may omit the time portion, and fractional seconds are valid in the dateTime form.
 - In a URL sitemap, `<url><lastmod>` identifies the time the page content was last modified.
 - In a Sitemap Index, `<sitemap><lastmod>` identifies the time the linked sitemap file itself was last modified.
 
+### Exact Sitemap `lastmod` lexical contract
+
+For this remediation, the accepted lexical contract is fixed here and must **not** be re-derived by the implementer.
+
+Sitemaps.org requires W3C Datetime and publishes Sitemap/Sitemap-Index XML schemas. The implementation contract is the intersection of that W3C profile with the schema date/dateTime forms:
+
+- `YYYY-MM-DD`
+- `YYYY-MM-DDThh:mm:ssTZD`
+- `YYYY-MM-DDThh:mm:ss.sTZD`, where the fractional-second part contains one or more digits
+
+For the dateTime forms, `TZD` is required and is one of:
+
+- `Z`
+- `+hh:mm`
+- `-hh:mm`
+
+Therefore the Sitemap protocol profile used by this library does **not** accept year-only, year-month, hour/minute-only dateTime, or zone-less dateTime forms. The same lexical policy applies to URL-Sitemap and Sitemap-Index `lastmod`; their semantic meaning differs by context as stated above.
+
 **Current implementation limitation/mismatch:**
 - `SitemapUrlDTO::isValidLastmod()`, `Shared\DTO\Sitemap\SitemapIndexEntryDTO`, and `Web\Sitemap\DTO\SitemapIndexEntryDTO` explicitly enforce regex `Y-m-d` or PHP `DateTimeInterface::ATOM` parsing.
-- `DateTimeInterface::ATOM` does not include fractional seconds, so the current implementation rejects a valid fractional-second dateTime form. This is a **current implementation limitation**, not evidence of W3C/Sitemap conformance.
-- Remediation must derive the exact accepted lexical forms from the Sitemap protocol/schema contract rather than blindly treating every granularity example in the W3C NOTE as interchangeable. The confirmed current mismatch is fractional-second dateTime support.
+- `DateTimeInterface::ATOM` does not include fractional seconds, so the current implementation rejects the valid fractional-second dateTime form above. This is a **current implementation limitation**, not evidence of W3C/Sitemap conformance.
+- Remediation must implement exactly the three accepted forms defined above and reject malformed or out-of-contract lexical forms; this decision is part of the audit authority and is not left to implementation-time standards interpretation.
 
 Host/path rules must not become unconditional same-host DTO rejection.
 
@@ -308,7 +325,7 @@ The architecture needs separate levels:
    - URL shape
    - page URL `<loc>` length below 2,048 characters
    - URL values must follow the applicable URI/IRI escaping requirements documented by the protocol.
-   - `lastmod` lexical format.
+   - `lastmod` lexical validation uses exactly the three forms fixed by this audit.
    - `changefreq` vocabulary.
    - `priority` limits (0.0 to 1.0).
 
@@ -542,7 +559,14 @@ Current Google News Sitemap documentation states:
 - `news:name` must exactly match the publication name as it appears on articles in Google News, **omitting anything in parentheses**;
 - `news:title` is the title as it appears on the site and must not include the author name, publication name, or publication date.
 
-The source says **"last two days"**. This audit deliberately does not redefine that phrase as an invented `48 hours` arithmetic contract. Any deterministic time-window implementation must preserve the provider wording and make its boundary semantics explicit rather than silently guessing.
+The source says **"last two days"** and does not define an exact `48 hours`, calendar-day, timezone, or date-only boundary algorithm. The library policy for this remediation is therefore fixed as follows:
+
+- **Do not implement hard local freshness arithmetic from `publicationDate` plus a clock/reference time.**
+- Treat the provider freshness rule as a **context/evidence diagnostic** with three semantic states: `within_window`, `outside_window`, or `unknown`.
+- `publicationDate` lexical validity alone must never be treated as proof that an article is within or outside Google's freshness window.
+- A host/caller that possesses authoritative freshness evidence may supply that state; the library must process it deterministically and must not call `now()`, read a global/system clock, or invent the provider boundary.
+- `unknown` must remain an evidence gap/diagnostic state, not be converted into a fabricated provider pass or failure.
+- If Google later publishes exact boundary semantics, changing this policy requires an explicit contract amendment rather than an implementation-time interpretation.
 
 ### Legacy fields
 
@@ -558,8 +582,8 @@ The repository still exposes `news:access`, `news:genres`, `news:keywords`, and 
 
 2. **Document/context validation**
    - maximum 1,000 News entries per Sitemap;
-   - the "last two days" metadata window using explicit caller-supplied reference time/context;
-   - no hidden `now()` or global/system time inside deterministic validation.
+   - the "last two days" rule is represented only through the caller-supplied `within_window` / `outside_window` / `unknown` evidence state defined above;
+   - no hard age calculation from the lexical publication date and no hidden `now()` or global/system time.
 
 3. **Content/provider evidence**
    - publication date truly being the original first-publication time;
@@ -854,17 +878,29 @@ This finding is an example of why provider behavior must not be embedded as time
 - title 20..60
 - description 80..155
 
-Length violations produce warnings and those warnings can affect scoring.
+Length violations produce warnings. `SeoValidationScoreCalculator` currently assigns warnings a default 5-point penalty, so these heuristic warnings participate in score deductions under the current contract.
 
-### Unicode Measurement Heuristics
+### Unicode Measurement Heuristics — compatibility decision
 
 The current validator uses `strlen()` to measure title and description length.
-- The current behavior relies on a byte-length heuristic, which is not a Unicode-aware character count.
-- Arabic and other non-ASCII content may trigger length warnings differently than ASCII text with the same number of visible characters.
-- Remediation must explicitly define the unit of measurement (e.g., bytes, Unicode code points, or grapheme clusters).
-- Do not assume `mb_strlen()` or grapheme counting is the immediate solution before defining the public heuristic contract.
-- Characterization tests must cover both ASCII and Unicode/Arabic content before changing the measurement behavior.
-- Any change may impact issue generation and scoring, and thus must not be done as an undocumented side effect.
+
+This audit fixes the remediation contract as follows:
+
+- **Preserve `strlen()` byte-length measurement throughout this remediation.** Byte length is the current compatibility contract for title/description heuristic thresholds.
+- Arabic and other non-ASCII content therefore continue to trigger length warnings according to UTF-8 byte length, not visible-character count, Unicode code points, or grapheme clusters.
+- Reclassifying these issues as `heuristic` must not change their existing issue codes, warning severity, threshold inputs, or byte measurement.
+- Do **not** replace `strlen()` with `mb_strlen()`, grapheme counting, or another measurement unit in Stack 5.
+- Any future change of measurement unit is a separate public heuristic-contract change and must be designed, documented, and tested independently rather than entering as a remediation side effect.
+- Characterization tests must cover ASCII and Unicode/Arabic inputs and lock the current byte-based boundaries before architecture refactoring.
+
+### Scoring compatibility decision
+
+The scoring decision is also fixed for this remediation:
+
+- Existing title/description length warnings continue to participate in scoring exactly as current warning issues do.
+- The existing default warning penalty remains 5 points per warning unless the caller supplies the already-supported scoring options.
+- Reclassification adds origin/profile semantics; it does not silently remove these warnings from scoring, alter their severity, or introduce a new scoring weight.
+- Any future decision to exclude or differently weight heuristic issues is a separate scoring-contract change outside this remediation.
 
 ### Current Google position
 
@@ -892,13 +928,13 @@ heuristic
 content-quality
 ```
 
-The exact API shape can be decided during remediation, but the semantic distinction must become real.
+The exact API shape can be decided during remediation, but the semantic distinction must become real while the byte-measurement and scoring compatibility decisions above remain fixed.
 
 ### What must not be done
 
 Do not simply delete title and description recommendations.
 
-Do not silently stop scoring them without deciding compatibility for existing score consumers.
+Do not change their `strlen()` byte measurement, issue severity/codes, or current score participation as part of semantic reclassification.
 
 Do not call them Google limits.
 
@@ -1600,7 +1636,8 @@ Add layered validation without collapsing protocol, provider, content-context, a
 - cross-submission semantics.
 - UTF-8 encoding requirements.
 - XML entity escaping and URL URI/IRI escaping requirements.
-- exact `lastmod` lexical contract derived from the Sitemap protocol/schema rather than an overbroad W3C-NOTE assumption.
+- `lastmod` must implement exactly these library protocol-profile forms: `YYYY-MM-DD`, `YYYY-MM-DDThh:mm:ssTZD`, and `YYYY-MM-DDThh:mm:ss.sTZD` with one-or-more fractional digits; dateTime requires `Z` or `±hh:mm` timezone designator.
+- year-only, year-month, hour/minute-only, zone-less dateTime, and malformed forms are out of contract.
 - fractional-second characterization and intentional correction of the current helper mismatch.
 - URL-sitemap vs Sitemap-Index `lastmod` semantics.
 - verification of XMLWriter UTF-8 and serialization guarantees.
@@ -1644,7 +1681,8 @@ Add layered validation without collapsing protocol, provider, content-context, a
 - title semantics.
 - one News entry per URL provider cardinality, while preserving the public list contract until migration is deliberate.
 - 1,000 total News entries per Sitemap.
-- "last two days" metadata window with caller-supplied reference time; do not silently redefine it as `48 hours`.
+- "last two days" is a context/evidence diagnostic only: consume caller-supplied `within_window` / `outside_window` / `unknown` evidence and do not derive a hard boundary from `publicationDate` plus a clock/reference time.
+- no hidden `now()`/global time and no invented `48 hours` or calendar-day arithmetic.
 - legacy optional News-field provider-status classification.
 - canonical example correction for `publicationDate: 'as-provided'`.
 
@@ -1664,18 +1702,18 @@ Stop mixing heuristic recommendations with protocol validity.
 
 1. Introduce issue origin/profile semantics.
 2. Establish OGP protocol validation.
-3. Preserve legacy issue/score behavior until migration is explicitly decided.
-4. Reclassify title/description length warnings as heuristics.
-5. Make an explicit decision on title/description measurement units (bytes, code points, etc.).
-6. Add characterization tests for ASCII and Arabic/Unicode title/description lengths before altering `strlen()` usage.
+3. Preserve legacy issue/score behavior: current title/description length issue codes and warning severity remain unchanged, and warning issues continue to flow through the existing score calculator.
+4. Reclassify title/description length warnings as heuristics without changing their observable compatibility behavior.
+5. Preserve `strlen()` byte measurement as the title/description heuristic measurement unit for this remediation; do not substitute code-point or grapheme measurement.
+6. Add characterization tests for ASCII and Arabic/Unicode title/description lengths that lock the current byte-based thresholds before refactoring validation architecture.
 7. Declare Twitter/X provider conformance out of scope until an official-source revalidation is conducted.
 8. Implement the OGP profile for the four required basics and the current exposed optional surface: determiner, locale, site_name, HTTP/HTTPS URL datatype, audio/video root URLs, image structured properties, multiple-image array preference/order, root/structured-property association, and `og:image:alt` as a protocol-level recommendation.
-9. Decide how heuristic warnings participate in scores.
+9. Keep heuristic warnings participating in scores exactly as current warnings do, including the existing default 5-point warning penalty; any future scoring change requires a separate explicit contract change.
 10. Align dedicated social builders and legacy `MetaTagsDTO` path.
 
 ### Critical constraint
 
-Do not silently change existing score math while changing semantic categories.
+Do not change existing score math, heuristic score participation, issue severity/codes, or title/description byte measurement while changing semantic categories.
 
 ---
 
@@ -1775,7 +1813,7 @@ Example: `max-snippet:-1`.
 
 **Do not change scoring as a side effect of refactoring validation layers.**
 
-Scoring changes need their own explicit contract decision.
+For Stack 5, the contract is already decided: existing heuristic warnings keep their current score participation and default warning penalty. Any future scoring change needs its own explicit contract change.
 
 ## ADR-06
 
@@ -1829,7 +1867,8 @@ Add characterization tests before changing public behavior for:
 - Open Graph multiple-image root/structured-property order and first-image preference.
 - canonical relative and absolute output.
 - current validation issue codes and score propagation.
-- ASCII and Arabic/Unicode title/description strings to isolate `strlen()` byte behavior.
+- ASCII and Arabic/Unicode title/description strings that lock `strlen()` byte behavior at heuristic boundaries.
+- current title/description length warnings retaining warning severity and the existing default 5-point-per-warning score deduction.
 
 ## 9.2 Formal protocol / vocabulary tests
 
@@ -1844,7 +1883,10 @@ Purpose: prove locally deterministic protocol behavior without silently importin
 - host/submission checks use explicit document context rather than unconditional same-host constructor rejection.
 - UTF-8 serialization.
 - XML entity escaping and URI/IRI escaping behavior.
-- exact Sitemap `lastmod` lexical cases, including valid fractional-second dateTime and invalid malformed input.
+- valid `lastmod`: `YYYY-MM-DD`.
+- valid `lastmod`: `YYYY-MM-DDThh:mm:ssZ` and `YYYY-MM-DDThh:mm:ss±hh:mm`.
+- valid `lastmod`: fractional-second dateTime with one or more fractional digits and required `Z`/offset.
+- invalid `lastmod`: year-only, year-month, hour/minute-only dateTime, zone-less dateTime, and malformed/out-of-range calendar/time input.
 - URL-sitemap vs Sitemap-Index `lastmod` semantic context where representable.
 
 ### RFC 9309 robots
@@ -1911,7 +1953,10 @@ Do **not** create offline tests that claim a URL extension proves the actual rem
 - invalid arbitrary date such as `as-provided`.
 - valid/invalid language cases including `zh-cn` and `zh-tw`.
 - publication-name parenthetical rule where locally decidable.
-- exact "last two days" boundary behavior only after that deterministic boundary is explicitly defined from provider semantics; use caller-supplied reference time and never hidden `now()`.
+- freshness state `within_window` is processed as caller-supplied provider evidence without local age arithmetic.
+- freshness state `outside_window` is processed deterministically as provider-out-of-window evidence.
+- freshness state `unknown` remains an evidence gap/diagnostic and is not fabricated into a pass or failure.
+- lexical `publicationDate` plus a reference clock must not trigger an invented `48 hours`, calendar-day, or timezone boundary calculation; no hidden `now()`.
 - original-publication-time/name/title truth remains content/context evidence, not fake lexical proof.
 
 ### Google robots.txt
@@ -1961,6 +2006,8 @@ Changing `maxSnippet(-1)` must not change:
 Unifying Sitemap serialization must not silently drop image/video/news/alternate data from an existing public entry point.
 
 Open Graph validation changes must not reorder multiple images or detach structured image properties from their root image.
+
+Reclassifying title/description length issues as heuristics must not change their `strlen()` byte thresholds, warning severity/codes, or existing score deductions.
 
 ---
 
