@@ -250,17 +250,18 @@ Sitemaps.org defines base sitemap constraints including:
 
 - Maximum 50,000 `<url>` entries.
 - The `lastmod` value must follow the W3C Datetime format (which allows omitting the time portion, e.g. YYYY-MM-DD). Fractional seconds are supported by the protocol.
-- **Current library behavior comparison:**
-  - `SitemapUrlDTO::isValidLastmod()` explicitly enforces regex `Y-m-d` or `ATOM` strict formats, and actively rejects malformed string lengths.
-  - `Shared\DTO\Sitemap\SitemapIndexEntryDTO` correctly applies the same `isValidLastmod` check.
-  - `Web\Sitemap\DTO\SitemapIndexEntryDTO` also applies the `isValidLastmod` check.
-  - However, standard ATOM (`Y-m-d\TH:i:sP`) does not natively include fractional seconds, meaning the current implementation safely rejects them to guarantee deterministic W3C-compliant output.
 - In a URL sitemap, `<url><lastmod>` identifies the time the page content was last modified, not the time the sitemap was generated.
 - In a Sitemap Index, `<sitemap><lastmod>` identifies the time the linked sitemap file itself was last modified.
 
-Google Provider additions:
-- Google does not use `priority` or `changefreq`.
-- Google uses `lastmod` only if it is consistently and verifiably accurate.
+**Current implementation limitation/mismatch:**
+- `SitemapUrlDTO::isValidLastmod()`, `Shared\DTO\Sitemap\SitemapIndexEntryDTO`, and `Web\Sitemap\DTO\SitemapIndexEntryDTO` explicitly enforce regex `Y-m-d` or `ATOM` strict formats.
+- Standard PHP `DateTimeInterface::ATOM` does not natively include fractional seconds. While W3C Datetime officially supports fractional seconds, the current implementation actively rejects them. This is a **current implementation limitation** that must be characterized before any remediation, rather than falsely claiming it guarantees W3C compliance.
+
+### Google Provider Behavior
+
+Google-specific behavior must be explicitly separated from the base sitemap protocol:
+- Google ignores `priority` and `changefreq`.
+- Google uses `lastmod` only if it is consistently and verifiably accurate (e.g., compared to actual page modification).
 - Maximum uncompressed size: 50 MB (52,428,800 bytes).
 - The required page URL `<loc>` inside a `<url>` entry must be less than 2,048 characters.
 - Sitemap index maximum 50,000 `<sitemap>` entries.
@@ -437,7 +438,8 @@ Current Google documentation includes constraints such as:
   - `YYYY-MM-DDThh:mm:ssTZD`
 - `video:content_loc` vs `video:player_loc`:
   - At least one of `video:content_loc` or `video:player_loc` must be present.
-  - `video:content_loc` must be a supported video file format. Google explicitly supports: `.3g2`, `.3gp2`, `.3gp`, `.3gpp`, `.asf`, `.avi`, `.divx`, `.f4v`, `.flv`, `.m2v`, `.m3u8`, `.m4v`, `.mkv`, `.mov`, `.mp4`, `.mpe`, `.mpeg`, `.mpg`, `.ogv`, `.qvt`, `.ram`, `.rm`, `.vob`, `.webm`, `.wmv`, `.xap`.
+  - `video:content_loc` must point to a supported video file format. Google currently documents support for: 3GP, 3G2, ASF, AVI, DivX, M2V, M3U, M3U8, M4V, MKV, MOV, MP4, MPEG, OGV, QVT, RAM, RM, VOB, WebM, WMV, XAP.
+  - Data URLs are explicitly unsupported for video URLs.
   - Both must not be the same URL as the parent page `<loc>`.
   - The resources must be accessible to Googlebot (Googlebot must not be blocked by robots.txt or login requirements, and must be able to fetch the file).
 
@@ -655,13 +657,14 @@ Google's provider-level behavior for robots.txt includes additional rules:
 - The `Sitemap:` field is independent of user-agent groups.
 - `Sitemap:` URLs can be cross-host (e.g., pointing to a CDN).
 - An empty Allow/Disallow rule path (e.g., `Allow:` or `Disallow:`) means the rule is ignored.
-- The path value must start with `/` to designate the root. (Note: Google requires a leading `/`, which differs from the RFC's `identifier` flexibility. Treat this as a Google parsing rule constraint).
+- The path value must start with `/` to designate the root.
 
 **Classification:**
 - UTF-8 encoded plain text file constraint: **Serialization/output responsibility**
 - File size limit (500 KiB): **Google provider document-level constraint** (The library can measure the generated document size deterministically and warn if it exceeds 500 KiB, but actual HTTP/file delivery remains the host's responsibility).
-- `Sitemap:` absolute URL, multiplicity, cross-host, case-sensitivity: **Provider behavior**
-- Empty path ignorance & leading `/`: **Google provider parsing rules** (to be modeled as explicit provider behavior, distinct from RFC 9309 rules).
+- `Sitemap:` absolute URL, multiplicity, cross-host, case-sensitivity: **Google provider contract**
+- Empty path ignorance: **Google provider parsing rules**.
+- Leading `/` requirement: **Google provider parsing behavior**. Google's requirement for a leading `/` must be compared against **RFC 9309 path-pattern semantics and documented Errata 7995** (which allows `*` or `/`), not against the RFC `identifier` grammar (which is exclusively for product-tokens).
 
 The current renderer is line-oriented, so injection prevention must be an explicit contract rather than an implied generic string check.
 
@@ -960,7 +963,7 @@ Additionally, the audit of the OGP provider contract must fully cover the capabi
 - `og:locale`: format `language_TERRITORY`
 - URL datatypes (validating shape)
 - audio/video URL semantics
-- `og:image:secure_url`: requires `https://`
+- `og:image:secure_url`: an alternate URL to use if a webpage requires HTTPS
 - `og:image:type`: MIME type
 - `og:image:width`: integer
 - `og:image:height`: integer
@@ -1597,6 +1600,9 @@ Add layered validation.
 - cross-submission semantics.
 - UTF-8 encoding requirements.
 - XML entity-escaping and URL URI/IRI escaping requirements.
+- sitemap `lastmod` accepted/rejected lexical forms (including W3C Datetime).
+- fractional-seconds characterization for current implementation behavior.
+- distinction between URL-sitemap and Sitemap-Index `lastmod` semantics where contextually representable.
 - Verification of XMLWriter UTF-8 and serialization guarantees.
 
 #### Google Image
@@ -1822,6 +1828,9 @@ Add explicit boundary cases including at minimum:
 - host/submission cases must validate explicit context behavior rather than unconditional same-host rejection.
 - UTF-8 encoding requirements.
 - XML entity-escaping and URL URI/IRI escaping requirements.
+- sitemap `lastmod` accepted/rejected lexical forms (including W3C Datetime).
+- fractional-seconds characterization for current implementation behavior.
+- distinction between URL-sitemap and Sitemap-Index `lastmod` semantics where contextually representable.
 
 ### Robots
 
@@ -1835,9 +1844,14 @@ Add explicit boundary cases including at minimum:
 - `%23`.
 - CR/LF injection cases.
 
-### Google Robots.txt Document Constraints
+### Google Robots.txt and Provider Constraints
 
 - file size limit behavior (500 KiB boundary) as a documented provider document-level constraint.
+- Google robots `Sitemap:` deterministic rules (valid absolute URLs).
+- Google-specific robots path cases (leading `/` handling).
+
+### Open Graph Protocol
+- supported OGP lexical/structural contracts (e.g., `og:locale` format, integer constraints for dimensions).
 
 ## 9.3 Provider profile tests
 
@@ -1857,6 +1871,7 @@ Add explicit boundary cases including at minimum:
 - `player_loc == parent <loc>`.
 - deterministic locally provable cases.
 - publication-date tests for both documented accepted forms plus invalid input.
+- rejection of Data URLs for `content_loc`.
 
 ### Google News
 
@@ -2003,6 +2018,9 @@ All provider facts should be rechecked again when the corresponding remediation 
 
 ## Standards / protocols
 
+- W3C Datetime
+  https://www.w3.org/TR/NOTE-datetime
+
 - PHP `strlen` function documentation
   https://www.php.net/manual/en/function.strlen.php
 
@@ -2025,6 +2043,9 @@ All provider facts should be rechecked again when the corresponding remediation 
   https://schema.org/
 
 ## Google Search
+
+- Build and Submit a Sitemap
+  https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap
 
 - Video SEO Best Practices
   https://developers.google.com/search/docs/appearance/video
