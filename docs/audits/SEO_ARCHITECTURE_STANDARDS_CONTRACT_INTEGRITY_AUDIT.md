@@ -992,6 +992,7 @@ The architecture of classification is also fixed; Stack 5 must not redesign the 
 - Existing title/description length issues are classified as origin `heuristic`, profile `seo-default` while retaining their existing issue codes/severity/score behavior.
 - OGP conformance issues use origin `protocol`, profile `ogp`; RFC 9309 conformance issues use origin `protocol`, profile `rfc9309`; Sitemap base-protocol issues use origin `protocol`, profile `sitemaps`; Google-specific diagnostics use origin `provider`, profile `google`.
 - The additive classification surface must pair each classification with its underlying `SeoValidationIssueDTO` without requiring consumers of the legacy result to migrate. Internal class naming is not a contract decision, but the separation and compatibility behavior above are mandatory.
+- For pre-existing legacy issues, that additive classification is emitted as the **legacy classification record** fixed in the GDC-01 Normative Legacy Classification Table: a companion entry with `code == related_legacy_code ==` the legacy issue code, `evidence_state = null`, and the fixed origin/profile/field for that code. These records are companion metadata, **not** new diagnostics, and produce no additional legacy, scoring, or validity effect.
 - The existing score calculator continues to consume the legacy issue severity contract; origin/profile metadata must not alter scoring in Stack 5.
 
 ### Current Google position
@@ -1041,13 +1042,13 @@ For each new diagnostic produced by the remediation:
 
 2. **`is_valid` is never changed by a new diagnostic.** `SeoValidationResultDTO::is_valid` continues to mean "no legacy error-severity issues". New provider/protocol/context diagnostics cannot turn a legacy-valid result into an invalid one.
 
-3. **Legacy collections are never mutated by a new diagnostic.** A new diagnostic must not be appended to the legacy `errors`, `warnings`, `info`, or `issues` series, and must not reuse or shadow an existing legacy issue code.
+3. **Legacy collections are never mutated by a new diagnostic.** A **new diagnostic** must not be appended to the legacy `errors`, `warnings`, `info`, or `issues` series, and must not reuse or shadow an existing legacy issue code. A **legacy classification record** is the sole exception: it intentionally uses the same `code` and `related_legacy_code` as the legacy issue it classifies (see the Normative Legacy Classification Table below) and introduces no additional legacy, scoring, or validity effect.
 
 4. **Scoring is never changed by a new diagnostic.** `SeoValidationScoreCalculator` continues to consume only the legacy issue severity contract exactly as it does today. New companion diagnostics contribute **no** deduction, not even a zero-point placeholder, and must not alter existing `error_count`, `warning_count`, `info_count`, `is_healthy`, grade, or score.
 
 5. **Relationship to legacy issues.** Where a new diagnostic concerns the same subject as an existing legacy issue, the companion record references the legacy issue via its stable code; the legacy issue itself remains in the legacy result unchanged. The two surfaces are correlated, never merged.
 
-6. **Single exception — pre-existing legacy issues.** Diagnostics that already existed before this remediation as `SeoValidationIssueDTO` objects (for example `missing_title`, `missing_og_title`, `missing_og_description`, `missing_og_image`, title/description length warnings) keep their current legacy placement, severity, code, and score participation under F-12. Reclassification adds companion origin/profile metadata only; it does not move them to the companion surface.
+6. **Single exception — pre-existing legacy issues.** Diagnostics that already existed before this remediation as `SeoValidationIssueDTO` objects (for example `missing_title`, `missing_og_title`, `missing_og_description`, `missing_og_image`, title/description length warnings) keep their current legacy placement, severity, code, and score participation under F-12. Reclassification adds companion origin/profile metadata only; it does not move them to the companion surface. Those companion metadata entries — where `code == related_legacy_code ==` the existing legacy issue code — are **legacy classification records**, not new diagnostics; they are the sole, intentional exception to the no-reuse rule and are fixed in the Normative Legacy Classification Table below.
 
 ### Public access contract — fixed surface (Stack 1 / Stack 5 deliverable)
 
@@ -1065,7 +1066,16 @@ This subsection fixes the consumer-facing shape of the companion surface so impl
   - `related_legacy_code` — `?string`: the stable legacy `SeoValidationIssueDTO` code this companion record concerns, when the same subject already has a legacy issue (correlation metadata only; it never moves the legacy issue).
   - Construction rules mirror the legacy DTO: empty `code` or `message` and unknown `severity`, `origin`, `profile`, or `evidence_state` values are construction errors. `evidence_state` values are scoped per code: a state not listed for that code is invalid for it. The construction guard must also reject any severity that does not match the fixed code severity for ordinary diagnostics, or that does not match the normative `(code, evidence_state) → severity` mapping for evidence-state diagnostics. A severity/evidence-state mismatch is never left to implementer interpretation.
 - **Correlation with the legacy result.** `SeoCompanionValidationResultDTO` exposes a nullable `legacy` property holding the `SeoValidationResultDTO` that was paired with the profile run, and `null` when the profile validator was invoked standalone. Correlation is therefore available both per-entry (`related_legacy_code`) and at the container level (`legacy`). The companion result never replaces the legacy result and never borrows its fields.
-- **Invocation surface.** `SeoMetaValidator::validate()` is unchanged and continues to return `SeoValidationResultDTO`. An additive `SeoMetaValidator::validateWithCompanion(MetaTagsDTO $meta, ?SeoValidationContextDTO $context = null): SeoCompanionValidationResultDTO` is the single public method that returns both surfaces for the web/meta/OGP path, embedding the identical legacy result under `legacy`. Every profile validator added by the remediation exposes a public `validate(<existing-domain-input>, ?SeoValidationContextDTO $context = null): SeoCompanionValidationResultDTO` entry point (existing domain DTO plus the optional unified context DTO) returning the same unified type; Stack 5 does not design an alternative result type, an alternative method contract, an alternative input shape, or an alternative legacy-pairing mechanism.
+- **Invocation surface.** The legacy `SeoMetaValidator::validate()` is unchanged letter-for-letter and continues to return `SeoValidationResultDTO`:
+
+  ```php
+  public static function validate(
+      array|object $meta,
+      array $options = []
+  ): SeoValidationResultDTO
+  ```
+
+  The additive `SeoMetaValidator::validateWithCompanion(array|object $meta, array $options = [], ?SeoValidationContextDTO $context = null): SeoCompanionValidationResultDTO` is the single public method that returns both surfaces for the web/meta/OGP path, embedding the identical legacy result under `legacy`. Every profile validator added by the remediation exposes exactly one of the fixed public signatures defined in "Profile validator public signatures — fixed" below, all returning the same unified type `SeoCompanionValidationResultDTO`; Stack 5 does not design an alternative result type, an alternative method contract, an alternative input shape, or an alternative legacy-pairing mechanism.
 - **Serialization shape.** `SeoCompanionValidationResultDTO` implements `\JsonSerializable` and its `toArray()`/JSON shape is fixed:
 
   ```json
@@ -1091,42 +1101,264 @@ This subsection fixes the consumer-facing shape of the companion surface so impl
 
 ### Unified immutable context DTO — fixed public input contract
 
-The companion/public validation surface consumes **one** immutable context DTO rather than per-validator invented method arguments. The fixed name is:
-
-- `Maatify\Seo\Web\Validation\DTO\SeoValidationContextDTO`
-
-It is the **additive public DTO** for all companion/profile validation. It has exactly the following fields:
-
-- `?array $evidence = null`
-- `?array $documentContext = null`
-
-No network, client, or clock dependency is introduced. The `evidence` and `documentContext` arrays are **typed semantic maps** whose keys are the fixed, Audit-authorized keys defined in the "Evidence input keys" table below. They are **not** an arbitrary policy-extension mechanism.
-
-The following invocation contracts are fixed. `SeoMetaValidator::validate()` is unchanged:
+The companion/public validation surface consumes **one** immutable context DTO rather than per-validator invented method arguments. The fixed class is:
 
 ```php
-SeoMetaValidator::validate(MetaTagsDTO $meta): SeoValidationResultDTO
+final readonly class Maatify\Seo\Web\Validation\DTO\SeoValidationContextDTO
+{
+    public function __construct(
+        public ?array $evidence = null,
+        public ?array $documentContext = null,
+    );
+}
 ```
 
-`SeoMetaValidator::validateWithCompanion()` is added:
+It is the **additive public DTO** for all companion/profile validation. It has exactly these two public fields and no other public fields. No network, client, or clock dependency is introduced, and no generic extension mechanism exists. The `evidence` and `documentContext` arrays are **typed semantic maps** whose keys are the fixed, Audit-authorized keys defined in the "Evidence input keys — fixed contract", "Normative evidence shapes", and "documentContext — fixed key contract" subsections below. They are **not** an arbitrary policy-extension mechanism. Constructor validation is fixed in "Context construction guards" below.
+
+The following invocation contracts are fixed.
+
+**Legacy `SeoMetaValidator::validate()` — preserved letter-for-letter:**
 
 ```php
-SeoMetaValidator::validateWithCompanion(
-    MetaTagsDTO $meta,
+public static function validate(
+    array|object $meta,
+    array $options = []
+): SeoValidationResultDTO
+```
+
+This is the actual existing repository contract and stays unchanged: `static`, `array|object $meta`, `$options` with default `[]`, and `SeoValidationResultDTO` return type. `MetaTagsDTO` remains a valid input through the `object` branch but is **not** the only accepted input. The audit's earlier `validate(MetaTagsDTO $meta)` wording is withdrawn; it is not a valid contract.
+
+**Additive `SeoMetaValidator::validateWithCompanion()` — fixed signature:**
+
+```php
+public static function validateWithCompanion(
+    array|object $meta,
+    array $options = [],
     ?SeoValidationContextDTO $context = null
 ): SeoCompanionValidationResultDTO
 ```
 
-Every profile validator uses the same pattern (existing domain input plus optional context, returning the unified result type):
+Parameter order is fixed: `$meta`, then `$options`, then `$context`. No overload variant is used; `$options` is not dropped; `$context` is not moved ahead of `$options`.
+
+**Required behavior of `validateWithCompanion()`:**
+
+1. Produces the exact legacy validation semantics equivalent to `SeoMetaValidator::validate($meta, $options)`.
+2. Embeds that identical `SeoValidationResultDTO` unchanged under `SeoCompanionValidationResultDTO::$legacy`.
+3. Adds **only** the companion legacy classification records (F-12 / GDC-01 Normative Legacy Classification Table, fixed below) and the fixed F-13 Open Graph companion diagnostics authorized below.
+4. Does **not** automatically run the Google robots.txt, Google robots-meta, Sitemap, Google Canonical, or hreflang cluster profiles. Those profiles are independent and are invoked through their own validators.
+
+`validateWithCompanion()` is responsible only for: legacy-result pairing; F-12 legacy classification records; F-13 Open Graph companion behavior. It is **not** a universal validation orchestrator.
+
+**Profile validator public signatures — fixed.**
+
+Every profile validator returns the unified `Maatify\Seo\Web\Validation\DTO\SeoCompanionValidationResultDTO` and takes the optional unified context DTO. The signatures below are fixed letter-for-letter. The domain input types are the existing repository types; no aggregate public DTO is invented. No generic placeholder such as `<existing-domain-input>` exists anywhere in the public contract.
+
+**1. RFC 9309 robots**
 
 ```php
-validate(
-    <existing-domain-input>,
-    ?SeoValidationContextDTO $context = null
-): SeoCompanionValidationResultDTO
+final class Rfc9309RobotsValidator
+{
+    public function validate(
+        RobotsTxtDTO $robots,
+        ?SeoValidationContextDTO $context = null
+    ): SeoCompanionValidationResultDTO;
+}
 ```
 
-`<existing-domain-input>` is the existing DTO/domain object for that profile's domain (for example the robots DTO for the robots validators, the sitemap document for the sitemap validators, the OGP/meta DTO for OGP, the canonical/hreflang inputs for Stack 6). No aggregate public DTO is invented.
+Domain type: `Maatify\Seo\Web\Robots\DTO\RobotsTxtDTO`.
+
+**2. Google robots.txt**
+
+```php
+final class GoogleRobotsTxtValidator
+{
+    public function validate(
+        RobotsTxtDTO $robots,
+        ?SeoValidationContextDTO $context = null
+    ): SeoCompanionValidationResultDTO;
+}
+```
+
+Domain type: `Maatify\Seo\Web\Robots\DTO\RobotsTxtDTO`.
+
+**3. Google robots meta**
+
+```php
+final class GoogleRobotsMetaValidator
+{
+    public function validate(
+        MetaRobotsBuilder $robots,
+        ?SeoValidationContextDTO $context = null
+    ): SeoCompanionValidationResultDTO;
+}
+```
+
+Domain type: `Maatify\Seo\Web\Robots\MetaRobotsBuilder`. The validator reads the authored directive state from the builder. It does not replace the builder and does not introduce a new robots-meta DTO.
+
+**4. Sitemap protocol**
+
+Runtime signature:
+
+```php
+final class SitemapProtocolValidator
+{
+    public function validate(
+        array $entries,
+        ?SeoValidationContextDTO $context = null
+    ): SeoCompanionValidationResultDTO;
+}
+```
+
+Normative PHPDoc/input contract:
+
+```text
+$entries is exactly one homogeneous list of:
+
+A) list<Maatify\Seo\Shared\DTO\Sitemap\SitemapUrlDTO>
+
+OR
+
+B) list<Maatify\Seo\Shared\DTO\Sitemap\SitemapIndexEntryDTO>
+
+OR
+
+C) list<Maatify\Seo\Web\Sitemap\DTO\SitemapIndexEntryDTO>
+```
+
+A mixed URL/index-entry list is **not** accepted. Both existing Sitemap Index DTO namespaces remain supported. If a supplied non-empty array contains an unsupported or mixed domain type, validation invocation is invalid and must use the library's existing invalid-argument exception family; it is **not** converted into an SEO diagnostic. No new Sitemap document aggregate DTO is introduced.
+
+**5. Google base Sitemap**
+
+```php
+final class GoogleSitemapValidator
+{
+    /**
+     * @param list<SitemapUrlDTO> $urls
+     */
+    public function validate(
+        array $urls,
+        ?SeoValidationContextDTO $context = null
+    ): SeoCompanionValidationResultDTO;
+}
+```
+
+`SitemapUrlDTO` here is `Maatify\Seo\Shared\DTO\Sitemap\SitemapUrlDTO`.
+
+**6. Google Image Sitemap**
+
+```php
+final class GoogleImageSitemapValidator
+{
+    /**
+     * @param list<SitemapUrlDTO> $urls
+     */
+    public function validate(
+        array $urls,
+        ?SeoValidationContextDTO $context = null
+    ): SeoCompanionValidationResultDTO;
+}
+```
+
+It validates the `images` lists carried by the supplied URL entries.
+
+**7. Google Video Sitemap**
+
+```php
+final class GoogleVideoSitemapValidator
+{
+    /**
+     * @param list<SitemapUrlDTO> $urls
+     */
+    public function validate(
+        array $urls,
+        ?SeoValidationContextDTO $context = null
+    ): SeoCompanionValidationResultDTO;
+}
+```
+
+It validates the `videos` lists carried by the supplied URL entries. The parent page `<loc>` for a video is `$urls[$urlIndex]->loc`; no duplicate parent-page-loc field is required in `documentContext`.
+
+**8. Google News Sitemap**
+
+```php
+final class GoogleNewsSitemapValidator
+{
+    /**
+     * @param list<SitemapUrlDTO> $urls
+     */
+    public function validate(
+        array $urls,
+        ?SeoValidationContextDTO $context = null
+    ): SeoCompanionValidationResultDTO;
+}
+```
+
+It validates the `news` lists carried by the supplied URL entries. This allows document-wide 1,000-News-entry validation without inventing another document DTO.
+
+**9. Open Graph**
+
+```php
+final class OpenGraphProtocolValidator
+{
+    public function validate(
+        array|object $meta,
+        ?SeoValidationContextDTO $context = null
+    ): SeoCompanionValidationResultDTO;
+}
+```
+
+It uses the same broad meta input domain already supported by `SeoMetaValidator` (`array|object`). It is not narrowed to `MetaTagsDTO`.
+
+**10. Google Canonical**
+
+```php
+final class GoogleCanonicalValidator
+{
+    public function validate(
+        string $canonical,
+        ?SeoValidationContextDTO $context = null
+    ): SeoCompanionValidationResultDTO;
+}
+```
+
+It diagnoses the supplied canonical URL string. It does not modify `CanonicalUrlBuilder`.
+
+**11. Google Hreflang Cluster**
+
+Runtime signature:
+
+```php
+final class GoogleHreflangClusterValidator
+{
+    public function validate(
+        array $cluster,
+        ?SeoValidationContextDTO $context = null
+    ): SeoCompanionValidationResultDTO;
+}
+```
+
+Normative shape:
+
+```text
+array<string, list<Maatify\Seo\Web\Hreflang\HreflangLinkDTO>>
+```
+
+The associative key is the fully-qualified localized page URL; the value is that page's complete supplied alternate-link set. Example (contract illustration only):
+
+```php
+[
+    'https://example.com/en/' => [
+        HreflangLinkDTO(...),
+        HreflangLinkDTO(...),
+    ],
+    'https://example.com/fr/' => [
+        HreflangLinkDTO(...),
+        HreflangLinkDTO(...),
+    ],
+]
+```
+
+This primary input is itself the complete deterministic cluster. Hreflang cluster data does **not** go in `documentContext`, and no new `HreflangClusterDTO` is introduced in this remediation.
 
 **Key authorization rule:**
 
@@ -1134,7 +1366,7 @@ validate(
 
 ### Concrete public profile validator classes — fixed
 
-The following classes/namespaces are fixed public contracts in this Audit. An implementer may not choose alternative names or per-profile result DTOs:
+The following classes/namespaces are fixed public contracts in this Audit. An implementer may not choose alternative names or per-profile result DTOs. Each class uses exactly the public signature fixed in the "Profile validator public signatures — fixed" subsection above.
 
 - `Maatify\Seo\Web\Validation\Profile\Rfc9309RobotsValidator`
 - `Maatify\Seo\Web\Validation\Profile\GoogleRobotsTxtValidator`
@@ -1168,23 +1400,93 @@ Because `SeoValidationContextDTO::$evidence` is a public surface, its keys are f
 | `google_news.freshness` | `GoogleNewsSitemapValidator` | `google_news_freshness_evidence` | `within_window` / `outside_window` / `unknown` |
 | `robots_meta.unavailable_after_recognizability` | `GoogleRobotsMetaValidator` | `robots_meta_unavailable_after_recognizability` | `recognized` / `unrecognized` / `unknown` |
 
+**General targeting rule.**
+
+Evidence associated with Sitemap child collections is indexed by the exact zero-based positions in the supplied `$urls` input. For nested child data:
+
+```text
+$urlIndex   = position in $urls
+$childIndex = position inside images/videos/news
+```
+
+URL strings, titles, object hashes, and invented IDs are **not** used as identity. This permits duplicate URLs/objects without ambiguity.
+
+**Normative evidence shapes — targeting and cardinality.**
+
+- `google_sitemap.lastmod_accuracy` → `array<int, 'accurate'|'inaccurate'|'unknown'>` indexed by `$urlIndex`; `evidence[$urlIndex]` describes `$urls[$urlIndex]->lastmod`.
+- `google_sitemap.host_verification` → document/site-level scalar `'verified_host'|'unverified_host'|'unknown'`; it is not per-URL evidence.
+- `google_image.cross_domain_verification` → `array<int, array<int, 'verified'|'unverified'|'unknown'>>` mapped to `$urls[$urlIndex]->images[$imageIndex]`.
+- `google_image.crawlability` → `array<int, array<int, 'accessible'|'inaccessible'|'unknown'>>` mapped to `$urls[$urlIndex]->images[$imageIndex]`.
+- `google_video.relevance` → `array<int, array<int, 'relevant'|'irrelevant'|'unknown'>>` mapped to `$urls[$urlIndex]->videos[$videoIndex]`.
+- `google_video.title_host_page_match` → `array<int, array<int, 'matches'|'differs'|'unknown'>>` mapped to `$urls[$urlIndex]->videos[$videoIndex]`.
+- `google_video.description_host_page_match` → `array<int, array<int, 'matches'|'differs'|'unknown'>>` mapped to `$urls[$urlIndex]->videos[$videoIndex]`.
+- `google_news.original_publication` → `array<int, array<int, 'original'|'not_original'|'unknown'>>` mapped to `$urls[$urlIndex]->news[$newsIndex]`.
+- `google_news.publication_name_match` → `array<int, array<int, 'matched'|'mismatched'|'unknown'>>` mapped to `$urls[$urlIndex]->news[$newsIndex]`.
+- `google_news.freshness` → `array<int, array<int, 'within_window'|'outside_window'|'unknown'>>` mapped to `$urls[$urlIndex]->news[$newsIndex]`.
+- `robots_meta.unavailable_after_recognizability` → scalar `'recognized'|'unrecognized'|'unknown'`.
+
 **Evidence consumption rules:**
 
 - A profile validator reads only its own key from the table above.
 - Missing evidence for a key maps to the `unknown` state **only** when the diagnostic's contract fixes an `unknown` state. A missing key is never converted into a warning or into any fabricated pass/fail.
 - No arbitrary evidence state is accepted. A state not listed for the key is invalid.
-- Unknown/unauthorized keys in `$evidence` are ignored for diagnostic production: they must not create new diagnostics or new semantics.
 
-**`documentContext` — fixed scope:**
+**Missing / extra evidence rules:**
 
-`SeoValidationContextDTO::$documentContext` is used **only** for local, deterministic facts that the validation surface legitimately needs and that the domain DTO cannot carry alone. Its fixed permitted uses are:
+- For authorized indexed evidence maps: a missing `$urlIndex` maps to `unknown` where `unknown` exists.
+- A missing child index maps to `unknown` where `unknown` exists.
+- An index that does not correspond to an actual supplied URL/child creates no diagnostic.
+- Non-integer or negative indices in an authorized indexed evidence map are invalid context input.
+- An invalid state for an authorized key is invalid context input.
+- Unknown top-level evidence keys remain ignored and may not create diagnostics or semantics.
+- Absent evidence is never converted into a warning.
 
-- Sitemap document location/scope (drive `sitemap_location_scope_violation` deterministically when caller-supplied location context is sufficient; never fabricated otherwise).
-- Parent page `loc` (drive `google_video_media_loc_equals_parent_loc`).
-- Hreflang cluster supplied data (drive cluster diagnostics).
-- Document size/count when the validation surface needs them.
+**`documentContext` — fixed key contract.**
 
-`documentContext` is **not** a catch-all provider data bag and must not carry network, Search Console, or clock-derived facts.
+`SeoValidationContextDTO::$documentContext` is **not** a prose-defined catch-all. Its complete allowed normative keys in this remediation are exactly:
+
+**`sitemap.document_location`**
+
+```text
+array{
+    scheme: string,
+    host: string,
+    port: int|null,
+    path: string
+}
+```
+
+- Meaning: the actual location of the Sitemap document being validated.
+- Rules: `scheme` non-empty; `host` non-empty; `port` positive integer or `null`; `path` starts with `/`.
+- This is caller-supplied deterministic data. No Search Console data and no ownership claim belongs here.
+- Consumed **only** by `SitemapProtocolValidator` for `sitemap_location_scope_violation`.
+
+**`sitemap.document_type`**
+
+Allowed: `'urlset'` or `'sitemapindex'`. Used when the document type cannot be determined solely from an empty `$entries` list, and for explicit consistency checking. For non-empty input the supplied value must agree with the domain type: `urlset` → `SitemapUrlDTO`; `sitemapindex` → either existing `SitemapIndexEntryDTO` namespace. A contradiction between domain input and explicit `sitemap.document_type` is invalid invocation/context, not an SEO diagnostic.
+
+**`sitemap.uncompressed_size_bytes`**
+
+Shape: `int >= 0`. Feeds `sitemap_document_size_exceeds_boundary`. It represents the actual uncompressed serialized document byte count supplied by the caller/serialization layer. It is **not** estimated from entry count.
+
+These are the only `documentContext` keys required by this remediation. The previous vague permitted-use items are removed:
+
+- Parent page `loc` — comes directly from `SitemapUrlDTO::loc`, never from `documentContext`.
+- Hreflang cluster data — the cluster is the primary input to `GoogleHreflangClusterValidator`, never `documentContext`.
+- Generic document count — URL/Index/News/Image counts are derived directly from the supplied arrays.
+
+Unknown `documentContext` keys may be ignored but must not create new diagnostics or new semantics.
+
+**Context construction guards — fixed.**
+
+`SeoValidationContextDTO` constructor validation is fixed:
+
+- For recognized `$evidence` keys: enforce the exact value shape (scalar / indexed / nested) and the allowed states defined above.
+- Negative and non-integer list indices are invalid for indexed evidence.
+- An invalid recognized evidence value (shape or state) is a construction error.
+- For recognized `$documentContext` keys: enforce the exact shape/value contract defined above; a violation is a construction error.
+- Unknown top-level keys are ignored by validators: they must not create diagnostics and must not introduce semantics.
+- No extension registry is invented.
 
 ### Fixed machine contracts for all new diagnostics
 
@@ -1280,6 +1582,56 @@ Every stable `code`, `severity`, `origin`, `profile`, `field`, and `evidence_sta
 | `hreflang_alternate_set_inconsistent` | warning | provider | `google` | `href` | — | Inconsistent alternate sets across supplied localized URLs (F-15). |
 | `hreflang_url_not_fully_qualified` | warning | provider | `google` | `href` | — | Alternate URL not fully qualified where the Google profile requires it (F-15). |
 
+### Normative Legacy Classification Table — fixed
+
+Two distinct kinds of entries exist inside `SeoCompanionDiagnosticDTO`:
+
+**A. New diagnostics** — genuinely new companion diagnostics (the GDC-01 machine tables above plus the fixed F-13 OGP contracts). They may not reuse or shadow any legacy issue code.
+
+**B. Legacy classification records** — companion metadata records for issues that already exist inside the legacy result. They are **not** new diagnostics. For these records only:
+
+```text
+code == related_legacy_code == existing legacy issue code
+```
+
+This is an explicit, intentional exception to the non-collision rule. A legacy classification record produces **no** additional legacy issue, **no** additional score contribution, **no** additional warning/error count, and **no** `is_valid` change. It is classification metadata for the legacy issue that already exists.
+
+The complete normative table of legacy classification records for this remediation is:
+
+| Legacy code              | Severity | Origin    | Profile       | Field            |
+| ------------------------ | -------- | --------- | ------------- | ---------------- |
+| `title_too_short`        | warning  | heuristic | `seo-default` | `title`          |
+| `title_too_long`         | warning  | heuristic | `seo-default` | `title`          |
+| `description_too_short`  | warning  | heuristic | `seo-default` | `description`    |
+| `description_too_long`   | warning  | heuristic | `seo-default` | `description`    |
+| `missing_og_title`       | warning  | protocol  | `ogp`         | `og:title`       |
+| `missing_og_description` | warning  | heuristic | `seo-default` | `og:description` |
+| `missing_og_image`       | warning  | protocol  | `ogp`         | `og:image`       |
+
+For every row:
+
+```text
+evidence_state = null
+related_legacy_code = same value as code
+```
+
+Example record:
+
+```json
+{
+  "code": "missing_og_description",
+  "severity": "warning",
+  "message": "...",
+  "field": "og:description",
+  "origin": "heuristic",
+  "profile": "seo-default",
+  "evidence_state": null,
+  "related_legacy_code": "missing_og_description"
+}
+```
+
+The `message` reflects/correlates with the same legacy issue and creates no new semantic rule. No legacy classification rows other than the seven above are added in this remediation.
+
 ### What legally belongs only in the companion surface
 
 Examples fixed by this audit (the complete, normative list is the machine-contract tables above plus the fixed F-13 OGP contracts):
@@ -1356,19 +1708,20 @@ This subsection fixes the executable outcome, replacing "characterize then migra
 
 - `og:description` is optional under OGP, so the OGP protocol profile emits **no** issue for a missing description.
 - The legacy `SeoValidationIssueDTO` `missing_og_description` warning is a pre-existing legacy issue. Under F-12 and GDC-01 it **remains in the legacy result unchanged**: same code, `warning` severity, same message, and the same default 5-point warning score deduction — exactly as today.
-- It is reclassified (companion metadata only) as origin `heuristic`, profile `seo-default`, because it is a publisher recommendation, not an OGP protocol requirement. Reclassification must not move it to the companion surface, change its severity/code, or alter its score participation.
+- Its companion entry is the **legacy classification record** fixed in the GDC-01 Normative Legacy Classification Table: origin `heuristic`, profile `seo-default`, `evidence_state = null`, `related_legacy_code = missing_og_description`, because it is a publisher recommendation, not an OGP protocol requirement. This record is **not** a new OGP diagnostic. Reclassification must not move the legacy issue to the companion surface, change its severity/code, or alter its score participation.
 
 **Issue contracts for missing OGP required basics:**
 
-- `og:title` and `og:image` already produce legacy warnings (`missing_og_title`, `missing_og_image`). Those pre-existing legacy issues stay in the legacy result and score under F-12 and GDC-01. Their companion classification is origin `protocol`, profile `ogp` — the missing property is a genuine OGP required basic even though it was historically reported as a warning. This is documentation/classification only; no legacy behavior changes.
-- Missing `og:type` and missing `og:url` are **new** diagnostics introduced by the OGP profile. Their contracts are fixed as:
+- `og:title` and `og:image` already produce legacy warnings (`missing_og_title`, `missing_og_image`). Those pre-existing legacy issues stay in the legacy result and score under F-12 and GDC-01. Their companion classification is the legacy classification record fixed in the GDC-01 Normative Legacy Classification Table (origin `protocol`, profile `ogp`) — the missing property is a genuine OGP required basic even though it was historically reported as a warning. This is documentation/classification only; no legacy behavior changes.
+- Missing `og:type` and missing `og:url` are **new** diagnostics introduced by the OGP profile (and the only new OGP diagnostics in this remediation). Their contracts are fixed as:
   - codes: `missing_og_type`, `missing_og_url`;
   - severity: `warning` — matching the severity convention of the existing missing-OGP-basic warnings;
   - origin: `protocol`; profile: `ogp`;
   - `field`: `og:type` for `missing_og_type`, `og:url` for `missing_og_url`;
-  - `evidence_state`: `null` (not evidence/context diagnostics); `related_legacy_code`: `null`;
+  - `evidence_state`: `null`; `related_legacy_code`: `null`;
   - container: **companion surface only** (`SeoCompanionDiagnosticDTO` in `SeoCompanionValidationResultDTO`). Under GDC-01 they must **not** be appended to the legacy `errors`/`warnings`/`info`/`issues` collections, must **not** change `is_valid` or `has_warnings`, and must **not** produce any score deduction.
 - These new codes must not collide with any legacy code and must not be emitted by `SeoMetaValidator::validate()` into the legacy result.
+- When invoked through `validateWithCompanion()`, the legacy classification records for `missing_og_title`, `missing_og_image`, and `missing_og_description` appear **only** when the corresponding legacy issue is actually present in the produced legacy result, and the new `missing_og_type` / `missing_og_url` diagnostics are added exactly once by the fixed F-13 OGP companion protocol validation.
 
 **Relationship to the legacy result and score:** unchanged for all pre-existing legacy issues; off-result and off-score for all new protocol diagnostics. `SeoMetaValidator::validate()` keeps returning the existing `SeoValidationResultDTO` contract; the OGP profile results are delivered through the companion surface (GDC-01) and the dedicated social builders.
 
@@ -1504,6 +1857,8 @@ Separate and unify:
    - reciprocal relationships
    - complete/consistent alternate groups
    - fully-qualified URLs
+
+The Google hreflang cluster validator consumes the fixed cluster input shape `array<string, list<Maatify\Seo\Web\Hreflang\HreflangLinkDTO>>` (fully-qualified localized page URL → complete alternate-link set) as its primary input; cluster data is never supplied through `documentContext`, and no new `HreflangClusterDTO` is introduced. The host or caller supplies the deterministic cluster input; the validator performs no crawling.
 
 ### What must not be done
 
@@ -1907,7 +2262,7 @@ Ordinary internal details that cannot change an observable/contract outcome do n
 
 ## AP-12 — New diagnostics are additive and never mutate legacy results or scores
 
-Every new protocol/provider/context diagnostic introduced by Stacks 2/4/5/6 is delivered through the GDC-01 companion surface: a `SeoCompanionDiagnosticDTO` entry inside the unified `SeoCompanionValidationResultDTO` (GDC-01 public access contract). It must not change `SeoValidationResultDTO::is_valid`, must not be appended to the legacy `errors`/`warnings`/`info`/`issues` collections, and must not affect `SeoValidationScoreCalculator`. Pre-existing legacy issues keep their F-12 placement and score behavior already documented here.
+Every new protocol/provider/context diagnostic introduced by Stacks 2/4/5/6 is delivered through the GDC-01 companion surface: a `SeoCompanionDiagnosticDTO` entry inside the unified `SeoCompanionValidationResultDTO` (GDC-01 public access contract). It must not change `SeoValidationResultDTO::is_valid`, must not be appended to the legacy `errors`/`warnings`/`info`/`issues` collections, and must not affect `SeoValidationScoreCalculator`. Pre-existing legacy issues keep their F-12 placement and score behavior already documented here. Legacy classification records (GDC-01 Normative Legacy Classification Table) are companion metadata, **not** new diagnostics: they intentionally reuse the legacy `code` as `related_legacy_code` and produce no additional legacy, scoring, or validity effect.
 
 ## AP-13 — Numeric textual boundaries use the fixed measurement policy
 
@@ -2066,7 +2421,8 @@ Add layered validation without collapsing protocol, provider, content-context, a
 - Sitemap Index count limit: 50,000 Sitemaps; over-limit emits `sitemap_index_count_exceeds_limit` (error, GDC-01 companion-only).
 - uncompressed byte-size limits: 50 MB (52,428,800 bytes); over-limit emits `sitemap_document_size_exceeds_boundary` (error, GDC-01 companion-only).
 - page `<loc>`: the sitemaps.org source rule is "less than 2,048 characters" without a defined unit. The F-02 exact measurement contract separates that source rule from the library deterministic policy (EVIDENCE BOUNDARY): measure UTF-8 bytes of the value as supplied (`strlen(loc) < 2048`), before URI/IRI normalization/percent-encoding, and emit `sitemap_loc_length_exceeds_measure_boundary` (warning, GDC-01 companion-only) as a conservative library-policy boundary — never worded as a proven protocol violation.
-- host/site/submission-context rules: modeled as the caller-supplied evidence diagnostic `google_sitemap_host_context` per the GDC-01 machine-contract table; no offline host verification is fabricated.
+- Generic Sitemaps.org protocol location/scope: uses **only** `sitemap_location_scope_violation` (error, origin `protocol`, profile `sitemaps`, GDC-01 companion-only), consuming `documentContext['sitemap.document_location']` as its sole input evidence. No Search Console, no Google ownership state, no network, and no guessed ownership; `google_sitemap_host_context` is never used to prove or disprove Sitemaps.org protocol scope.
+- Google verified ownership/submission evidence: uses **only** `google_sitemap_host_context` (origin `provider`, profile `google`, GDC-01 companion-only), consuming `evidence['google_sitemap.host_verification']` with states `verified_host` / `unverified_host` / `unknown`. It is independent provider evidence; no offline host verification is fabricated, and it is never a substitute for generic Sitemap protocol location-scope validation.
 - Sitemaps.org location/scope protocol validation: modeled as `sitemap_location_scope_violation` (error, origin `protocol`, profile `sitemaps`, GDC-01 companion-only), emitting with `field = loc` for page-URL scope violations or `field = sitemap` for Sitemap Index child location scope violations; emitted only when caller-supplied document/location context deterministically proves the violation; no network, no Search Console, no guessed ownership.
 - UTF-8 encoding requirements.
 - XML entity escaping and URL URI/IRI escaping requirements.
@@ -2139,14 +2495,14 @@ Stop mixing heuristic recommendations with protocol validity.
 
 ### Order
 
-1. Introduce additive issue origin/profile classification exactly under the F-12 contract, delivering every new diagnostic as a `SeoCompanionDiagnosticDTO` entry in the unified `SeoCompanionValidationResultDTO` and exposing them through the GDC-01 public access contract (`SeoMetaValidator::validateWithCompanion()` / per-profile `validate()`), with no alteration to legacy `SeoValidationIssueDTO` / `SeoValidationResultDTO` serialized shapes or to `SeoMetaValidator::validate()` return contract.
+1. Introduce additive issue origin/profile classification exactly under the F-12 contract, delivering every new diagnostic as a `SeoCompanionDiagnosticDTO` entry in the unified `SeoCompanionValidationResultDTO` and exposing them through the GDC-01 public access contract using exactly the fixed invocation signatures (`SeoMetaValidator::validateWithCompanion(array|object $meta, array $options = [], ?SeoValidationContextDTO $context = null)` and the 11 fixed profile-validator `validate()` signatures), with no alteration to legacy `SeoValidationIssueDTO` / `SeoValidationResultDTO` serialized shapes or to `SeoMetaValidator::validate()` return contract.
 2. Establish OGP protocol validation under the fixed F-13 OGP migration contract.
 3. Preserve legacy issue/score behavior: current title/description length issue codes and warning severity remain unchanged, and warning issues continue to flow through the existing score calculator.
 4. Reclassify title/description length warnings as origin `heuristic`, profile `seo-default` without changing their observable compatibility behavior.
 5. Preserve `strlen()` byte measurement as the title/description heuristic measurement unit for this remediation; do not substitute code-point or grapheme measurement.
 6. Add characterization tests for ASCII and Arabic/Unicode title/description lengths that lock the current byte-based thresholds before refactoring validation architecture.
 7. Declare Twitter/X provider conformance out of scope until an official-source revalidation is conducted.
-8. Implement the OGP profile for the four required basics and the current exposed optional surface: determiner, locale, site_name, HTTP/HTTPS URL datatype, audio/video root URLs, image structured properties, multiple-image array preference/order, root/structured-property association, and `og:image:alt` as a protocol-level recommendation. Emit the new `missing_og_type` / `missing_og_url` protocol diagnostics (`warning`, origin `protocol`, profile `ogp`) as GDC-01 companion-only; keep the pre-existing `missing_og_title`, `missing_og_image`, and `missing_og_description` legacy issues in the legacy result and score unchanged, with `missing_og_description` reclassified as origin `heuristic`, profile `seo-default`.
+8. Implement the OGP profile for the four required basics and the current exposed optional surface: determiner, locale, site_name, HTTP/HTTPS URL datatype, audio/video root URLs, image structured properties, multiple-image array preference/order, root/structured-property association, and `og:image:alt` as a protocol-level recommendation. Emit the new `missing_og_type` / `missing_og_url` protocol diagnostics (`warning`, origin `protocol`, profile `ogp`, `evidence_state`/`related_legacy_code` null) as GDC-01 companion-only; keep the pre-existing `missing_og_title`, `missing_og_image`, and `missing_og_description` legacy issues in the legacy result and score unchanged. Companion classification for those three is exactly the legacy classification record fixed in the GDC-01 Normative Legacy Classification Table (origin `protocol`, profile `ogp` for `missing_og_title`/`missing_og_image`; origin `heuristic`, profile `seo-default` for `missing_og_description`), emitted only when the corresponding legacy issue is actually present.
 9. Keep heuristic warnings participating in scores exactly as current warnings do, including the existing default 5-point warning penalty; any future scoring change requires a separate explicit contract change.
 10. Align dedicated social builders and legacy `MetaTagsDTO` path without adding origin/profile keys to legacy JSON payloads.
 
@@ -2169,6 +2525,7 @@ Do not change existing score math, heuristic score participation, issue severity
 - use conventional BCP 47 casing when normalization is performed, without treating casing alone as provider invalidity.
 - preserve `x-default`.
 - validate deterministically knowable Google structural rules from supplied data, including fully-qualified alternate URLs → `hreflang_url_not_fully_qualified` (warning, GDC-01 companion-only).
+- `GoogleHreflangClusterValidator` accepts the fixed cluster input shape `array<string, list<Maatify\Seo\Web\Hreflang\HreflangLinkDTO>>` (fully-qualified localized page URL → that page's complete alternate-link set). The cluster input is itself the complete deterministic cluster; cluster data is never supplied through `documentContext`, and no `HreflangClusterDTO` is introduced.
 - add cluster-level validation with the fixed GDC-01 codes `hreflang_self_reference_missing`, `hreflang_reciprocal_link_missing`, and `hreflang_alternate_set_inconsistent` (all warning, origin `provider`, profile `google`, field `href`, GDC-01 companion-only).
 - **do not implement ISO 639-1 / ISO 3166-1 / ISO 15924 membership tables in this remediation** and do not claim full provider code-membership validation; that requires the separate versioned standards-data contract defined by F-15.
 - preserve deterministic behavior and host ownership; no crawling is introduced.
@@ -2312,7 +2669,7 @@ This applies in particular to hreflang ISO membership tables and Google structur
 
 **Do not let new diagnostics hit the legacy result or score.**
 
-Every new protocol/provider/context diagnostic introduced by Stacks 2/4/5/6 is delivered through the GDC-01 companion surface. It must not change `is_valid`, must not be appended to legacy `errors`/`warnings`/`info`/`issues`, and must not alter `SeoValidationScoreCalculator` output. The single exception is pre-existing legacy issues, which keep their F-12 placement and score behavior.
+Every new protocol/provider/context diagnostic introduced by Stacks 2/4/5/6 is delivered through the GDC-01 companion surface. It must not change `is_valid`, must not be appended to legacy `errors`/`warnings`/`info`/`issues`, and must not alter `SeoValidationScoreCalculator` output. The single exception is pre-existing legacy issues, which keep their F-12 placement and score behavior. Legacy classification records (GDC-01 Normative Legacy Classification Table) are companion metadata, not new diagnostics: they intentionally reuse the legacy `code` as `related_legacy_code` and produce no additional legacy, scoring, or validity effect.
 
 ## ADR-14
 
@@ -2356,6 +2713,31 @@ Add characterization tests before changing public behavior for:
 
 If characterization discovers a material behavior not already classified `preserve` or `intentionally change`, assert the AP-11 decision gate rather than inventing the expected production behavior inside the test PR.
 
+**Legacy compatibility:**
+
+- Characterize the exact existing method contract and prove it stays unchanged:
+
+  ```php
+  SeoMetaValidator::validate(array|object $meta, array $options = [])
+  ```
+
+- Prove `MetaTagsDTO` remains accepted through the `object` branch while the broader public input contract (`array|object`) is preserved; the audit's earlier `validate(MetaTagsDTO $meta)` wording is withdrawn and must not reappear.
+
+**`validateWithCompanion`:**
+
+- `validateWithCompanion($meta, $options, $context)` produces an embedded `legacy` result exactly equal to `validate($meta, $options)` for the same `$meta` and `$options`.
+- Custom options supplied through `$options` (for example title/description thresholds) flow identically into the embedded legacy result.
+
+**Legacy classification:**
+
+- Assert every fixed classification row: `title_too_short`, `title_too_long`, `description_too_short`, `description_too_long`, `missing_og_title`, `missing_og_description`, `missing_og_image`.
+- For each row: the classification record appears **only** when the underlying legacy issue exists; `code == related_legacy_code`; severity matches the legacy severity; origin/profile match the GDC-01 Normative Legacy Classification Table; the legacy result and score remain unchanged.
+
+**Profile public signatures:**
+
+- Tests/static checks must lock the 11 exact public signatures documented in GDC-01 ("Profile validator public signatures — fixed").
+- No generic placeholder such as `<existing-domain-input>` remains anywhere in the public contract.
+
 ## 9.2 Formal protocol / vocabulary tests
 
 Purpose: prove locally deterministic protocol behavior without silently importing provider rules.
@@ -2371,6 +2753,8 @@ Purpose: prove locally deterministic protocol behavior without silently importin
 - host/submission checks use explicit document context rather than unconditional same-host constructor rejection.
 - Sitemap location/scope protocol validation emits `sitemap_location_scope_violation` (error, origin `protocol`, profile `sitemaps`, GDC-01 companion-only) only when caller-supplied document/location context deterministically proves a page URL violates the applicable scope (`field = loc`), or a Sitemap Index child location violates the same-site restriction (`field = sitemap`); insufficient context emits no diagnostic and no fabricated pass/fail.
 - Google verified-ownership/submission context stays a provider evidence diagnostic (`google_sitemap_host_context`) and is never used as a substitute for generic protocol location-scope validation.
+- `sitemap.document_type` conflicting with the supplied entry domain type is rejected as invalid invocation/context (library invalid-argument exception family), not reported as an SEO diagnostic.
+- document byte size drives `sitemap_document_size_exceeds_boundary`, sourced from `documentContext['sitemap.uncompressed_size_bytes']` and never estimated from entry count.
 - UTF-8 serialization.
 - XML entity escaping and URI/IRI escaping behavior.
 - extended DTO parity: equivalent `SitemapUrlDTO` input produces identical `image:*`/`video:*`/`news:*`/`xhtml:link` output through `SitemapGeneratorService` and `SitemapXmlStringRenderer` after Stack 3, with namespaces declared conditionally.
@@ -2399,8 +2783,9 @@ Purpose: prove locally deterministic protocol behavior without silently importin
 - four required basics.
 - `og:description` remains optional at protocol-validity level; the OGP profile emits **no** missing-description conformance issue.
 - legacy `missing_og_description` warning remains a legacy `SeoValidationIssueDTO` (warning, heuristic origin, `seo-default` profile) that keeps its legacy result placement and default 5-point score deduction unchanged.
-- pre-existing `missing_og_title` / `missing_og_image` legacy warnings stay in the legacy result and score, with companion origin `protocol` / profile `ogp`.
-- new `missing_og_type` and `missing_og_url` are `warning`-severity protocol diagnostics (origin `protocol`, profile `ogp`) delivered only through the GDC-01 companion surface: they must not appear in legacy `errors`/`warnings`/`info`/`issues`, must not change `is_valid`/`has_warnings`, and must not affect the calculated score.
+- pre-existing `missing_og_title` / `missing_og_image` legacy warnings stay in the legacy result and score, with companion classification fixed as origin `protocol` / profile `ogp` per the GDC-01 Normative Legacy Classification Table (legacy classification records, `code == related_legacy_code`).
+- through `validateWithCompanion()`, the classification records for `missing_og_title`, `missing_og_image`, and `missing_og_description` appear **only** when the corresponding legacy issue is actually present in the produced legacy result; no classification record is produced for an absent legacy issue, and no duplicate classification entries occur for the same legacy issue instance.
+- new `missing_og_type` and `missing_og_url` are `warning`-severity protocol diagnostics (origin `protocol`, profile `ogp`, `evidence_state`/`related_legacy_code` null) delivered only through the GDC-01 companion surface: they must not appear in legacy `errors`/`warnings`/`info`/`issues`, must not change `is_valid`/`has_warnings`, and must not affect the calculated score.
 - determiner enum.
 - locale shape.
 - HTTP/HTTPS URL datatype.
@@ -2417,12 +2802,16 @@ Purpose: prove locally deterministic protocol behavior without silently importin
 
 - `priority` and `changefreq` remain protocol-valid fields but emit `google_sitemap_priority_ignored` / `google_sitemap_changefreq_ignored` (info, GDC-01 companion-only), not Google validity failures.
 - Google `lastmod` accuracy is represented as `google_sitemap_lastmod_accuracy` (provider/content diagnostic) consuming caller evidence `accurate`/`inaccurate`/`unknown` rather than inferred from lexical validity; `unknown` remains a gap.
+- two URL entries can carry independent `lastmod` evidence by `$urlIndex` (for example `[0] => 'inaccurate'`, `[1] => 'accurate'`) producing independent diagnostics per entry.
+- `evidence['google_sitemap.host_verification']` is document/site-level scalar evidence and does **not** drive `sitemap_location_scope_violation` or any generic protocol-scope diagnostic.
 
 ### Google Image
 
 - 1,000 images valid.
 - 1,001 images emit `google_image_count_exceeds_limit` (warning, GDC-01 companion-only).
 - cross-domain verification remains the evidence/context diagnostic `google_image_cross_domain_verification` rather than an offline network assertion; `unknown` remains a gap.
+- two images under one URL can carry different evidence by `[urlIndex][imageIndex]` (for example `[0][0] => 'verified'`, `[0][1] => 'unverified'`) producing independent diagnostics per image.
+- evidence for a non-existent child index creates no diagnostic; a missing child index maps to `unknown` where `unknown` exists.
 
 ### Google Video
 
@@ -2439,6 +2828,9 @@ Deterministic/provider-input cases:
 - title match (`google_video_title_host_page_match`) and `content_loc` preference (`google_video_content_loc_preference`) are recommendations/context diagnostics, not generic constructor validity failures.
 - description host-page consistency is `google_video_description_host_page_match`: `matches` → info, `differs` → warning, `unknown` → info; it is distinct from `google_video_relevance_context` (topical relevance of video to page).
 - missing required fields emit `google_video_title_missing`, `google_video_description_missing`, `google_video_thumbnail_loc_missing` (warning, GDC-01 companion-only).
+- two videos under one URL can carry different relevance/title/description states by `[urlIndex][videoIndex]` producing independent diagnostics per video.
+- video evidence targeting uses `$urls[$urlIndex]->videos[$videoIndex]`; the parent page `<loc>` for a video is `$urls[$urlIndex]->loc`, never a `documentContext` field.
+- evidence for a non-existent video index creates no diagnostic; a missing child index maps to `unknown` where `unknown` exists.
 
 Do **not** create offline tests that claim a URL extension proves the actual remote video file type, thumbnail format/dimensions/transparency, Googlebot accessibility, resource stability, or watch-page indexing eligibility. If a future context validator accepts caller-supplied evidence for those facts, test the evidence-processing contract, not the network fact itself.
 
@@ -2457,6 +2849,8 @@ Do **not** create offline tests that claim a URL extension proves the actual rem
 - freshness state `unknown` remains an evidence gap/diagnostic (`google_news_freshness_evidence`, info) and is not fabricated into a pass or failure.
 - lexical `publicationDate` plus a reference clock must not trigger an invented `48 hours`, calendar-day, or timezone boundary calculation; no hidden `now()`.
 - original-publication-time/name/title truth remains content/context evidence (`google_news_original_publication_evidence`, `google_news_name_exact_match_evidence`), not fake lexical proof.
+- two News entries can carry different freshness/original/name evidence by `[urlIndex][newsIndex]` producing independent diagnostics per entry.
+- evidence for a non-existent News index creates no diagnostic; a missing child index maps to `unknown` where `unknown` exists.
 
 ### Google robots.txt
 
@@ -2497,11 +2891,19 @@ Do **not** create offline tests that claim a URL extension proves the actual rem
 - missing return link emits `hreflang_reciprocal_link_missing` (warning, GDC-01 companion-only).
 - inconsistent alternate set across supplied localized URLs emits `hreflang_alternate_set_inconsistent` (warning, GDC-01 companion-only).
 - alternate URL not fully qualified emits `hreflang_url_not_fully_qualified` (warning, GDC-01 companion-only).
+- cluster tests supply the fixed input shape `array<string, list<Maatify\Seo\Web\Hreflang\HreflangLinkDTO>>` (fully-qualified localized page URL → complete alternate-link set); the cluster is the primary input and is never supplied through `documentContext`.
 
 ### Canonical
 
 - relative canonical output remains generic-compatible and identical to current behavior.
 - a relative canonical produces `canonical_relative_provider_best_practice` (warning, origin `provider`, profile `google`, field `href`) through the GDC-01 companion surface; it never throws and never changes the legacy result or score.
+
+### Legacy surface and fixed public signatures
+
+- exact legacy signature locked as `SeoMetaValidator::validate(array|object $meta, array $options = []): SeoValidationResultDTO`.
+- additive signature locked as `SeoMetaValidator::validateWithCompanion(array|object $meta, array $options = [], ?SeoValidationContextDTO $context = null): SeoCompanionValidationResultDTO`; parameter order `$meta`, `$options`, `$context` is asserted, no overload variant exists, and `$options` is not dropped.
+- the 11 profile-validator public signatures (RFC 9309, Google robots.txt, Google robots meta, Sitemap protocol, Google base Sitemap, Google Image, Google Video, Google News, Open Graph, Google Canonical, Google Hreflang Cluster) are locked by tests/static checks; no `<existing-domain-input>` placeholder remains.
+- a legacy classification record is emitted exactly once per matching present legacy issue with `code == related_legacy_code`, and changes neither the legacy result, the score, nor the warning/error counts; no record is emitted when the underlying legacy issue is absent.
 
 ### Global diagnostics contract (GDC-01)
 
@@ -2511,13 +2913,14 @@ Tightest contract coverage across Stacks 2/4/5/6 — asserted for every new diag
 - `is_valid` is `true` and `has_warnings` is `false` in the legacy result even when a new `warning`-severity companion diagnostic is present.
 - `SeoValidationScoreCalculator` output (score, grade, counts, `is_healthy`) is unchanged by the presence of new companion diagnostics.
 - each new diagnostic carries the fixed origin/profile/evidence-state metadata and a stable, non-colliding code.
-- no new diagnostic reuses or shadows a legacy issue code.
+- **no new diagnostic reuses or shadows a legacy issue code.** A **legacy classification record** is the sole exception: it intentionally uses the same `code` and `related_legacy_code` as the legacy issue it classifies, per the GDC-01 Normative Legacy Classification Table, and produces no additional legacy/scoring effect.
 - every profile validator returns the unified `SeoCompanionValidationResultDTO`; no per-profile result type or alternative container exists.
 - the unified type's JSON shape matches the GDC-01 serialization contract: snake_case keys, the exact legacy `SeoValidationResultDTO` shape embedded under `legacy` when paired (with `null` for standalone runs), and the fixed entry keys `code`/`severity`/`message`/`field`/`origin`/`profile`/`evidence_state`/`related_legacy_code`.
 - correlation assertions: a companion record's `related_legacy_code` references the legacy code for the same subject (for example `missing_og_description`), and the embedded `legacy` object is bit-for-bit equal to the standalone `SeoMetaValidator::validate()` result for the same input.
 - `SeoCompanionValidationResultDTO` exposes no `is_valid`/`has_warnings`/score/grade/health fields; derived aggregates never feed `SeoValidationScoreCalculator`.
 - construction guards: empty `code`/`message`, unknown `severity`/`origin`/`profile`, and an `evidence_state` not in the code's fixed state vocabulary each throw a construction error; a severity that does not match the fixed code severity (ordinary diagnostics) or the `(code, evidence_state)` mapping (evidence-state diagnostics) also throws.
 - the unified context DTO (`SeoValidationContextDTO` with `$evidence`/`$documentContext`) is the only accepted input surface for companion/profile validation; a validator reads only its authorized evidence keys, missing evidence maps to `unknown` only where the contract fixes an `unknown` state, arbitrary evidence states are rejected, and no diagnostic is produced from unauthorized/unknown keys.
+- `SeoValidationContextDTO` constructor guards: recognized `$evidence` keys enforce the fixed value shape and allowed states; negative/non-integer indices in indexed evidence and invalid recognized values are construction errors; recognized `$documentContext` keys enforce the fixed shape/value contract (`sitemap.document_location`, `sitemap.document_type`, `sitemap.uncompressed_size_bytes`); unknown top-level keys are ignored and produce no diagnostics; no extension registry exists.
 - every code in the GDC-01 machine-contract tables and the fixed F-13 OGP contracts is asserted at least once on its fixed severity/origin/profile/field and (where applicable) evidence-state contract.
 
 ### Structured Data boundary
@@ -2548,6 +2951,8 @@ Open Graph validation changes must not reorder multiple images or detach structu
 Reclassifying title/description length issues as heuristics must not change their `strlen()` byte thresholds, warning severity/codes, existing score deductions, or legacy issue/result serialized payloads.
 
 The OGP migration must not remove or re-severity `missing_og_title`, `missing_og_description`, or `missing_og_image` in the legacy result, and must not add `missing_og_type` / `missing_og_url` to the legacy result or score.
+
+`validateWithCompanion()` must pair the identical legacy result without altering its serialization or score; legacy classification records must not duplicate, reorder, or change the counts of the underlying legacy issues, and must not change `is_valid` / `has_warnings`.
 
 Applying the measurement contract must not change any non-length validation (URL shape, URI/IRI escaping, `lastmod` lexical forms), must not rebase the boundary to a different unit, and must not re-word the over-boundary diagnostics (`sitemap_loc_length_exceeds_measure_boundary`, `google_video_description_length_exceeds_measure_boundary`) as proven protocol/provider character-limit violations.
 
@@ -2651,6 +3056,9 @@ This audit is the **baseline execution authority** for remediation Stacks 0 thro
 - **No automatic reopening:** a freshness check is not permission to reopen settled architecture or perform broad provider research. If an authoritative source has materially changed after the audit date, record the changed evidence and amend the relevant contract explicitly before implementing against it.
 - **Evidence boundaries:** remote/provider facts that the library cannot prove offline remain explicit caller/host/provider evidence boundaries.
 - **GDC-01 global diagnostics contract:** every new protocol/provider/context diagnostic introduced by Stacks 2/4/5/6 is delivered through the companion surface (`SeoCompanionDiagnosticDTO` entries in the unified `SeoCompanionValidationResultDTO`) and must not mutate the legacy result, `is_valid`, `errors`/`warnings`/`info`/`issues`, or `SeoValidationScoreCalculator`. The public access contract (unified result type, entry fields, legacy correlation, serialization shape, profile surface) and the fixed machine contracts (code/severity/origin/profile/field/evidence state) are part of the execution authority; an implementation may not add or rename codes, severities, origins, profiles, fields, evidence states, or result types. Pre-existing legacy issues keep their documented F-12 placement and score behavior. This is part of the execution authority, not an implementation preference.
+- **Fixed public signatures:** the legacy `SeoMetaValidator::validate(array|object $meta, array $options = []): SeoValidationResultDTO` signature is preserved letter-for-letter; the additive `SeoMetaValidator::validateWithCompanion(array|object $meta, array $options = [], ?SeoValidationContextDTO $context = null): SeoCompanionValidationResultDTO` and the fixed `final readonly` `SeoValidationContextDTO` (`$evidence`, `$documentContext`) are part of the execution authority. The 11 profile-validator public signatures fixed in GDC-01 may not be renamed, reordered, overloaded, or replaced by a generic placeholder (`<existing-domain-input>`).
+- **Evidence targeting:** Sitemap child-collection evidence is indexed by zero-based `$urlIndex` / `$childIndex` exactly as fixed in GDC-01; `documentContext` contains only the fixed keys `sitemap.document_location`, `sitemap.document_type`, and `sitemap.uncompressed_size_bytes`. The legacy classification records fixed in the GDC-01 Normative Legacy Classification Table are metadata records, **not** new diagnostics: they are the sole exception to the no-reuse rule (`code == related_legacy_code`) and produce no legacy, scoring, or validity effect.
+- **Protocol/provider separation:** Sitemaps.org protocol location/scope uses `sitemap_location_scope_violation` (consuming `documentContext['sitemap.document_location']`); Google verified-ownership/submission uses `google_sitemap_host_context` (consuming `evidence['google_sitemap.host_verification']`). The two never substitute for each other.
 - **Measurement policy:** the source-backed rules for Sitemap `<loc>` (< 2,048 characters) and Google Video `description` (<= 2,048 characters) are unit-undefined; the audit converts them under F-02 to an explicit EVIDENCE BOUNDARY with a conservative library policy of UTF-8 bytes via `strlen()` on the value as supplied. A value below the byte boundary is conservative proof that it is also below the same numeric threshold under Unicode code-point or grapheme counting, because the UTF-8 byte count is never smaller than those counts for valid UTF-8 text; a value at/above the byte boundary emits the fixed warning codes and must never be labeled a proven protocol/provider violation, because a multi-byte value may exceed the byte threshold while remaining below the same character-count threshold. Stack 4 must not substitute another unit and must not restate the diagnostic as source-proven.
 - **Unknown-decision gate:** a material `unknown / needs decision` discovered by characterization blocks the affected production change until an approved contract amendment resolves it.
 - **Future-contract boundaries:** hreflang ISO membership registries, complete Google structured-data capability/eligibility profiles, Twitter/X provider conformance, and the F-18 lexical/enumeration expansion are not implementation discretion under this audit. They are separate future contracts.
