@@ -439,6 +439,7 @@ Current Google documentation includes constraints such as:
 - `video:content_loc` vs `video:player_loc`:
   - At least one of `video:content_loc` or `video:player_loc` must be present.
   - `video:content_loc` must point to a supported video file format. Google currently documents support for: 3GP, 3G2, ASF, AVI, DivX, M2V, M3U, M3U8, M4V, MKV, MOV, MP4, MPEG, OGV, QVT, RAM, RM, VOB, WebM, WMV, XAP.
+  - Video URLs must use HTTP, HTTPS, or FTP. Streaming protocols are explicitly unsupported.
   - Data URLs are explicitly unsupported for video URLs.
   - Both must not be the same URL as the parent page `<loc>`.
   - The resources must be accessible to Googlebot (Googlebot must not be blocked by robots.txt or login requirements, and must be able to fetch the file).
@@ -454,6 +455,7 @@ The current DTO enforces part of the contract (such as non-empty title/descripti
    - `video:publication_date` accepted forms.
    - Requirement of either `video:content_loc` or `video:player_loc`.
    - `video:thumbnail_loc` URL shape.
+   - Rejection of explicitly unsupported protocols (e.g. streaming protocols, Data URLs) for `content_loc`. Enforcement of HTTP/HTTPS/FTP where applicable.
 
 2. **Document/Context validation:**
    - Inequality of `content_loc`/`player_loc` to parent `<loc>`.
@@ -964,13 +966,13 @@ First establish an explicit OGP-conformance validator/profile that enforces the 
 Additionally, the audit of the OGP provider contract must fully cover the capabilities actually exposed by `OpenGraphBuilder` and `SocialImage`, including:
 - `og:determiner`: enum of (a, an, the, "", auto)
 - `og:locale`: format `language_TERRITORY`
-- URL datatypes (validating shape)
+- URL datatypes: OGP specifies URLs must use `http://` or `https://` schemes.
 - audio/video URL semantics
 - `og:image:secure_url`: an alternate URL to use if a webpage requires HTTPS
 - `og:image:type`: MIME type
 - `og:image:width`: integer
 - `og:image:height`: integer
-- `og:image:alt`: string. The OGP protocol officially recommends providing this whenever `og:image` is used, but it must be explicitly classified as a heuristic recommendation, not a strict protocol requirement.
+- `og:image:alt`: string. The OGP protocol officially recommends providing this whenever `og:image` is used. It must be explicitly classified as a **protocol-level recommendation / optional structured property**, not a heuristic recommendation and not a required validity rule.
 - structured-property ordering semantics with respect to the root property (e.g., `og:image` properties must be grouped sequentially after the root `og:image` tag).
 
 Then decide how the legacy `SeoMetaValidator` should migrate to that profile.
@@ -1554,11 +1556,18 @@ Robots has:
 2. Explicit CR/LF injection prevention.
 3. Line-by-line renderer with provider document-level constraints (e.g. 500 KiB boundary warning, UTF-8 encoded plain text output).
 4. Preserve non-standard extensions separately.
-5. Fix `-1` meta robots behavior.
-6. Add `indexifembedded`.
-7. Correct `noarchive` documentation.
-8. Add provider-aware `unavailable_after` validation.
-9. Update examples/tests/docs.
+5. Implement explicit separation between RFC 9309 behavior, Errata 7995, and Google provider path parsing rules.
+6. Implement Google `Sitemap:` contract validation:
+   - Enforce fully-qualified/absolute URLs.
+   - Support multiplicity (multiple `Sitemap:` fields without limits).
+   - Explicitly allow cross-host semantics.
+   - Verify independence from user-agent groups.
+7. Implement Google-specific path parsing behavior (e.g. leading `/` rules).
+8. Fix `-1` meta robots behavior.
+9. Add `indexifembedded`.
+10. Correct `noarchive` documentation.
+11. Add provider-aware `unavailable_after` validation.
+12. Update examples/tests/docs.
 
 ### Stop condition
 
@@ -1623,6 +1632,10 @@ Add layered validation.
 - deterministic versus external/provider-evidence rules.
 - video title/description serialization semantics (XML/CDATA escaping).
 - thumbnail contract classification (URL shape vs external image format, dimensions, stability, accessibility, and transparency).
+- Implement Google Video explicit profile with entry, document, and serialization levels.
+- Document supported video file types.
+- Explicitly reject Data URLs and streaming protocols (HTTP/HTTPS/FTP only).
+- Explicitly separate Googlebot resource-accessibility boundaries as external/provider-evidence.
 
 #### Google News
 - language contract (ISO 639 formatting, including Google's `zh-cn`/`zh-tw` exceptions).
@@ -1654,7 +1667,7 @@ Stop mixing heuristic recommendations with protocol validity.
 5. Make an explicit decision on title/description measurement units (bytes, code points, etc.).
 6. Add characterization tests for ASCII and Arabic/Unicode title/description lengths before altering `strlen()` usage.
 7. Declare Twitter/X provider conformance out of scope until an official-source revalidation is conducted.
-8. Implement strict OGP DTO profile (only 4 required) and formalize remaining supported optional properties (determiner, locale, image details including the `og:image:alt` heuristic, structured-property ordering, etc.).
+8. Implement strict OGP DTO profile (only 4 required) and formalize remaining supported optional properties (determiner, locale, HTTP/HTTPS URL datatypes, structured-property ordering, and `og:image:alt` as a protocol-level recommendation).
 9. Decide how heuristic warnings participate in scores.
 10. Align dedicated social builders and legacy `MetaTagsDTO` path.
 
@@ -1854,8 +1867,8 @@ Add explicit boundary cases including at minimum:
 - Google-specific robots path cases (leading `/` handling).
 
 ### Open Graph Protocol
-- supported OGP lexical/structural contracts (e.g., `og:locale` format, integer constraints for dimensions, proper property grouping).
-- explicit distinction for the `og:image:alt` heuristic recommendation vs validity.
+- supported OGP lexical/structural contracts (e.g., HTTP/HTTPS URL datatypes, `og:locale` format, integer constraints for dimensions, proper property grouping).
+- explicit distinction for the `og:image:alt` protocol-level recommendation vs validity.
 
 ## 9.3 Provider profile tests
 
