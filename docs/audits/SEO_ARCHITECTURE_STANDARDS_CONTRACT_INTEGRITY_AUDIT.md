@@ -1858,6 +1858,9 @@ All provider facts should be rechecked again when the corresponding remediation 
 - RFC 9309 — Robots Exclusion Protocol  
   https://www.rfc-editor.org/rfc/rfc9309.html
 
+- RFC 9309 Errata 7995 — path-pattern leading wildcard inconsistency
+  https://www.rfc-editor.org/errata/eid7995
+
 - RFC 5646 / BCP 47 — Tags for Identifying Languages  
   https://www.rfc-editor.org/rfc/rfc5646.html
 
