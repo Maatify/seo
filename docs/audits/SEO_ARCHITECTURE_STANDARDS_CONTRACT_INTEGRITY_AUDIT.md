@@ -249,19 +249,6 @@ Before refactoring:
 Sitemaps.org defines base sitemap constraints including:
 
 - Maximum 50,000 `<url>` entries.
-- The `lastmod` value must follow the W3C Datetime format (which allows omitting the time portion, e.g. YYYY-MM-DD). Fractional seconds are supported by the protocol.
-- In a URL sitemap, `<url><lastmod>` identifies the time the page content was last modified, not the time the sitemap was generated.
-- In a Sitemap Index, `<sitemap><lastmod>` identifies the time the linked sitemap file itself was last modified.
-
-**Current implementation limitation/mismatch:**
-- `SitemapUrlDTO::isValidLastmod()`, `Shared\DTO\Sitemap\SitemapIndexEntryDTO`, and `Web\Sitemap\DTO\SitemapIndexEntryDTO` explicitly enforce regex `Y-m-d` or `ATOM` strict formats.
-- Standard PHP `DateTimeInterface::ATOM` does not natively include fractional seconds. While W3C Datetime officially supports fractional seconds, the current implementation actively rejects them. This is a **current implementation limitation** that must be characterized before any remediation, rather than falsely claiming it guarantees W3C compliance.
-
-### Google Provider Behavior
-
-Google-specific behavior must be explicitly separated from the base sitemap protocol:
-- Google ignores `priority` and `changefreq`.
-- Google uses `lastmod` only if it is consistently and verifiably accurate (e.g., compared to actual page modification).
 - Maximum uncompressed size: 50 MB (52,428,800 bytes).
 - The required page URL `<loc>` inside a `<url>` entry must be less than 2,048 characters.
 - Sitemap index maximum 50,000 `<sitemap>` entries.
@@ -270,6 +257,13 @@ Google-specific behavior must be explicitly separated from the base sitemap prot
 - XML data values must be entity-escaped.
 - URL values must follow the applicable URI/IRI escaping requirements documented by the protocol.
 - The default Sitemap location scope affects allowed URLs by protocol/scheme, host, port where applicable, and path scope derived from the Sitemap location.
+- The `lastmod` value must follow the W3C Datetime format (which allows omitting the time portion, e.g. YYYY-MM-DD). Fractional seconds are supported by the protocol.
+- In a URL sitemap, `<url><lastmod>` identifies the time the page content was last modified.
+- In a Sitemap Index, `<sitemap><lastmod>` identifies the time the linked sitemap file itself was last modified.
+
+**Current implementation limitation/mismatch:**
+- `SitemapUrlDTO::isValidLastmod()`, `Shared\DTO\Sitemap\SitemapIndexEntryDTO`, and `Web\Sitemap\DTO\SitemapIndexEntryDTO` explicitly enforce regex `Y-m-d` or `ATOM` strict formats.
+- Standard PHP `DateTimeInterface::ATOM` does not natively include fractional seconds. While W3C Datetime officially supports fractional seconds, the current implementation actively rejects them. This is a **current implementation limitation** that must be characterized before any remediation, rather than falsely claiming it guarantees W3C compliance.
 
 Host/path rules must not become unconditional same-host DTO rejection.
 
@@ -298,6 +292,12 @@ Therefore those rules **cannot safely be pushed into the DTO constructor**. Do n
 
 Furthermore, while `XMLWriter` declares UTF-8 in the XML declaration (`startDocument(..., 'UTF-8')`), the library must not assume that it automatically validates or transcodes all input to UTF-8 without proof. The actual XML escaping behavior and UTF-8 validity must be characterized and verified. Entity escaping remains a **serialization/output guarantee**, not a DTO pre-escaping requirement.
 
+### Google Provider Behavior
+
+Google-specific behavior must be explicitly separated from the base sitemap protocol:
+- Google ignores `priority` and `changefreq`.
+- Google uses `lastmod` only if it is consistently and verifiably accurate (e.g., compared to actual page modification).
+
 ### Safe target
 
 The architecture needs separate levels:
@@ -315,7 +315,7 @@ The architecture needs separate levels:
    - Uncompressed size max 50 MB
    - Sitemap Index count max 50,000
    - Sitemap Index Uncompressed size max 50 MB
-   - Content semantic validation: `lastmod` represents the page's actual modification time (in `<url>`) or the sitemap's generation time (in `<sitemap>`).
+   - Content semantic validation: `lastmod` represents the page's actual modification time (in `<url>`) or the linked sitemap file's actual modification time (in `<sitemap>`).
 
 3. **Serialization/output guarantees**
    - Sitemap XML must be UTF-8 encoded.
@@ -464,10 +464,12 @@ The current DTO enforces part of the contract (such as non-empty title/descripti
 
 4. **External/Provider-evidence condition:**
    - Consistency between `video:title`/`video:description` and the on-page visible content.
-   - Crawlability, accessibility, and indexing state of `content_loc` or `player_loc`.
-   - Actual remote MIME/file format of `content_loc`.
-   - Actual remote image format, transparency (at least 80% with alpha > 250), dimensions, stability, and crawlability of `thumbnail_loc`.
+   - Actual remote accessibility of `content_loc`, `player_loc`, and `thumbnail_loc` to Googlebot.
+   - Actual remote MIME/file format of `content_loc` matching the documented supported types.
+   - Actual remote image format, transparency (at least 80% with alpha > 250), dimensions, and stability of `thumbnail_loc`.
    (These must not be converted into fake offline validation).
+
+Note: Watch-page or video indexing eligibility is an external outcome entirely separate from the Video Sitemap resource contract and must not be used as a DTO validation rule.
 
 ### Safe target architecture
 
@@ -553,7 +555,7 @@ The News policy should be explicit. The two-day rule must remain deterministic: 
 
 1. **Deterministic lexical/local validation:**
    - `news:publication_date` W3C Datetime lexical shape constraints.
-   - `news:publication/news:language` ISO 639 code formatting (including Google's `zh-cn`/`zh-tw` exceptions).
+   - `news:publication/news:language` must be a 2 or 3 letter ISO 639 code (including Google's documented exceptions for simplified `zh-cn` and traditional `zh-tw` Chinese).
 
 2. **Document/Context validation:**
    - 1,000-entry limit per News sitemap.
@@ -601,13 +603,18 @@ RFC 9309 defines:
 - The RFC's own examples also demonstrate wildcard patterns such as: `Disallow: *.gif$`
 - The RFC explains `*` wildcard matching in a way that supports that example.
 - RFC Editor Errata 7995 reports this inconsistency and proposes allowing `/` or `*` at the start.
-- Errata 7995 is currently reported errata, not an incorporated normative replacement for the RFC text.
+- Errata 7995 is currently a reported erratum/proposed correction, not an incorporated normative replacement for the RFC text.
 - Do not instruct the remediation to implement unconditional slash-only rejection.
 - Do not classify a leading `*` pattern as definitely invalid solely from the published ABNF.
 - Explicitly document the RFC text/example inconsistency.
 - Treat this as a contract decision requiring compatibility-safe handling.
 - Characterization tests must capture existing wildcard behavior before tightening validation.
 - Any future accepted grammar must preserve supported wildcard semantics deliberately rather than accidentally rejecting them.
+
+### Line-ending injection
+
+Because `robots.txt` is line-oriented:
+
 - raw `#` starts comment semantics;
 - raw `#` is not an ordinary literal path-pattern character;
 - literal `#` in a path is represented using percent encoding such as `%23`;
@@ -633,18 +640,14 @@ Because `robots.txt` is a line-oriented protocol, uncontrolled newline content c
 
 This is not only cosmetic validation.
 
-### Safe target
+### Safe Target
 
-Introduce RFC-aware validation with explicit rules for:
+Implement a strict RFC 9309 `RobotsRuleDTO` and serialization layer that:
 
-- valid product-token grammar.
-- valid empty Allow/Disallow pattern.
-- wildcard path characterization including leading `*` before any slash-only rejection is considered.
-- raw `#` comment semantics.
-- literal `#` in a path is represented using percent encoding such as `%23`.
-- CR/LF and other forbidden control characters in rule values.
-- CR/LF safety for rule comments.
-- CR/LF safety for top-level comments.
+- accepts `identifier` without digits.
+- accepts `*`.
+- allows empty path-patterns.
+- explicitly prevents CR/LF injection in serialized output.
 
 ### Google robots.txt parsing rules
 
@@ -967,7 +970,7 @@ Additionally, the audit of the OGP provider contract must fully cover the capabi
 - `og:image:type`: MIME type
 - `og:image:width`: integer
 - `og:image:height`: integer
-- `og:image:alt`: string
+- `og:image:alt`: string. The OGP protocol officially recommends providing this whenever `og:image` is used, but it must be explicitly classified as a heuristic recommendation, not a strict protocol requirement.
 - structured-property ordering semantics with respect to the root property (e.g., `og:image` properties must be grouped sequentially after the root `og:image` tag).
 
 Then decide how the legacy `SeoMetaValidator` should migrate to that profile.
@@ -1651,7 +1654,7 @@ Stop mixing heuristic recommendations with protocol validity.
 5. Make an explicit decision on title/description measurement units (bytes, code points, etc.).
 6. Add characterization tests for ASCII and Arabic/Unicode title/description lengths before altering `strlen()` usage.
 7. Declare Twitter/X provider conformance out of scope until an official-source revalidation is conducted.
-8. Implement strict OGP DTO profile (only 4 required) and formalize remaining supported optional properties (determiner, locale, image details, structured-property ordering, etc.).
+8. Implement strict OGP DTO profile (only 4 required) and formalize remaining supported optional properties (determiner, locale, image details including the `og:image:alt` heuristic, structured-property ordering, etc.).
 9. Decide how heuristic warnings participate in scores.
 10. Align dedicated social builders and legacy `MetaTagsDTO` path.
 
@@ -1851,7 +1854,8 @@ Add explicit boundary cases including at minimum:
 - Google-specific robots path cases (leading `/` handling).
 
 ### Open Graph Protocol
-- supported OGP lexical/structural contracts (e.g., `og:locale` format, integer constraints for dimensions).
+- supported OGP lexical/structural contracts (e.g., `og:locale` format, integer constraints for dimensions, proper property grouping).
+- explicit distinction for the `og:image:alt` heuristic recommendation vs validity.
 
 ## 9.3 Provider profile tests
 
