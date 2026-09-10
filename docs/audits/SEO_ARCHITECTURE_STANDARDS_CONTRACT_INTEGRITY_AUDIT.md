@@ -283,7 +283,7 @@ Not all of these constraints belong at the same validation level. The page URL `
 
 Therefore those rules **cannot safely be pushed into the DTO constructor**. Do not turn host/path rules into unconditional same-host constructor rejection.
 
-Furthermore, `XMLWriter` natively handles UTF-8 encoding and entity-escaping for values written via its API. However, this must be explicitly verified and documented as a **serialization/output guarantee** rather than assuming no tests are needed.
+Furthermore, while `XMLWriter` declares UTF-8 in the XML declaration (`startDocument(..., 'UTF-8')`), the library must not assume that it automatically validates or transcodes all input to UTF-8 without proof. The actual XML escaping behavior and UTF-8 validity must be characterized and verified. Entity escaping remains a **serialization/output guarantee**, not a DTO pre-escaping requirement.
 
 ### Safe target
 
@@ -405,10 +405,10 @@ Do not remove constructor parameters or output support in a compatibility-breaki
 
 Current Google documentation includes constraints such as:
 
-- `video:title`: provider semantics apply.
+- `video:title`: should match the title of the video on the web page.
 - `video:description`:
   - maximum 2,048 characters.
-  - must match the description shown on the page.
+  - should be consistent with the description shown on the page (no strict exact literal match required).
 - `video:thumbnail_loc`:
   - must be a valid URL.
   - supported formats include BMP, GIF, JPEG, PNG, WebP, and SVG.
@@ -445,10 +445,10 @@ The DTO does not enforce these limits.
    - The library must not instruct the implementation to double-escape values.
 
 4. **External/Provider-evidence condition:**
-   - Match between `video:description` and the on-page visible description.
+   - Consistency between `video:title`/`video:description` and the on-page visible content.
    - Crawlability, accessibility, and indexing state of `content_loc` or `player_loc`.
    - Actual remote MIME/file format of `content_loc`.
-   - Actual remote image dimensions, stability, and format of `thumbnail_loc`.
+   - Actual remote image format, transparency, dimensions, and stability of `thumbnail_loc`.
    (These must not be converted into fake offline validation).
 
 ### Safe target architecture
@@ -620,7 +620,7 @@ Google's provider-level behavior for robots.txt documents includes additional co
 
 **Classification:**
 - UTF-8 encoded plain text constraint: **Serialization/output responsibility**
-- File size limit (500 KiB): **Document-level heuristic validation** (The library can warn if the generated document exceeds 500 KiB, but HTTP delivery is a host responsibility).
+- File size limit (500 KiB): **Google provider document-level constraint** (The library can measure the generated document size deterministically and warn if it exceeds 500 KiB, but actual HTTP/file delivery remains the host's responsibility).
 
 The current renderer is line-oriented, so injection prevention must be an explicit contract rather than an implied generic string check.
 
@@ -1296,6 +1296,31 @@ Historical verification reports should not silently override current code or cur
 
 ---
 
+## F-21 — Twitter/X Cards provider contract was not source-verified by this audit
+
+**Decision:** `ADD` (Out of Scope Statement)
+**Risk:** Medium
+**Area:** Social Metadata
+
+### Repository evidence
+
+The repository contains:
+- `src/Web/Social/TwitterCardBuilder.php`
+- Twitter validation inside `SeoMetaValidator`
+- Tests covering Twitter fields
+- README announcing Twitter Card support
+
+### Audit Scope Limitation
+
+The current audit reviewed Open Graph Protocol provider behavior, but did not independently verify Twitter/X Card rules against a current, official Twitter/X documentation source.
+
+### Safe Target
+
+- Twitter/X provider conformance was **not source-verified by this audit**.
+- Generic/current library compatibility for Twitter Cards remains preserved as-is.
+- Twitter/X provider-rule remediation is out of scope until a dedicated official-source revalidation is completed.
+- The documentation should reflect that Open Graph was audited, but Twitter/X Cards remain under historical implementation assumptions pending future review.
+
 # 6. Required Architecture Principles Before Remediation
 
 The following rules should be treated as constraints for all later fixes.
@@ -1468,7 +1493,7 @@ Robots has:
 
 1. RFC 9309 rule validation (allow `*`, empty paths, correct RFC identifiers).
 2. Explicit CR/LF injection prevention.
-3. Line-by-line renderer with document-level heuristics (e.g. 500 KiB boundary warning, UTF-8 encoded plain text output).
+3. Line-by-line renderer with provider document-level constraints (e.g. 500 KiB boundary warning, UTF-8 encoded plain text output).
 4. Preserve non-standard extensions separately.
 5. Fix `-1` meta robots behavior.
 6. Add `indexifembedded`.
@@ -1514,7 +1539,7 @@ Add layered validation.
 - URL sitemap count limit (50,000 URLs).
 - Sitemap-index count limit (50,000 Sitemaps).
 - uncompressed byte-size limits (50 MB).
-- page `<loc>` length rule (2,048 characters).
+- page `<loc>` must be less than 2,048 characters.
 - host/site/submission-context rules.
 - cross-submission semantics.
 - UTF-8 encoding requirements.
@@ -1758,7 +1783,7 @@ Add explicit boundary cases including at minimum:
 
 ### Google Robots.txt Document Constraints
 
-- file size limit behavior (500 KiB boundary) as a document-level heuristic.
+- file size limit behavior (500 KiB boundary) as a documented provider document-level constraint.
 
 ## 9.3 Provider profile tests
 
@@ -1861,31 +1886,6 @@ docs/roadmap/
 
 The exact paths can be adjusted to repository conventions, but the authority levels must be explicit.
 
-## F-21 — Twitter/X Cards provider contract was not source-verified by this audit
-
-**Decision:** `ADD` (Out of Scope Statement)
-**Risk:** Medium
-**Area:** Social Metadata
-
-### Repository evidence
-
-The repository contains:
-- `src/Web/Social/TwitterCardBuilder.php`
-- Twitter validation inside `SeoMetaValidator`
-- Tests covering Twitter fields
-- README announcing Twitter Card support
-
-### Audit Scope Limitation
-
-The current audit reviewed Open Graph Protocol provider behavior, but did not independently verify Twitter/X Card rules against a current, official Twitter/X documentation source.
-
-### Safe Target
-
-- Twitter/X provider conformance was **not source-verified by this audit**.
-- Generic/current library compatibility for Twitter Cards remains preserved as-is.
-- Twitter/X provider-rule remediation is out of scope until a dedicated official-source revalidation is completed.
-- The documentation should reflect that Open Graph was audited, but Twitter/X Cards remain under historical implementation assumptions pending future review.
-
 ---
 
 # 11. Findings Summary
@@ -1913,7 +1913,6 @@ The current audit reviewed Open Graph Protocol provider behavior, but did not in
 | F-19 | CHANGELOG/docs/examples do not fully match current behavior | DOC-FIX | High |
 | F-20 | No explicit normative documentation hierarchy | ADD / RECLASSIFY | High |
 | F-21 | Twitter/X Cards provider contract not source-verified | ADD | Medium |
-
 
 ---
 
@@ -1972,6 +1971,9 @@ All provider facts should be rechecked again when the corresponding remediation 
   https://schema.org/
 
 ## Google Search
+
+- Video SEO Best Practices
+  https://developers.google.com/search/docs/appearance/video
 
 - Robots.txt specification (UTF-8, 500 KiB)
   https://developers.google.com/search/docs/crawling-indexing/robots/robots_txt
