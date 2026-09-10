@@ -405,19 +405,23 @@ Do not remove constructor parameters or output support in a compatibility-breaki
 
 Current Google documentation includes constraints such as:
 
-- `video:title`: provider semantics apply; must be properly entity-escaped/CDATA wrapped if containing special characters.
+- `video:title`: provider semantics apply.
 - `video:description`:
   - maximum 2,048 characters.
-  - must be properly entity-escaped/CDATA wrapped.
   - must match the description shown on the page.
-- `video:thumbnail_loc`: must be a valid URL pointing to a supported image format.
+- `video:thumbnail_loc`:
+  - must be a valid URL.
+  - supported formats include BMP, GIF, JPEG, PNG, WebP, and SVG.
+  - minimum dimensions: 60x30 pixels.
+  - the URL must be stable.
+  - Google expects the thumbnail to be accessible/crawlable.
 - `video:duration`: 1..28,800 seconds.
 - `video:publication_date` documented forms:
   - `YYYY-MM-DD`
   - `YYYY-MM-DDThh:mm:ssTZD`
 - `video:content_loc` vs `video:player_loc`:
   - At least one of `video:content_loc` or `video:player_loc` must be present.
-  - `video:content_loc` must be a supported media format (e.g., .mp4, .mpeg, .mkv).
+  - `video:content_loc` must be a supported media format.
   - Both must not be the same URL as the parent page `<loc>`.
   - The provider expects these resources to be accessible/crawlable.
 
@@ -425,22 +429,26 @@ The DTO does not enforce these limits.
 
 ### Classification of Rules
 
-1. **Deterministic lexical/local validation:**
+1. **Deterministic lexical/local validation (Entry Level):**
+   - Raw DTO values remain non-pre-escaped.
    - `video:duration` limits.
    - `video:description` maximum length.
    - `video:publication_date` accepted forms.
    - Requirement of either `video:content_loc` or `video:player_loc`.
-   - Inequality of `content_loc`/`player_loc` to parent `<loc>`.
-   - String escaping/CDATA requirements for `title` and `description`.
    - `video:thumbnail_loc` URL shape.
 
 2. **Document/Context validation:**
-   - (N/A for these specific fields, mostly handled at lexical or external level)
+   - Inequality of `content_loc`/`player_loc` to parent `<loc>`.
 
-3. **External/Provider-evidence condition:**
+3. **Serialization/Output Guarantees:**
+   - `video:title` and `video:description` must be properly XML entity-escaped or CDATA wrapped during output rendering.
+   - The library must not instruct the implementation to double-escape values.
+
+4. **External/Provider-evidence condition:**
    - Match between `video:description` and the on-page visible description.
    - Crawlability, accessibility, and indexing state of `content_loc` or `player_loc`.
-   - Validity of the actual video/image format returned by the URL.
+   - Actual remote MIME/file format of `content_loc`.
+   - Actual remote image dimensions, stability, and format of `thumbnail_loc`.
    (These must not be converted into fake offline validation).
 
 ### Safe target architecture
@@ -526,31 +534,6 @@ The News policy should be explicit. The two-day rule must remain deterministic: 
 ---
 
 
-## F-21 — Twitter/X Cards provider contract was not source-verified by this audit
-
-**Decision:** `ADD` (Out of Scope Statement)
-**Risk:** Medium
-**Area:** Social Metadata
-
-### Repository evidence
-
-The repository contains:
-- `src/Web/Social/TwitterCardBuilder.php`
-- Twitter validation inside `SeoMetaValidator`
-- Tests covering Twitter fields
-- README announcing Twitter Card support
-
-### Audit Scope Limitation
-
-The current audit reviewed Open Graph Protocol provider behavior, but did not independently verify Twitter/X Card rules against a current, official Twitter/X documentation source.
-
-### Safe Target
-
-- Twitter/X provider conformance was **not source-verified by this audit**.
-- Generic/current library compatibility for Twitter Cards remains preserved as-is.
-- Twitter/X provider-rule remediation is out of scope until a dedicated official-source revalidation is completed.
-- The documentation should reflect that Open Graph was audited, but Twitter/X Cards remain under historical implementation assumptions pending future review.
-
 ## F-06 — `robots.txt` DTO does not conform cleanly to RFC 9309 grammar
 
 **Decision:** `FIX`  
@@ -632,12 +615,12 @@ Introduce RFC-aware validation with explicit rules for:
 ### Google robots.txt document constraints
 
 Google's provider-level behavior for robots.txt documents includes additional constraints:
-- Must be UTF-8 encoded or plain text.
+- Must be UTF-8 encoded plain text.
 - File size limit is currently 500 kibibytes (kiB) (Google parses up to this limit and ignores the rest).
 
 **Classification:**
-- UTF-8/plain-text constraints: **Renderer/output responsibility**
-- File size limit: **Host delivery responsibility** (The library can track size during generation, but HTTP enforcement is the host's job. A provider document validation check could optionally warn if the generated string exceeds 500 kiB).
+- UTF-8 encoded plain text constraint: **Serialization/output responsibility**
+- File size limit (500 KiB): **Document-level heuristic validation** (The library can warn if the generated document exceeds 500 KiB, but HTTP delivery is a host responsibility).
 
 The current renderer is line-oriented, so injection prevention must be an explicit contract rather than an implied generic string check.
 
@@ -1483,13 +1466,15 @@ Robots has:
 
 ### Order
 
-1. RFC 9309 rule validation.
-2. Preserve non-standard extensions separately.
-3. Fix `-1` meta robots behavior.
-4. Add `indexifembedded`.
-5. Correct `noarchive` documentation.
-6. Add provider-aware `unavailable_after` validation.
-7. Update examples/tests/docs.
+1. RFC 9309 rule validation (allow `*`, empty paths, correct RFC identifiers).
+2. Explicit CR/LF injection prevention.
+3. Line-by-line renderer with document-level heuristics (e.g. 500 KiB boundary warning, UTF-8 encoded plain text output).
+4. Preserve non-standard extensions separately.
+5. Fix `-1` meta robots behavior.
+6. Add `indexifembedded`.
+7. Correct `noarchive` documentation.
+8. Add provider-aware `unavailable_after` validation.
+9. Update examples/tests/docs.
 
 ### Stop condition
 
@@ -1526,12 +1511,15 @@ Add layered validation.
 ### Required coverage
 
 #### Base sitemap
-- URL sitemap count limit.
-- Sitemap-index count limit.
-- uncompressed byte-size limits.
-- page `<loc>` length rule.
+- URL sitemap count limit (50,000 URLs).
+- Sitemap-index count limit (50,000 Sitemaps).
+- uncompressed byte-size limits (50 MB).
+- page `<loc>` length rule (2,048 characters).
 - host/site/submission-context rules.
 - cross-submission semantics.
+- UTF-8 encoding requirements.
+- XML entity-escaping and URL URI/IRI escaping requirements.
+- Verification of XMLWriter UTF-8 and serialization guarantees.
 
 #### Google Image
 - current/deprecated field classification.
@@ -1546,6 +1534,8 @@ Add layered validation.
 - publication-date forms.
 - parent `<loc>` relationship.
 - deterministic versus external/provider-evidence rules.
+- video title/description serialization semantics (XML/CDATA escaping).
+- thumbnail contract classification (URL shape vs external image dimensions/stability).
 
 #### Google News
 - language contract.
@@ -1574,8 +1564,11 @@ Stop mixing heuristic recommendations with protocol validity.
 2. Establish OGP protocol validation.
 3. Preserve legacy issue/score behavior until migration is explicitly decided.
 4. Reclassify title/description length warnings as heuristics.
-5. Decide how heuristic warnings participate in scores.
-6. Align dedicated social builders and legacy `MetaTagsDTO` path.
+5. Make an explicit decision on title/description measurement units (bytes, code points, etc.).
+6. Add characterization tests for ASCII and Arabic/Unicode title/description lengths before altering `strlen()` usage.
+7. Declare Twitter/X provider conformance out of scope until an official-source revalidation is conducted.
+8. Decide how heuristic warnings participate in scores.
+9. Align dedicated social builders and legacy `MetaTagsDTO` path.
 
 ### Critical constraint
 
@@ -1719,6 +1712,11 @@ The test strategy must cover the contracts introduced by the findings, not only 
 
 ## 9.1 Characterization tests
 
+Add characterization tests for:
+
+- ASCII title and description strings.
+- Arabic/Unicode title and description strings (to isolate the `strlen()` byte-length behavior before changing it).
+
 Purpose: preserve behavior before refactoring.
 
 Examples:
@@ -1760,7 +1758,7 @@ Add explicit boundary cases including at minimum:
 
 ### Google Robots.txt Document Constraints
 
-- file size limit behavior (500 kiB boundary) as a documented host responsibility or document-level heuristic.
+- file size limit behavior (500 KiB boundary) as a document-level heuristic.
 
 ## 9.3 Provider profile tests
 
@@ -1863,6 +1861,31 @@ docs/roadmap/
 
 The exact paths can be adjusted to repository conventions, but the authority levels must be explicit.
 
+## F-21 — Twitter/X Cards provider contract was not source-verified by this audit
+
+**Decision:** `ADD` (Out of Scope Statement)
+**Risk:** Medium
+**Area:** Social Metadata
+
+### Repository evidence
+
+The repository contains:
+- `src/Web/Social/TwitterCardBuilder.php`
+- Twitter validation inside `SeoMetaValidator`
+- Tests covering Twitter fields
+- README announcing Twitter Card support
+
+### Audit Scope Limitation
+
+The current audit reviewed Open Graph Protocol provider behavior, but did not independently verify Twitter/X Card rules against a current, official Twitter/X documentation source.
+
+### Safe Target
+
+- Twitter/X provider conformance was **not source-verified by this audit**.
+- Generic/current library compatibility for Twitter Cards remains preserved as-is.
+- Twitter/X provider-rule remediation is out of scope until a dedicated official-source revalidation is completed.
+- The documentation should reflect that Open Graph was audited, but Twitter/X Cards remain under historical implementation assumptions pending future review.
+
 ---
 
 # 11. Findings Summary
@@ -1890,6 +1913,7 @@ The exact paths can be adjusted to repository conventions, but the authority lev
 | F-19 | CHANGELOG/docs/examples do not fully match current behavior | DOC-FIX | High |
 | F-20 | No explicit normative documentation hierarchy | ADD / RECLASSIFY | High |
 | F-21 | Twitter/X Cards provider contract not source-verified | ADD | Medium |
+
 
 ---
 
@@ -1926,6 +1950,9 @@ All provider facts should be rechecked again when the corresponding remediation 
 
 ## Standards / protocols
 
+- PHP `strlen` function documentation
+  https://www.php.net/manual/en/function.strlen.php
+
 - RFC 9309 — Robots Exclusion Protocol  
   https://www.rfc-editor.org/rfc/rfc9309.html
 
@@ -1945,6 +1972,9 @@ All provider facts should be rechecked again when the corresponding remediation 
   https://schema.org/
 
 ## Google Search
+
+- Robots.txt specification (UTF-8, 500 KiB)
+  https://developers.google.com/search/docs/crawling-indexing/robots/robots_txt
 
 - Robots meta tag specifications  
   https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag
