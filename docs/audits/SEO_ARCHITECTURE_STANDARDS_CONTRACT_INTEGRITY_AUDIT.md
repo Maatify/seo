@@ -408,14 +408,14 @@ Current Google documentation includes constraints such as:
 - `video:title`: should match the title of the video on the web page.
 - `video:description`:
   - maximum 2,048 characters.
-  - should be consistent with the description shown on the page (no strict exact literal match required).
+  - must match the description shown on the page, though exact word-for-word identity is not explicitly required.
 - `video:thumbnail_loc`:
   - must be a valid URL.
   - supported formats include BMP, GIF, JPEG, PNG, WebP, SVG, and AVIF.
   - minimum dimensions: 60x30 pixels.
   - transparency: At least 80% of the thumbnail's pixels must have an alpha (transparency) value greater than 250.
   - the URL must be stable.
-  - Google expects the thumbnail to be accessible/crawlable by Googlebot and Googlebot Images.
+  - must be accessible to Googlebot and Googlebot Images.
 - `video:duration`: 1..28,800 seconds.
 - `video:publication_date` documented forms:
   - `YYYY-MM-DD`
@@ -424,9 +424,9 @@ Current Google documentation includes constraints such as:
   - At least one of `video:content_loc` or `video:player_loc` must be present.
   - `video:content_loc` must be a supported media format.
   - Both must not be the same URL as the parent page `<loc>`.
-  - The provider expects these resources to be accessible/crawlable.
+  - The resources must be accessible to Googlebot.
 
-The DTO does not enforce these limits.
+The current DTO enforces part of the contract (such as non-empty title/description, minimum duration, basic URL shapes, and requiring at least one of `contentLoc` or `playerLoc`), but does not enforce all additional Google Video constraints documented above.
 
 ### Classification of Rules
 
