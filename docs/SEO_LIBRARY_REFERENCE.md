@@ -53,10 +53,16 @@ The `SchemaGeneratorService` handles the generation of structured data for SEO b
   - `@graph: [...]` (the serialized schema array)
 
 ### Meta Generator Service
-The `MetaGeneratorService` orchestrates the assembly of `<title>`, `<meta>` description, canonical, robots, OpenGraph, and Twitter tags per the current language and provided entity data.
-- **Responsibility**: It builds host-agnostic meta tags from host-provided defaults by accepting a `GenerateMetaTagsCommand` and returning a `MetaTagsDTO`.
-- **Override Fallback Behavior**: The service checks if a manual SEO override exists in `maa_seo_overrides` via the `SeoOverrideQueryService`. If an override exists for the specific entity and language, it replaces the default title and/or description. If the query service throws a `SeoNotFoundException`, it treats this as "no override" and falls back to the host-provided defaults.
-- **Canonical URL Resolution**: It determines the canonical URL first by checking the `canonicalUrl` property in the `GenerateMetaTagsCommand`. If that is not provided, it falls back to generating the URL via the `HostUrlGeneratorInterface` using the entity details.
+`MetaGeneratorService` is present and its current observable behavior is covered by
+the Stack 0 characterization test, but the material output contract remains
+`unknown / needs decision` in the [Stack 0 inventory](verification/STACK_0_CONTRACT_CHARACTERIZATION_INVENTORY.md).
+That classification is a gate, not permission to choose or promise a policy; this
+reference therefore does not promote trimming, override fallback/precedence,
+canonical precedence, or social-field copying into a resolved normative guarantee.
+
+`GenerateMetaTagsCommand`, `MetaTagsDTO`, the host URL generator, and the override
+query service remain callable public surfaces. Any production reinterpretation or
+refactor of their characterized output requires an approved contract amendment.
 
 ### DTOs and Commands
 - **`GenerateMetaTagsCommand`**: Encapsulates all data required to generate meta tags:
@@ -146,7 +152,12 @@ The Web layer provides framework-neutral host-facing SEO consumption capabilitie
 - **`Web/SeoRender/Service/SeoPageRenderService`**: Orchestrates the generation of the SEO page payload using Shared services (`MetaGeneratorService`, `SchemaGeneratorService`, etc.). It supports computing redirect decisions via `RedirectManagerService` and generating sitemap strings via `SitemapGeneratorService` if injected.
 
 ### Canonical and Hreflang Validation Profiles
-Stack 6 provides `GoogleCanonicalValidator` and `GoogleHreflangClusterValidator` as standalone Google-oriented companion profiles. A relative canonical URL produces the `canonical_relative_provider_best_practice` provider best-practice warning; it is not a generic invalidity and does not change `CanonicalUrlBuilder` output. Hreflang syntax validation uses `hreflang_tag_invalid_syntax` for the fixed lexical shape, while ISO 639, ISO 3166, and ISO 15924 membership remains deferred until a separately versioned standards-data contract exists.
+Stack 6 provides `GoogleCanonicalValidator` and `GoogleHreflangClusterValidator` as standalone Google-oriented companion profiles. A relative canonical URL produces the `canonical_relative_provider_best_practice` provider best-practice warning; it is not a generic invalidity and does not change `CanonicalUrlBuilder` output. Hreflang syntax validation uses `hreflang_tag_invalid_syntax` for the fixed lexical shape, while ISO 639, ISO 3166, and ISO 15924 membership remains deferred until a separately versioned standards-data contract exists. Hreflang syntax/normalization therefore does not prove membership in those external registries.
+
+Twitter/X Card builders, renderers, and current compatibility behavior remain
+available. The architecture audit independently source-verified Open Graph
+behavior but did not source-verify Twitter/X provider conformance; no stronger
+Twitter/X provider claim is made here until a dedicated official-source review.
 
 Hreflang normalization uses conventional casing: language subtags are lowercase, script subtags use Title Case, alphabetic regions are uppercase, numeric regions are unchanged, and `x-default` is preserved exactly. Google alternate URLs are required to be fully-qualified under the shared lexical URL profile; a failure emits the single `hreflang_url_not_fully_qualified` diagnostic. `GoogleHreflangClusterValidator` evaluates only the caller-supplied deterministic cluster for self-reference, reciprocal links, and alternate-set consistency; it performs no crawling, DNS, network, or ISO membership lookup.
 
@@ -175,7 +186,7 @@ The Web layer includes optional helpers for rendering XML sitemap strings direct
 - **Separate index DTO roles**: `Maatify\Seo\Shared\DTO\Sitemap\SitemapIndexEntryDTO` belongs to `SitemapGeneratorService`; `Maatify\Seo\Web\Sitemap\DTO\SitemapIndexEntryDTO` belongs to `SitemapIndexXmlStringRenderer`. They are deliberate separate public contracts and are not interchangeable by implication.
 - **News date contract**: `SitemapNewsDTO::$publicationDate` remains non-empty and is emitted exactly as provided. It intentionally does not use the strict shared `lastmod` date parser; the Stack 4 Google News candidate validator separately accepts only its four fixed publication-date forms.
 - **Sitemap validation profiles**: Stack 4 exposes standalone protocol, Google Sitemap, Google Image, Google Video, and Google News validators over the validation candidate DTOs. They emit companion diagnostics only, use caller-supplied context evidence where required, perform no network or clock inference, and do not change the legacy validation result or score.
-- **`Shared/DTO/Sitemap/SitemapNewsDTO.php`**: A final readonly DTO that encapsulates Google News sitemap tags. It requires `publicationName`, `publicationLanguage`, `publicationDate`, and `title`. It optionally supports `access`, `genres`, `keywords`, and `stockTickers`. The `publicationDate` is accepted as-is and rendered exactly as provided. Required fields are trimmed, and providing empty required values throws a `SeoInvalidArgumentException`. Optional empty strings are normalized to `null` and are entirely omitted from the XML output. All values are safely escaped by `XMLWriter` when rendered.
+- **`Shared/DTO/Sitemap/SitemapNewsDTO.php`**: A final readonly DTO that encapsulates Google News sitemap tags. It requires `publicationName`, `publicationLanguage`, `publicationDate`, and `title`. It optionally supports `access`, `genres`, `keywords`, and `stockTickers` for public/output compatibility; these optional legacy fields are not presented as current recommended provider enhancements. The `publicationDate` is accepted as-is and rendered exactly as provided. Required fields are trimmed, and providing empty required values throws a `SeoInvalidArgumentException`. Optional empty strings are normalized to `null` and are entirely omitted from the XML output. All values are safely escaped by `XMLWriter` when rendered.
 
 ### Robots.txt String Output
 The Web layer includes framework-neutral helpers for generating `robots.txt` string output.
@@ -266,7 +277,7 @@ PHPStan, the conditional PHPUnit step, and the standalone PHP test suite.
 
 The focused structured-data CI gate runs through the existing
 `SeoMetaValidator::validate()` entry point and existing report/exporter contracts.
-It covers the current structural JSON-LD rules and the deep semantic scope of
+It covers the current structural JSON-LD rules and the scoped structural and property-range semantic validation scope of
 `Product`, `Offer`, `AggregateOffer`, and `ProductGroup`, including the supported
 metadata aliases `jsonLd`, `json_ld`, `schema`, and `schemas`. It does not add
 Google Rich Results eligibility, Merchant eligibility, provider SDKs, network

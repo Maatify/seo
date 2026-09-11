@@ -86,6 +86,11 @@ echo $dto->fullHtml;         // Output the concatenated complete head HTML
 
 This is particularly useful when integrating with template engines where blocks or sections are used for specific meta components.
 
+> **Twitter/X compatibility boundary:** Twitter Card builders and rendering remain
+> available for compatibility. The architecture audit source-verified Open Graph
+> behavior but did not source-verify Twitter/X provider conformance; this guide does
+> not make a stronger provider claim.
+
 ---
 
 ## 4. FluentSeoBuilder Example
@@ -349,7 +354,7 @@ $childVariant2 = (new ProductJsonLdBuilder())
     ->setInProductGroupWithID('TSHIRT-BASE'); // Writes the string ID directly
 ```
 
-*Note: The builders ensure that nested `@context` tags are automatically stripped from typed builders during output, while the root builder retains its context. Raw array contexts are not touched. The library builds Schema.org-oriented JSON-LD structures but does not enforce semantic validation or guarantee Google Rich Results eligibility.*
+*Note: The builders ensure that nested `@context` tags are automatically stripped from typed builders during output, while the root builder retains its context. Raw array contexts are not touched. Builders and `SchemaGeneratorService` provide generic Schema.org generation; they are independent of Google Rich Results and Merchant eligibility. The current validation boundary is scoped structural and property-range semantic validation for selected types, not complete provider eligibility proof.*
 
 ---
 
@@ -615,13 +620,18 @@ The validator natively covers:
 * **JSON-LD structural validation:** Checks JSON-LD nodes and numeric node lists,
   including `@graph` wrappers and recursive graph nodes, while preserving
   deterministic issue fields.
-* **JSON-LD semantic validation:** Performs the current deep checks only for
-  `Product`, `Offer`, `AggregateOffer`, and `ProductGroup`. JSON-LD can be supplied
-  through the existing `jsonLd`, `json_ld`, `schema`, or `schemas` aliases.
+* **JSON-LD scoped validation:** Performs scoped structural and property-range semantic
+  validation only for `Product`, `Offer`, `AggregateOffer`, and `ProductGroup`.
+  JSON-LD can be supplied through the existing `jsonLd`, `json_ld`, `schema`, or
+  `schemas` aliases.
 
-The validator does not provide complete Schema.org coverage, Google Rich Results
-eligibility, or Merchant eligibility validation. Those concerns remain outside the
-library's current validation contract.
+The validator does not provide complete Schema.org semantic or lexical proof. In the
+current property-range boundaries, non-empty strings shaped as `URL`, `Date`,
+`DateTime`, `ItemAvailability`, or `OfferItemCondition` remain accepted
+representations; URL/date grammar, enumeration membership, provider-vocabulary
+lookup, reachability, and DNS/network checks are not performed. Google
+required/recommended properties are not implemented as an eligibility profile, and
+Merchant eligibility remains a separate provider boundary.
 
 > **Note:** The validator expects data in an array or object format, typically generated before final HTML string rendering. Invalid `$options` configuration (such as passing a string where an integer is expected) will throw a `SeoInvalidArgumentException`. Normal SEO warnings and errors *do not* throw exceptions.
 

@@ -138,9 +138,8 @@ Final Review passed against latest `main`:
 
 `2989683e3609bcc843d0ec25ead3799a3b5d2d39`
 
-The Integration PR remains the final integration path to `main`; Ready and merge
-actions remain under maintainer decision. This roadmap entry does not claim that the
-Integration PR has been merged.
+Phase 8 is Complete and its implementation is present in the current `main` history.
+This roadmap entry records no pending Draft, Ready, or merge lifecycle action.
 
 ## 8A: Usage Guide
 
@@ -195,9 +194,8 @@ Final Review passed against exact latest `main`:
 
 `3f3018bfa3656c8c7706a9fe9e4e9ae5c662c7c0`
 
-Integration PR #184 is the final path to `main`. Ready and squash-merge actions
-remain separate maintainer integration decisions and are not part of the technical
-completion state recorded here.
+Phase 9 implementation and documentation are present in the current `main` history;
+this roadmap entry records no pending Draft, Ready, or merge lifecycle action.
 
 ## Goal
 
@@ -256,7 +254,8 @@ Phase 10 implementation is complete, post-correction Verification passed, and po
 - Implementation Work Units remaining: `0`
 - Phase 10 technical lifecycle: `Complete`
 
-PR #191 remains Draft until the maintainer explicitly performs the Ready action. Ready and squash-merge are separate maintainer integration actions.
+Phase 10 implementation and documentation are present in the current `main` history;
+this roadmap entry records no pending Draft, Ready, or merge lifecycle action.
 
 ## Goal
 
@@ -572,7 +571,8 @@ Fully reflect the structured-data gaps that previously existed in the library. T
 
 ## Goal
 
-Provide deep semantic validation for the in-scope Schema.org types, distinguishing
+Provide scoped structural and property-range semantic validation for the in-scope
+Schema.org types, distinguishing
 Schema.org correctness from Google eligibility. Phase 13P now includes the completed
 validation foundation, generic structural and graph validation, scoped semantic
 validation for Product, Offer, AggregateOffer, and ProductGroup, validation-pipeline
@@ -615,7 +615,8 @@ Sweep, and Final Review against the latest `main` all passed.
 
 Final Review compared Draft SHA `2692f66e12a62da0c8e4579c4796dcb94942af78` against
 `main` SHA `ce087cf6682f411b8884ee4e3a1c0f56f9fb5f9b`. The Phase remains limited to
-Product, Offer, AggregateOffer, and ProductGroup deep semantic validation; Google Rich
+scoped structural and property-range semantic validation for Product, Offer,
+AggregateOffer, and ProductGroup; Google Rich
 Results and Merchant eligibility remain Future Work.
 ---
 
@@ -815,7 +816,8 @@ Allow host apps to export/import SEO metadata safely.
 * Reviewed main: `2cc1bbeafb9b612da5c7552185145274e2e57c35`
 * Reviewed Draft: `9bd895e86f87ee50f87cca94c72a1346ccfe7965`
 
-*(Note: Lead Final Acceptance / Ready / merge remain separate decisions. The PR is not automatically merged by this Phase.)*
+The Phase 20 implementation and examples are present in the current `main` history;
+this roadmap entry records no pending Draft, Ready, or merge lifecycle action.
 
 ## Goal
 
@@ -857,8 +859,9 @@ without changing runtime contracts or adding a CLI dependency.
 WU1–WU4 implementation, Verification, Documentation Sweep, and Final Review are
 complete on the Phase 21 integration stack. Final Review passed against `main`
 SHA `228ad2cdc026e0148e934526cc35068b50bf5948` using Draft SHA
-`726c84ce8cf30e26f87f2bc125bd278b26b9092a`. Ready and merge actions remain
-separate maintainer decisions; no other Phase status is changed.
+`726c84ce8cf30e26f87f2bc125bd278b26b9092a`. The Phase 21 implementation and
+documentation are present in the current `main` history; this roadmap entry records
+no pending Draft, Ready, or merge lifecycle action.
 
 ## Goal
 
@@ -896,7 +899,7 @@ Phase 21 includes structured-data verification using the existing contracts:
 
 * CI/CD structured-data validation
 * CI-friendly structured-data validation output
-* deep semantic validation limited to `Product`, `Offer`, `AggregateOffer`, and
+* scoped structural and property-range semantic validation limited to `Product`, `Offer`,
   `ProductGroup`
 * documentation of a boundary for separately approved future external verification
 
@@ -952,8 +955,8 @@ unofficial endpoints remain out of scope.
 * Reviewed latest `main`: `1e2cca61fa4259da3cf20c8908b08f413b93c51b`
 
 The Phase is recorded as Complete after the Final Review passed against the latest
-`main`. Ready and merge remain separate maintainer integration actions and are not
-part of this completion record.
+`main`; its implementation is present in the current `main` history and no pending
+Draft, Ready, or merge lifecycle action remains.
 
 ## Scope and provider boundary
 
