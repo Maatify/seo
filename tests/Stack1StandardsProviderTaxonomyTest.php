@@ -63,21 +63,28 @@ function stack1AssertThrows(string $label, callable $callback): void
     throw new RuntimeException("Assertion failed: {$label}\nExpected SeoInvalidArgumentException.");
 }
 
-function stack1AssertConstructorDoc(string $label, string $class, string $expected): void
+function stack1AssertConstructorDoc(string $label, string $class, string $parameter, string $expected): void
 {
     $docComment = (new ReflectionMethod($class, '__construct'))->getDocComment();
-    if ($docComment === false || !str_contains($docComment, $expected)) {
+    $overridePattern = '/@phpstan-param[^\r\n]*\$' . preg_quote($parameter, '/') . '\\b/';
+    if ($docComment === false || !str_contains($docComment, $expected) || preg_match($overridePattern, $docComment) === 1) {
         throw new RuntimeException("Assertion failed: {$label}\nExpected constructor PHPDoc fragment:\n{$expected}\nActual:\n" . ($docComment === false ? 'false' : $docComment));
     }
 }
 
-stack1AssertConstructorDoc('Robots meta list PHPDoc contract', RobotsMetaValidationInputDTO::class, '@param list<string> $directives');
-stack1AssertConstructorDoc('Sitemap document entry PHPDoc contract', SitemapValidationDocumentDTO::class, '@param list<SitemapUrlValidationInputDTO>|list<SitemapIndexEntryValidationInputDTO> $entries');
-stack1AssertConstructorDoc('Sitemap image list PHPDoc contract', SitemapUrlValidationInputDTO::class, '@param list<SitemapImageValidationInputDTO> $images');
-stack1AssertConstructorDoc('Sitemap video list PHPDoc contract', SitemapUrlValidationInputDTO::class, '@param list<SitemapVideoValidationInputDTO> $videos');
-stack1AssertConstructorDoc('Sitemap news list PHPDoc contract', SitemapUrlValidationInputDTO::class, '@param list<SitemapNewsValidationInputDTO> $news');
-stack1AssertConstructorDoc('Hreflang page list PHPDoc contract', HreflangValidationPageDTO::class, '@param list<HreflangValidationLinkDTO> $links');
-stack1AssertConstructorDoc('Hreflang cluster list PHPDoc contract', HreflangValidationClusterDTO::class, '@param list<HreflangValidationPageDTO> $pages');
+stack1AssertConstructorDoc('Robots meta list PHPDoc contract', RobotsMetaValidationInputDTO::class, 'directives', '@param list<string> $directives');
+stack1AssertConstructorDoc('Sitemap document entry PHPDoc contract', SitemapValidationDocumentDTO::class, 'entries', '@param list<SitemapUrlValidationInputDTO>|list<SitemapIndexEntryValidationInputDTO> $entries');
+stack1AssertConstructorDoc('Sitemap image list PHPDoc contract', SitemapUrlValidationInputDTO::class, 'images', '@param list<SitemapImageValidationInputDTO> $images');
+stack1AssertConstructorDoc('Sitemap video list PHPDoc contract', SitemapUrlValidationInputDTO::class, 'videos', '@param list<SitemapVideoValidationInputDTO> $videos');
+stack1AssertConstructorDoc('Sitemap news list PHPDoc contract', SitemapUrlValidationInputDTO::class, 'news', '@param list<SitemapNewsValidationInputDTO> $news');
+stack1AssertConstructorDoc('Hreflang page list PHPDoc contract', HreflangValidationPageDTO::class, 'links', '@param list<HreflangValidationLinkDTO> $links');
+stack1AssertConstructorDoc('Hreflang cluster list PHPDoc contract', HreflangValidationClusterDTO::class, 'pages', '@param list<HreflangValidationPageDTO> $pages');
+
+/** @param list<mixed> $args */
+function stack1ConstructWithArgs(string $class, array $args): object
+{
+    return (new ReflectionClass($class))->newInstanceArgs($args);
+}
 
 $videoTarget = new SeoDiagnosticTargetDTO('sitemap_video', 0, 1);
 $diagnostic = new SeoCompanionDiagnosticDTO(
@@ -186,8 +193,8 @@ $robotsCandidate = new RobotsTxtValidationInputDTO($rawContent);
 stack1AssertSame('robots candidate preserves raw bytes', $rawContent, $robotsCandidate->content);
 $metaCandidate = new RobotsMetaValidationInputDTO(['  noindex  ', '']);
 stack1AssertSame('robots meta candidate preserves raw directives', ['  noindex  ', ''], $metaCandidate->directives);
-stack1AssertThrows('robots meta candidate requires a list', static fn() => new RobotsMetaValidationInputDTO(['directive' => 'noindex']));
-stack1AssertThrows('robots meta candidate requires string elements', static fn() => new RobotsMetaValidationInputDTO(['noindex', 1]));
+stack1AssertThrows('robots meta candidate requires a list', static fn() => stack1ConstructWithArgs(RobotsMetaValidationInputDTO::class, [['directive' => 'noindex']]));
+stack1AssertThrows('robots meta candidate requires string elements', static fn() => stack1ConstructWithArgs(RobotsMetaValidationInputDTO::class, [['noindex', 1]]));
 
 $image = new SitemapImageValidationInputDTO('  relative image  ');
 $video = new SitemapVideoValidationInputDTO(duration: 0, publicationDate: 'not-a-date');
@@ -206,7 +213,7 @@ stack1AssertSame('sitemap candidate keeps non-finite priority', INF, $urlCandida
 stack1AssertSame('video candidate keeps zero duration', 0, $video->duration);
 stack1AssertSame('image candidate keeps raw loc', '  relative image  ', $image->loc);
 stack1AssertSame('news candidate keeps malformed language', 'not-an-ISO-code', $news->publicationLanguage);
-stack1AssertThrows('sitemap URL child list requires exact DTOs', static fn() => new SitemapUrlValidationInputDTO(images: [new stdClass()]));
+stack1AssertThrows('sitemap URL child list requires exact DTOs', static fn() => stack1ConstructWithArgs(SitemapUrlValidationInputDTO::class, [null, null, null, null, [new stdClass()]]));
 
 $location = new SitemapValidationLocationDTO('https', 'Example.COM', 443, '/sitemaps/index.xml');
 $urlDocument = new SitemapValidationDocumentDTO('urlset', [$urlCandidate], $location, 0);
@@ -219,8 +226,8 @@ stack1AssertThrows('sitemap location requires non-empty host', static fn() => ne
 stack1AssertThrows('sitemap location rejects non-positive port', static fn() => new SitemapValidationLocationDTO('https', 'example.com', 0, '/'));
 stack1AssertThrows('sitemap location requires slash-prefixed path', static fn() => new SitemapValidationLocationDTO('https', 'example.com', null, 'relative'));
 stack1AssertThrows('sitemap document rejects unknown type', static fn() => new SitemapValidationDocumentDTO('other', []));
-stack1AssertThrows('sitemap document rejects mixed entry type', static fn() => new SitemapValidationDocumentDTO('urlset', [$indexCandidate]));
-stack1AssertThrows('sitemap document rejects associative entries', static fn() => new SitemapValidationDocumentDTO('urlset', ['url' => $urlCandidate]));
+stack1AssertThrows('sitemap document rejects mixed entry type', static fn() => stack1ConstructWithArgs(SitemapValidationDocumentDTO::class, ['urlset', [$indexCandidate]]));
+stack1AssertThrows('sitemap document rejects associative entries', static fn() => stack1ConstructWithArgs(SitemapValidationDocumentDTO::class, ['urlset', ['url' => $urlCandidate]]));
 stack1AssertThrows('sitemap document rejects negative byte size', static fn() => new SitemapValidationDocumentDTO('urlset', [], uncompressedSizeBytes: -1));
 stack1AssertSame('empty sitemap documents are valid candidate inputs', [], (new SitemapValidationDocumentDTO('sitemapindex', []))->entries);
 
@@ -230,9 +237,9 @@ $cluster = new HreflangValidationClusterDTO([$page]);
 stack1AssertSame('hreflang candidate preserves raw link values', ['EN_us', ' /relative path '], [$link->hreflang, $link->url]);
 stack1AssertSame('hreflang page identity remains exact', '  page identity  ', $cluster->pages[0]->pageUrl);
 stack1AssertThrows('hreflang page identity cannot be empty', static fn() => new HreflangValidationPageDTO('', []));
-stack1AssertThrows('hreflang page links must be a list', static fn() => new HreflangValidationPageDTO('page', ['link' => $link]));
-stack1AssertThrows('hreflang page links require exact DTOs', static fn() => new HreflangValidationPageDTO('page', [new stdClass()]));
-stack1AssertThrows('hreflang cluster pages must be a list', static fn() => new HreflangValidationClusterDTO(['page' => $page]));
+stack1AssertThrows('hreflang page links must be a list', static fn() => stack1ConstructWithArgs(HreflangValidationPageDTO::class, ['page', ['link' => $link]]));
+stack1AssertThrows('hreflang page links require exact DTOs', static fn() => stack1ConstructWithArgs(HreflangValidationPageDTO::class, ['page', [new stdClass()]]));
+stack1AssertThrows('hreflang cluster pages must be a list', static fn() => stack1ConstructWithArgs(HreflangValidationClusterDTO::class, [['page' => $page]]));
 stack1AssertThrows('hreflang cluster rejects duplicate exact page identity', static fn() => new HreflangValidationClusterDTO([$page, new HreflangValidationPageDTO('  page identity  ', [])]));
 
 stack1AssertThrows('existing strict sitemap URL DTO remains strict', static fn() => new SitemapUrlDTO('not-a-url'));

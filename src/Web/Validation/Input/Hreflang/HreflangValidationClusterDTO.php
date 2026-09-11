@@ -10,17 +10,21 @@ final readonly class HreflangValidationClusterDTO
 {
     /**
      * @param list<HreflangValidationPageDTO> $pages
-     * @phpstan-param array<int|string, mixed> $pages
      */
     public function __construct(
         public array $pages,
     ) {
-        if (!array_is_list($this->pages)) {
+        self::assertPages($this->pages);
+    }
+
+    private static function assertPages(mixed $pages): void
+    {
+        if (!is_array($pages) || !array_is_list($pages)) {
             throw SeoInvalidArgumentException::invalidValue('pages', 'Expected a list of HreflangValidationPageDTO objects.');
         }
 
         $seenPageUrls = [];
-        foreach ($this->pages as $index => $page) {
+        foreach ($pages as $index => $page) {
             if (!$page instanceof HreflangValidationPageDTO) {
                 throw SeoInvalidArgumentException::invalidValue("pages.{$index}", 'Expected a HreflangValidationPageDTO.');
             }

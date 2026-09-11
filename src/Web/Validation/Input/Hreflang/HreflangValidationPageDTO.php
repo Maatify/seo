@@ -10,7 +10,6 @@ final readonly class HreflangValidationPageDTO
 {
     /**
      * @param list<HreflangValidationLinkDTO> $links
-     * @phpstan-param array<int|string, mixed> $links
      */
     public function __construct(
         public string $pageUrl,
@@ -20,11 +19,16 @@ final readonly class HreflangValidationPageDTO
             throw SeoInvalidArgumentException::emptyField('pageUrl');
         }
 
-        if (!array_is_list($this->links)) {
+        self::assertLinks($this->links);
+    }
+
+    private static function assertLinks(mixed $links): void
+    {
+        if (!is_array($links) || !array_is_list($links)) {
             throw SeoInvalidArgumentException::invalidValue('links', 'Expected a list of HreflangValidationLinkDTO objects.');
         }
 
-        foreach ($this->links as $index => $link) {
+        foreach ($links as $index => $link) {
             if (!$link instanceof HreflangValidationLinkDTO) {
                 throw SeoInvalidArgumentException::invalidValue("links.{$index}", 'Expected a HreflangValidationLinkDTO.');
             }

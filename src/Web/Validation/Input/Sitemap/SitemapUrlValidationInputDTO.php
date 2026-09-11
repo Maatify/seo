@@ -12,9 +12,6 @@ final readonly class SitemapUrlValidationInputDTO
      * @param list<SitemapImageValidationInputDTO> $images
      * @param list<SitemapVideoValidationInputDTO> $videos
      * @param list<SitemapNewsValidationInputDTO> $news
-     * @phpstan-param array<int|string, mixed> $images
-     * @phpstan-param array<int|string, mixed> $videos
-     * @phpstan-param array<int|string, mixed> $news
      */
     public function __construct(
         public ?string $loc = null,
@@ -30,10 +27,10 @@ final readonly class SitemapUrlValidationInputDTO
         self::assertChildList('news', $this->news, SitemapNewsValidationInputDTO::class);
     }
 
-    /** @param array<mixed> $values @param class-string $expectedClass */
-    private static function assertChildList(string $field, array $values, string $expectedClass): void
+    /** @param class-string $expectedClass */
+    private static function assertChildList(string $field, mixed $values, string $expectedClass): void
     {
-        if (!array_is_list($values)) {
+        if (!is_array($values) || !array_is_list($values)) {
             throw SeoInvalidArgumentException::invalidValue($field, 'Expected a list of candidate child DTOs.');
         }
 
