@@ -86,9 +86,9 @@ assertSameValue10B(
 );
 
 assertSameValue10B(
-    'array alternates normalize x-default and hreflang case and whitespace',
+    'array alternates normalize x-default and conventional hreflang case and whitespace',
     $xmlHeader
-    . '<url xmlns:xhtml="http://www.w3.org/1999/xhtml"><loc>https://example.com/en/product</loc><xhtml:link rel="alternate" hreflang="x-default" href="https://example.com/product"/><xhtml:link rel="alternate" hreflang="en-us" href="https://example.com/en-us/product"/></url>' . "\n",
+    . '<url xmlns:xhtml="http://www.w3.org/1999/xhtml"><loc>https://example.com/en/product</loc><xhtml:link rel="alternate" hreflang="x-default" href="https://example.com/product"/><xhtml:link rel="alternate" hreflang="en-US" href="https://example.com/en-us/product"/></url>' . "\n",
     $renderer->renderUrlEntry([
         'loc' => 'https://example.com/en/product',
         'alternates' => [

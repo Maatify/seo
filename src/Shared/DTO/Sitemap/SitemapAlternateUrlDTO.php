@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Maatify\Seo\Shared\DTO\Sitemap;
 
 use Maatify\Seo\Exception\SeoInvalidArgumentException;
+use Maatify\Seo\Shared\Service\Internal\HreflangTagNormalizer;
 
 final readonly class SitemapAlternateUrlDTO implements \JsonSerializable
 {
@@ -32,15 +33,13 @@ final readonly class SitemapAlternateUrlDTO implements \JsonSerializable
     public function jsonSerialize(): array
     {
         return [
-            'hreflang' => strtolower(trim($this->hreflang)),
+            'hreflang' => HreflangTagNormalizer::normalize($this->hreflang),
             'url' => trim($this->url),
         ];
     }
 
     private static function isValidHreflang(string $hreflang): bool
     {
-        $value = strtolower(trim($hreflang));
-
-        return $value === 'x-default' || preg_match('/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/', $value) === 1;
+        return HreflangTagNormalizer::isStrictDomainCompatible($hreflang);
     }
 }
