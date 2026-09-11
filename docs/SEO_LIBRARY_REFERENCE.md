@@ -214,7 +214,7 @@ Phase 13P keeps four validation layers separate:
 1. The existing validation foundation for non-empty JSON-LD arrays and schema entries.
 2. Generic structural validation for node/list placement, `@graph`, and well-formed
    `@type` values.
-3. Deep Schema.org-oriented semantic validation for `Product`, `Offer`,
+3. Scoped structural and property-range semantic validation for `Product`, `Offer`,
    `AggregateOffer`, and `ProductGroup` only.
 4. Google Rich Results and Merchant eligibility, which are outside this Phase and
    remain Future Work.
@@ -242,8 +242,18 @@ out-of-scope relationship targets are allowed without deep validation of their
 internals. Unknown extension properties are not rejected solely for being outside the
 fixed catalog.
 
+This semantic layer is not complete Schema.org semantic or lexical proof. In the
+current `URL`, `Date`, `DateTime`, `ItemAvailability`, and `OfferItemCondition`
+property-range boundaries, a non-empty string remains an accepted representation;
+URL/date grammar, enumeration membership, provider-vocabulary lookup, reachability,
+and DNS/network checks are not performed. Well-formed out-of-scope types, unknown
+extension properties, and valid out-of-scope relationship targets remain allowed
+according to the current structural traversal contract.
+
 Phase 13P does not claim complete Schema.org coverage, required-property completeness,
-Google Rich Results eligibility, or Merchant eligibility.
+Google Rich Results eligibility, or Merchant eligibility. Google required/recommended
+properties are not an eligibility profile in this layer, and a complete provider
+capability matrix is deferred to a separately approved, date-stamped contract.
 
 #### Phase 21 Quality / CI / Release Readiness
 
@@ -311,7 +321,7 @@ Provider results remain completely separated from core SEO validation. Unknown p
 Product/feed mutation, automatic remediation, Search Console integration, and core SEO validation changes are explicitly out of scope.
 
 ### JSON-LD Builders
-The Web layer includes builders for constructing Schema.org-oriented JSON-LD structures. These builders encapsulate the logic for creating complex schemas and provide a fluent interface for setting properties and composing nodes; they do not perform semantic Schema.org validation or establish Google Rich Results eligibility.
+The Web layer includes generic builders for constructing Schema.org-oriented JSON-LD structures. These builders encapsulate the logic for creating complex schemas and provide a fluent interface for setting properties and composing nodes; they do not perform semantic Schema.org validation or establish Google Rich Results/provider eligibility. `SchemaGeneratorService` likewise generates generic Schema.org JSON-LD and does not infer provider status.
 - **`Web/JsonLd/Builder/AbstractJsonLdBuilder.php`**: Base class implementing `JsonLdBuilderInterface` and using `JsonLdBuilderTrait`.
 - **`Web/JsonLd/Builder/JsonLdBuilderInterface.php`**: Defines the fluent mutation and output contract shared by JSON-LD builders: `set`, `remove`, `has`, `get`, `toArray`, and `toJson`.
 - **`Web/JsonLd/Builder/JsonLdBuilderTrait.php`**: Stores values without normalization during `set()`. During `toArray()`, it recursively resolves nested `JsonLdBuilderInterface` nodes, removes `@context` from nested builder nodes, preserves the root builder `@context`, and preserves raw-array content including raw-array `@context` values. Builders inside lists and nested raw arrays are resolved at the same time. `toJson()` encodes the resolved `toArray()` output.
@@ -323,6 +333,8 @@ The Web layer includes builders for constructing Schema.org-oriented JSON-LD str
 - **`Web/JsonLd/Builder/ProductGroupJsonLdBuilder.php`**: A `ProductGroup` builder initialized with `@context: https://schema.org` and `@type: ProductGroup`. It supports name, description, URL, `productGroupID`, `variesBy`, and `brand`. `setBrand()` accepts a string, raw array, or typed builder. `setHasVariant()` and `addVariant()` support raw arrays and typed builders with one-node object, multi-node numeric-list, flattening, no-op empty-input, and append lifecycle semantics.
 - **`Web/JsonLd/Builder/AggregateOfferJsonLdBuilder.php`**: An `AggregateOffer` builder initialized with `@context: https://schema.org` and `@type: AggregateOffer`. It supports `lowPrice`, `highPrice`, `priceCurrency`, `offerCount`, `availability`, and nested `offers`. `setOffers()` and `addOffer()` use the same typed/raw collection semantics as `ProductGroupJsonLdBuilder`.
 - **`Web/JsonLd/Builder/ArticleJsonLdBuilder.php`**: A builder for the `Article`, `NewsArticle`, or `BlogPosting` JSON-LD schemas, supporting configuration of headlines, images, authors, publishers, and publication dates.
+- **`Web/JsonLd/Builder/CourseJsonLdBuilder.php`**: A generic `Course` Schema.org builder. Course Info search-appearance history and current Course List provider documentation do not turn this builder into a Google eligibility profile; its public API and output remain provider-neutral.
+- **`Web/JsonLd/Builder/BookJsonLdBuilder.php`**: A generic `Book` Schema.org builder. Book / Book Actions provider documentation is not a generic rich-result contract for every Book page, so this builder remains callable without Book eligibility rules.
 - **`Web/JsonLd/Builder/BreadcrumbJsonLdBuilder.php`**: A builder for the `BreadcrumbList` JSON-LD schema, providing methods to add breadcrumb items (`addItem`, `addBreadcrumb`, `addItems`) and correctly sequencing them with `ListItem` and `position` properties.
 
 Typed composition is intentionally output-time behavior: builder objects remain stored as supplied until `toArray()` or `toJson()` is called. Root `@context` values remain on the root schema, while `@context` values initialized by nested typed builders are omitted from the nested node. Resolution is recursive: nested `JsonLdBuilderInterface` instances inside raw arrays are resolved and have their `@context` stripped. Raw associative arrays preserve their keys and explicit `@context` values (unless they are nested typed builders).
