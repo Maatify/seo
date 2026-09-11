@@ -6,6 +6,74 @@ namespace Maatify\Seo\Web\Validation\Profile\Internal;
 
 final class AbsoluteAuthorityUrlLexicalProfile
 {
+    /**
+     * @return array{scheme: string, host: string, port: int|null, path: string}|null
+     */
+    public static function components(string $value, bool $fragmentAllowed): ?array
+    {
+        if (!self::accepts($value, $fragmentAllowed)) {
+            return null;
+        }
+
+        $schemeSeparator = strpos($value, '://');
+        if ($schemeSeparator === false) {
+            return null;
+        }
+
+        $scheme = substr($value, 0, $schemeSeparator);
+        $remainder = substr($value, $schemeSeparator + 3);
+        $authorityEnd = strlen($remainder);
+        foreach (['/', '?', '#'] as $delimiter) {
+            $position = strpos($remainder, $delimiter);
+            if ($position !== false && $position < $authorityEnd) {
+                $authorityEnd = $position;
+            }
+        }
+
+        $authority = substr($remainder, 0, $authorityEnd);
+        $atPosition = strrpos($authority, '@');
+        if ($atPosition !== false) {
+            $authority = substr($authority, $atPosition + 1);
+        }
+
+        $host = $authority;
+        $port = null;
+        if (str_starts_with($authority, '[')) {
+            $closingBracket = strpos($authority, ']');
+            if ($closingBracket === false) {
+                return null;
+            }
+
+            $host = substr($authority, 0, $closingBracket + 1);
+            $portSuffix = substr($authority, $closingBracket + 1);
+            if ($portSuffix !== '') {
+                $port = (int) substr($portSuffix, 1);
+            }
+        } else {
+            $colonPosition = strpos($authority, ':');
+            if ($colonPosition !== false) {
+                $host = substr($authority, 0, $colonPosition);
+                $port = (int) substr($authority, $colonPosition + 1);
+            }
+        }
+
+        $suffix = substr($remainder, $authorityEnd);
+        $fragmentPosition = strpos($suffix, '#');
+        if ($fragmentPosition !== false) {
+            $suffix = substr($suffix, 0, $fragmentPosition);
+        }
+
+        $queryPosition = strpos($suffix, '?');
+        $path = $queryPosition === false ? $suffix : substr($suffix, 0, $queryPosition);
+
+        return [
+            'scheme' => $scheme,
+            'host' => $host,
+            'port' => $port,
+            'path' => $path,
+        ];
+    }
+
     public static function accepts(string $value, bool $fragmentAllowed): bool
     {
         if (preg_match('//u', $value) !== 1) {

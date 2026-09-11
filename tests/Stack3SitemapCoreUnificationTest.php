@@ -202,8 +202,8 @@ stack3AssertTrue('Web renderer retains raw associative URL compatibility', str_c
 stack3AssertSame('empty Web URL set remains an empty urlset', $xmlHeader . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"/>' . "\n", $urlRenderer->renderUrlSet([]));
 stack3AssertTrue('minimal standalone URL has no unused child namespaces', !str_contains($urlRenderer->renderUrlEntry(['loc' => 'https://example.com/minimal']), 'xmlns:xhtml'));
 stack3AssertSame(
-    'fractional second remains rejected by strict URL contract',
-    false,
+    'fractional second is accepted by strict URL contract',
+    true,
     SitemapUrlDTO::isValidLastmod('2026-07-01T10:00:00.123+00:00'),
 );
 stack3AssertThrows('Web renderer rejects list-shaped raw URL entry', static fn() => $urlRenderer->renderUrlEntry(['https://example.com/not-an-entry']));
@@ -224,8 +224,8 @@ stack3AssertSame('Shared and Web index DTO serialization contracts remain distin
 stack3AssertSame('Web index DTO serialization remains stable', ['loc' => 'https://example.com/web.xml', 'lastmod' => '2026-07-01'], $webIndexEntry->jsonSerialize());
 stack3AssertThrows('Shared index DTO keeps its empty-field URL exception', static fn() => new SharedSitemapIndexEntryDTO('not-a-url'), 'Field [loc] must not be empty.');
 stack3AssertThrows('Web index DTO keeps its invalid-URL exception', static fn() => new WebSitemapIndexEntryDTO('not-a-url'), 'URL [not-a-url] is invalid.');
-stack3AssertThrows('Shared index DTO rejects fractional seconds', static fn() => new SharedSitemapIndexEntryDTO('https://example.com/shared.xml', '2026-07-01T10:00:00.123+00:00'));
-stack3AssertThrows('Web index DTO rejects fractional seconds', static fn() => new WebSitemapIndexEntryDTO('https://example.com/web.xml', '2026-07-01T10:00:00.123+00:00'));
+stack3AssertTrue('Shared index DTO accepts fractional seconds', new SharedSitemapIndexEntryDTO('https://example.com/shared.xml', '2026-07-01T10:00:00.123+00:00') instanceof SharedSitemapIndexEntryDTO);
+stack3AssertTrue('Web index DTO accepts fractional seconds', new WebSitemapIndexEntryDTO('https://example.com/web.xml', '2026-07-01T10:00:00.123+00:00') instanceof WebSitemapIndexEntryDTO);
 
 $equivalentSharedIndexEntry = new SharedSitemapIndexEntryDTO('https://example.com/web.xml', '2026-07-01');
 $generatorIndexResult = (new SitemapGeneratorService())->generateSitemapIndex([$equivalentSharedIndexEntry]);

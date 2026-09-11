@@ -62,7 +62,7 @@ final readonly class SitemapVideoDTO implements \JsonSerializable
         }
 
         $normalizedPublicationDate = self::nullableNonEmptyString($publicationDate);
-        if ($normalizedPublicationDate !== null && !SitemapUrlDTO::isValidLastmod($normalizedPublicationDate)) {
+        if ($normalizedPublicationDate !== null && !self::isValidPublicationDate($normalizedPublicationDate)) {
             throw SeoInvalidArgumentException::emptyField('publicationDate');
         }
 
@@ -98,5 +98,11 @@ final readonly class SitemapVideoDTO implements \JsonSerializable
         }
 
         return trim($value);
+    }
+
+    private static function isValidPublicationDate(string $value): bool
+    {
+        return preg_match('/\.\d+(?:Z|[+-]\d{2}:\d{2})\z/', $value) !== 1
+            && SitemapUrlDTO::isValidLastmod($value);
     }
 }

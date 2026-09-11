@@ -415,10 +415,6 @@ $urlDto = new SitemapUrlDTO(
     images: [
         new SitemapImageDTO(
             loc: 'https://example.com/image.jpg',
-            title: 'Sample Image',
-            caption: 'A view of the ocean',
-            geoLocation: 'Limerick, Ireland',
-            license: 'https://example.com/license'
         )
     ],
     videos: [
@@ -452,10 +448,6 @@ echo $renderer->renderUrlEntry($urlDto);
 //   <xhtml:link rel="alternate" hreflang="es" href="https://example.com/es/page-1"/>
 //   <image:image>
 //     <image:loc>https://example.com/image.jpg</image:loc>
-//     <image:title>Sample Image</image:title>
-//     <image:caption>A view of the ocean</image:caption>
-//     <image:geo_location>Limerick, Ireland</image:geo_location>
-//     <image:license>https://example.com/license</image:license>
 //   </image:image>
 //   <video:video>
 //     <video:thumbnail_loc>https://example.com/thumbnail.jpg</video:thumbnail_loc>
@@ -487,7 +479,7 @@ $arrayEntry = [
         ['hreflang' => 'de', 'url' => 'https://example.com/de/page-2'],
     ],
     'images' => [
-        ['loc' => 'https://example.com/image2.jpg', 'title' => 'Image 2']
+        ['loc' => 'https://example.com/image2.jpg']
     ],
     'videos' => [
         [
@@ -517,7 +509,9 @@ $xmlOutput = $renderer->renderUrlSet([$urlDto, $arrayEntry]);
 >
 > **News Fields Handling:** When using `SitemapNewsDTO`, the `publicationDate` is accepted as-is and rendered exactly as provided. Required fields are trimmed, and providing empty required values throws a `SeoInvalidArgumentException`. Optional empty strings are normalized to `null` and are entirely omitted from the XML output. All XML values are safely escaped by `XMLWriter`.
 
-> **URL validation:** `SitemapUrlDTO::isValidLastmod()` accepts valid `YYYY-MM-DD` and valid ATOM timestamps, while rejecting invalid calendar dates and ATOM parser warnings/errors. The Web renderer applies the same contract to raw-array `lastmod` values and also validates raw top-level `loc`, the allowed `changefreq` values, and the inclusive `0.0..1.0` priority range. This strict date behavior applies to URL/index/video contracts; News `publicationDate` intentionally remains an emitted-as-provided, non-empty string.
+> **Google Image compatibility:** `SitemapImageDTO` still accepts and renders `title`, `caption`, `geoLocation`, and `license` for public/output compatibility. Google-deprecates these fields; they are not presented here as current indexing/search enhancements and have no Stack 4 runtime diagnostic. Current examples therefore use `loc` only.
+
+> **URL validation:** `SitemapUrlDTO::isValidLastmod()` and the Web URL/Index rendering contracts accept `YYYY-MM-DD`, full-seconds date-times, and fractional-seconds date-times with a required `Z` or numeric offset, while rejecting invalid calendar/time values and zone-less or partial date-times. Strict `SitemapVideoDTO` and raw-video `publicationDate` remain limited to `YYYY-MM-DD` and full-seconds date-times; fractional seconds are rejected there. News `publicationDate` intentionally remains an emitted-as-provided, non-empty string. Stack 4 candidate validators separately apply the fixed provider lexical forms and caller-supplied evidence to Sitemap/Google extension inputs; they do not alter rendering output or infer remote facts.
 
 ---
 
