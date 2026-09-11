@@ -145,6 +145,11 @@ The Web layer provides framework-neutral host-facing SEO consumption capabilitie
 - **`Web/SeoRender/DTO/SeoPagePayloadDTO`**: A final readonly DTO (implementing `\JsonSerializable`) that wraps the computed meta tags, schemas, redirect decisions, and optional sitemap XML. It enforces that all inputs are valid.
 - **`Web/SeoRender/Service/SeoPageRenderService`**: Orchestrates the generation of the SEO page payload using Shared services (`MetaGeneratorService`, `SchemaGeneratorService`, etc.). It supports computing redirect decisions via `RedirectManagerService` and generating sitemap strings via `SitemapGeneratorService` if injected.
 
+### Canonical and Hreflang Validation Profiles
+Stack 6 provides `GoogleCanonicalValidator` and `GoogleHreflangClusterValidator` as standalone Google-oriented companion profiles. A relative canonical URL produces the `canonical_relative_provider_best_practice` provider best-practice warning; it is not a generic invalidity and does not change `CanonicalUrlBuilder` output. Hreflang syntax validation uses `hreflang_tag_invalid_syntax` for the fixed lexical shape, while ISO 639, ISO 3166, and ISO 15924 membership remains deferred until a separately versioned standards-data contract exists.
+
+Hreflang normalization uses conventional casing: language subtags are lowercase, script subtags use Title Case, alphabetic regions are uppercase, numeric regions are unchanged, and `x-default` is preserved exactly. Google alternate URLs are required to be fully-qualified under the shared lexical URL profile; a failure emits the single `hreflang_url_not_fully_qualified` diagnostic. `GoogleHreflangClusterValidator` evaluates only the caller-supplied deterministic cluster for self-reference, reciprocal links, and alternate-set consistency; it performs no crawling, DNS, network, or ISO membership lookup.
+
 ### HTML Rendering Helpers
 The Web layer includes optional HTML Rendering Helpers under `src/Web/Render/`. These renderers are framework-neutral, return pure PHP strings (HTML) or strictly-typed read-only DTOs, and do not emit HTTP responses. They can be manually consumed by any host application or template engine to safely render SEO data.
 - **`Web/Render/MetaTagsHtmlRenderer.php`**: Renders `<title>`, `<meta name="description">`, canonical URLs, and robots tags with safely escaped text and attributes.

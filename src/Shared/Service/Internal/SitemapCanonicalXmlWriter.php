@@ -534,7 +534,7 @@ final class SitemapCanonicalXmlWriter
         if ($url === '') {
             throw SeoInvalidArgumentException::emptyField('url');
         }
-        if (!$this->isValidHreflang($hreflang)) {
+        if (!HreflangTagNormalizer::isStrictDomainCompatible($hreflang)) {
             throw SeoInvalidArgumentException::emptyField('hreflang');
         }
         if (filter_var($url, FILTER_VALIDATE_URL) === false) {
@@ -542,7 +542,7 @@ final class SitemapCanonicalXmlWriter
         }
 
         return [
-            'hreflang' => strtolower($hreflang),
+            'hreflang' => HreflangTagNormalizer::normalize($hreflang),
             'url' => $url,
         ];
     }
@@ -683,13 +683,6 @@ final class SitemapCanonicalXmlWriter
             'keywords' => $this->nullableNonEmptyString($keywords),
             'stockTickers' => $this->nullableNonEmptyString($stockTickers),
         ];
-    }
-
-    private function isValidHreflang(string $hreflang): bool
-    {
-        $value = strtolower(trim($hreflang));
-
-        return $value === 'x-default' || preg_match('/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/', $value) === 1;
     }
 
     /**
