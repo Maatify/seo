@@ -243,6 +243,7 @@ stack5AssertMethodSignature(
 stack5AssertProfileSignature('RFC 9309 profile signature', 'Maatify\\Seo\\Web\\Validation\\Profile\\Rfc9309RobotsValidator', 'Maatify\\Seo\\Web\\Validation\\Input\\RobotsTxtValidationInputDTO');
 stack5AssertProfileSignature('Google robots.txt profile signature', 'Maatify\\Seo\\Web\\Validation\\Profile\\GoogleRobotsTxtValidator', 'Maatify\\Seo\\Web\\Validation\\Input\\RobotsTxtValidationInputDTO');
 stack5AssertProfileSignature('Google robots meta profile signature', 'Maatify\\Seo\\Web\\Validation\\Profile\\GoogleRobotsMetaValidator', 'Maatify\\Seo\\Web\\Validation\\Input\\RobotsMetaValidationInputDTO');
+stack5AssertProfileSignature('Sitemap protocol profile signature', 'Maatify\\Seo\\Web\\Validation\\Profile\\SitemapProtocolValidator', 'Maatify\\Seo\\Web\\Validation\\Input\\Sitemap\\SitemapValidationDocumentDTO', 'document');
 stack5AssertProfileSignature('Google Sitemap profile signature', 'Maatify\\Seo\\Web\\Validation\\Profile\\GoogleSitemapValidator', 'Maatify\\Seo\\Web\\Validation\\Input\\Sitemap\\SitemapValidationDocumentDTO', 'document');
 stack5AssertProfileSignature('Google Image profile signature', 'Maatify\\Seo\\Web\\Validation\\Profile\\GoogleImageSitemapValidator', 'Maatify\\Seo\\Web\\Validation\\Input\\Sitemap\\SitemapValidationDocumentDTO', 'document');
 stack5AssertProfileSignature('Google Video profile signature', 'Maatify\\Seo\\Web\\Validation\\Profile\\GoogleVideoSitemapValidator', 'Maatify\\Seo\\Web\\Validation\\Input\\Sitemap\\SitemapValidationDocumentDTO', 'document');
