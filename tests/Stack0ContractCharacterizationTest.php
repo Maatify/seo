@@ -30,6 +30,7 @@ use Maatify\Seo\Shared\DTO\Sitemap\SitemapVideoDTO;
 use Maatify\Seo\Shared\Service\MetaGeneratorService;
 use Maatify\Seo\Shared\Service\SeoOverrideQueryService;
 use Maatify\Seo\Shared\Service\SitemapGeneratorService;
+use Maatify\Seo\Exception\SeoInvalidArgumentException;
 use Maatify\Seo\Web\Robots\DTO\RobotsRuleDTO;
 use Maatify\Seo\Web\Robots\DTO\RobotsTxtDTO;
 use Maatify\Seo\Web\Sitemap\DTO\SitemapIndexEntryDTO as WebSitemapIndexEntryDTO;
@@ -54,11 +55,15 @@ function stack0AssertSame(string $label, mixed $expected, mixed $actual): void
     }
 }
 
-function stack0AssertThrows(string $label, callable $callback, ?string $expectedMessage = null): void
+function stack0AssertThrows(string $label, callable $callback, ?string $expectedMessage = null, ?string $expectedClass = null): void
 {
     try {
         $callback();
     } catch (Throwable $exception) {
+        if ($expectedClass !== null) {
+            stack0AssertSame($label . ' exception class', $expectedClass, get_class($exception));
+        }
+
         if ($expectedMessage !== null) {
             stack0AssertSame($label . ' exception message', $expectedMessage, $exception->getMessage());
         }
@@ -175,8 +180,22 @@ stack0AssertSame(
     $xmlHeader . '<sitemap><loc>https://example.com/web.xml</loc><lastmod>2026-07-01</lastmod></sitemap>' . "\n",
     (new SitemapIndexXmlStringRenderer())->renderEntry($webIndexEntry),
 );
-stack0AssertThrows('shared index DTO retains empty-field invalid URL exception', static fn() => new SharedSitemapIndexEntryDTO('not-a-url'), 'Field [loc] must not be empty.');
-stack0AssertThrows('web index DTO retains invalid-URL exception', static fn() => new WebSitemapIndexEntryDTO('not-a-url'), 'URL [not-a-url] is invalid.');
+stack0AssertThrows('shared index DTO retains empty-field invalid URL exception', static fn() => new SharedSitemapIndexEntryDTO('not-a-url'), 'Field [loc] must not be empty.', SeoInvalidArgumentException::class);
+stack0AssertThrows('web index DTO retains invalid-URL exception', static fn() => new WebSitemapIndexEntryDTO('not-a-url'), 'URL [not-a-url] is invalid.', SeoInvalidArgumentException::class);
+
+$generator = new SitemapGeneratorService();
+stack0AssertThrows(
+    'typed-only URL sitemap generator rejects raw-array URL entries',
+    static fn() => $generator->generateUrlSitemap([['loc' => 'https://example.com/raw-url-entry']]),
+    'Field [urls] must not be empty.',
+    SeoInvalidArgumentException::class,
+);
+stack0AssertThrows(
+    'typed-only sitemap index generator rejects raw-array index entries',
+    static fn() => $generator->generateSitemapIndex([['loc' => 'https://example.com/raw-index-entry.xml']]),
+    'Field [entries] must not be empty.',
+    SeoInvalidArgumentException::class,
+);
 
 $fractionalLastmod = '2026-07-01T10:00:00.123+00:00';
 stack0AssertTrue('fractional-second lastmod is currently rejected by shared helper', !SitemapUrlDTO::isValidLastmod($fractionalLastmod));
