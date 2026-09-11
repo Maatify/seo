@@ -796,7 +796,7 @@ Do not describe current `RobotsRuleDTO` as already enforcing a leading slash; it
 
 ### Repository evidence
 
-`RobotsRuleDTO` has:
+`RobotsRuleDTO` has this class-member property declaration (PHP fragment — a member inside the class, not a standalone file):
 
 ```php
 public int|float|null $crawlDelay = null
@@ -836,7 +836,7 @@ For this remediation:
 
 `maxSnippet()` and `maxVideoPreview()` call a non-negative assertion.
 
-Current tests explicitly expect:
+Current tests explicitly expect these method-call fragments (not standalone files):
 
 ```php
 maxSnippet(-1)
@@ -1053,6 +1053,8 @@ Do not call title/description heuristics Google limits.
 
 This is the single contract that decides where every **new** diagnostic introduced by Stacks 2, 4, 5, and 6 lands and what it may affect. It applies to provider diagnostics, protocol-conformance diagnostics, and context/evidence diagnostics that did not exist as a `SeoValidationIssueDTO` before this remediation.
 
+> **Contract notation convention.** Fully-qualified class identities are normative. PHP-fenced class examples use valid PHP namespace/class syntax. Method-only blocks labeled "Normative signature" specify the public signature only; omitted method bodies are implementation details unless behavior is separately fixed by this Audit. Code blocks marked as PHP must be valid PHP syntax. When the Audit needs to express a signature without supplying an implementation body, it must be explicitly labeled as contract/signature notation rather than presented as a compilable concrete class. Method bodies in illustrative PHP blocks are intentionally omitted/minimal; the normative behavior is defined by the surrounding contract text and guard rules.
+
 ### Validation candidate layer — strict domain DTOs are not validation inputs
 
 Strict domain/rendering DTOs and validation candidate inputs are **two separate architectural layers**. They must not be conflated:
@@ -1132,7 +1134,7 @@ This subsection fixes the consumer-facing shape of the companion surface so impl
   - `target` — the **required** `SeoDiagnosticTargetDTO` fixed in "Diagnostic target locator — fixed contract" below. It is **not** nullable and is present on **every** companion entry, including legacy classification records. The human-readable `message` / `field` is **never** used as target identity.
   - Construction rules mirror the legacy DTO: empty `code` or `message` and unknown `severity`, `origin`, `profile`, or `evidence_state` values are construction errors. `evidence_state` values are scoped per code: a state not listed for that code is invalid for it. The construction guard must also reject any severity that does not match the fixed code severity for ordinary diagnostics, or that does not match the normative `(code, evidence_state) → severity` mapping for evidence-state diagnostics. A severity/evidence-state mismatch is never left to implementer interpretation. An invalid `target` shape (see "Target shape guards" below) is also a construction error.
 - **Correlation with the legacy result.** `SeoCompanionValidationResultDTO` exposes a nullable `legacy` property holding the `SeoValidationResultDTO` that was paired with the profile run, and `null` when the profile validator was invoked standalone. Correlation is therefore available both per-entry (`related_legacy_code`) and at the container level (`legacy`). The companion result never replaces the legacy result and never borrows its fields. **Single exception:** `OpenGraphProtocolValidator` always embeds the exact legacy result produced by `SeoMetaValidator::validate($meta, $options)` from the same `$meta` and `$options`, because OGP compatibility intentionally reuses existing legacy OGP issues as classification records (FIX 9 / FIX 26). Robots, Sitemap, Canonical, and Hreflang standalone profile runs keep `legacy = null`.
-- **Invocation surface.** The legacy `SeoMetaValidator::validate()` is unchanged letter-for-letter and continues to return `SeoValidationResultDTO`:
+- **Invocation surface.** The legacy `SeoMetaValidator::validate()` is unchanged letter-for-letter and continues to return `SeoValidationResultDTO` (normative signature shown in method-signature notation, not as a standalone PHP file):
 
   ```php
   public static function validate(
@@ -1176,11 +1178,14 @@ This subsection fixes the consumer-facing shape of the companion surface so impl
 The companion/public validation surface consumes **one** immutable context DTO rather than per-validator invented method arguments. The fixed class is:
 
 ```php
-final readonly class Maatify\Seo\Web\Validation\DTO\SeoValidationContextDTO
+namespace Maatify\Seo\Web\Validation\DTO;
+
+final readonly class SeoValidationContextDTO
 {
     public function __construct(
         public ?array $evidence = null,
-    );
+    ) {
+    }
 }
 ```
 
@@ -1190,6 +1195,8 @@ The following invocation contracts are fixed.
 
 **Legacy `SeoMetaValidator::validate()` — preserved letter-for-letter:**
 
+**Normative signature** (method-signature notation, not a standalone PHP file):
+
 ```php
 public static function validate(
     array|object $meta,
@@ -1197,9 +1204,11 @@ public static function validate(
 ): SeoValidationResultDTO
 ```
 
-This is the actual existing repository contract and stays unchanged: `static`, `array|object $meta`, `$options` with default `[]`, and `SeoValidationResultDTO` return type. `MetaTagsDTO` remains a valid input through the `object` branch but is **not** the only accepted input. The audit's earlier `validate(MetaTagsDTO $meta)` wording is withdrawn; it is not a valid contract.
+"Letter-for-letter" is normative with respect to method name, parameter order, parameter types, default values, and return type. This is the actual existing repository contract and stays unchanged: `static`, `array|object $meta`, `$options` with default `[]`, and `SeoValidationResultDTO` return type. `MetaTagsDTO` remains a valid input through the `object` branch but is **not** the only accepted input. The audit's earlier `validate(MetaTagsDTO $meta)` wording is withdrawn; it is not a valid contract.
 
 **Additive `SeoMetaValidator::validateWithCompanion()` — fixed signature:**
+
+**Normative signature** (method-signature notation, not a standalone PHP file):
 
 ```php
 public static function validateWithCompanion(
@@ -1234,159 +1243,170 @@ with respect to the embedded legacy result, the legacy classification records, a
 
 **Profile validator public signatures — fixed.**
 
-Every profile validator returns the unified `Maatify\Seo\Web\Validation\DTO\SeoCompanionValidationResultDTO` and takes the optional unified evidence-only context DTO. The signatures below are fixed letter-for-letter. The Sitemap/Robots/Hreflang profile inputs are the fixed **validation candidate** types defined in "Validation candidate inputs — fixed public input contract" below; the previous signatures based on strict domain DTOs (`RobotsTxtDTO`, `MetaRobotsBuilder`, `SitemapUrlDTO` lists, `array<string,list<HreflangLinkDTO>>`) are superseded and withdrawn. No generic placeholder such as `<existing-domain-input>` exists anywhere in the public contract.
+Every profile validator returns the unified `Maatify\Seo\Web\Validation\DTO\SeoCompanionValidationResultDTO` and takes the optional unified evidence-only context DTO. The public method signatures below are normative letter-for-letter contracts with respect to method name, parameter order, parameter types, default values, and return type. The surrounding class presentation is contract notation, not a prescribed method-body implementation. The Sitemap/Robots/Hreflang profile inputs are the fixed **validation candidate** types defined in "Validation candidate inputs — fixed public input contract" below; the previous signatures based on strict domain DTOs (`RobotsTxtDTO`, `MetaRobotsBuilder`, `SitemapUrlDTO` lists, `array<string,list<HreflangLinkDTO>>`) are superseded and withdrawn. No generic placeholder such as `<existing-domain-input>` exists anywhere in the public contract.
 
 **1. RFC 9309 robots**
 
-```php
-final class Rfc9309RobotsValidator
-{
-    public function validate(
-        RobotsTxtValidationInputDTO $input,
-        ?SeoValidationContextDTO $context = null
-    ): SeoCompanionValidationResultDTO;
-}
+```text
+Class:
+Maatify\Seo\Web\Validation\Profile\Rfc9309RobotsValidator
+
+Normative public method signature:
+public function validate(
+    RobotsTxtValidationInputDTO $input,
+    ?SeoValidationContextDTO $context = null
+): SeoCompanionValidationResultDTO
 ```
 
 Input type: `Maatify\Seo\Web\Validation\Input\RobotsTxtValidationInputDTO`.
 
 **2. Google robots.txt**
 
-```php
-final class GoogleRobotsTxtValidator
-{
-    public function validate(
-        RobotsTxtValidationInputDTO $input,
-        ?SeoValidationContextDTO $context = null
-    ): SeoCompanionValidationResultDTO;
-}
+```text
+Class:
+Maatify\Seo\Web\Validation\Profile\GoogleRobotsTxtValidator
+
+Normative public method signature:
+public function validate(
+    RobotsTxtValidationInputDTO $input,
+    ?SeoValidationContextDTO $context = null
+): SeoCompanionValidationResultDTO
 ```
 
 Input type: `Maatify\Seo\Web\Validation\Input\RobotsTxtValidationInputDTO`.
 
 **3. Google robots meta**
 
-```php
-final class GoogleRobotsMetaValidator
-{
-    public function validate(
-        RobotsMetaValidationInputDTO $input,
-        ?SeoValidationContextDTO $context = null
-    ): SeoCompanionValidationResultDTO;
-}
+```text
+Class:
+Maatify\Seo\Web\Validation\Profile\GoogleRobotsMetaValidator
+
+Normative public method signature:
+public function validate(
+    RobotsMetaValidationInputDTO $input,
+    ?SeoValidationContextDTO $context = null
+): SeoCompanionValidationResultDTO
 ```
 
 Input type: `Maatify\Seo\Web\Validation\Input\RobotsMetaValidationInputDTO`. The validator interprets directives; `MetaRobotsBuilder` remains a generation/domain DTO unchanged. No public adapter/factory contract from the builder to candidate input is added.
 
 **4. Sitemap protocol**
 
-```php
-final class SitemapProtocolValidator
-{
-    public function validate(
-        SitemapValidationDocumentDTO $document,
-        ?SeoValidationContextDTO $context = null
-    ): SeoCompanionValidationResultDTO;
-}
+```text
+Class:
+Maatify\Seo\Web\Validation\Profile\SitemapProtocolValidator
+
+Normative public method signature:
+public function validate(
+    SitemapValidationDocumentDTO $document,
+    ?SeoValidationContextDTO $context = null
+): SeoCompanionValidationResultDTO
 ```
 
 Input type: `Maatify\Seo\Web\Validation\Input\Sitemap\SitemapValidationDocumentDTO`.
 
 **5. Google base Sitemap**
 
-```php
-final class GoogleSitemapValidator
-{
-    public function validate(
-        SitemapValidationDocumentDTO $document,
-        ?SeoValidationContextDTO $context = null
-    ): SeoCompanionValidationResultDTO;
-}
+```text
+Class:
+Maatify\Seo\Web\Validation\Profile\GoogleSitemapValidator
+
+Normative public method signature:
+public function validate(
+    SitemapValidationDocumentDTO $document,
+    ?SeoValidationContextDTO $context = null
+): SeoCompanionValidationResultDTO
 ```
 
 Requirement: `$document->type === 'urlset'`; any other type is invalid invocation (library invalid-argument exception family), not an SEO diagnostic.
 
 **6. Google Image Sitemap**
 
-```php
-final class GoogleImageSitemapValidator
-{
-    public function validate(
-        SitemapValidationDocumentDTO $document,
-        ?SeoValidationContextDTO $context = null
-    ): SeoCompanionValidationResultDTO;
-}
+```text
+Class:
+Maatify\Seo\Web\Validation\Profile\GoogleImageSitemapValidator
+
+Normative public method signature:
+public function validate(
+    SitemapValidationDocumentDTO $document,
+    ?SeoValidationContextDTO $context = null
+): SeoCompanionValidationResultDTO
 ```
 
 Requirement: `$document->type === 'urlset'`; it inspects the child `images` of each entry.
 
 **7. Google Video Sitemap**
 
-```php
-final class GoogleVideoSitemapValidator
-{
-    public function validate(
-        SitemapValidationDocumentDTO $document,
-        ?SeoValidationContextDTO $context = null
-    ): SeoCompanionValidationResultDTO;
-}
+```text
+Class:
+Maatify\Seo\Web\Validation\Profile\GoogleVideoSitemapValidator
+
+Normative public method signature:
+public function validate(
+    SitemapValidationDocumentDTO $document,
+    ?SeoValidationContextDTO $context = null
+): SeoCompanionValidationResultDTO
 ```
 
 Requirement: `$document->type === 'urlset'`; it inspects the child `videos` of each entry. The parent page loc for a video is `$document->entries[$urlIndex]->loc`; no duplicate parent-loc field exists in any context or document field.
 
 **8. Google News Sitemap**
 
-```php
-final class GoogleNewsSitemapValidator
-{
-    public function validate(
-        SitemapValidationDocumentDTO $document,
-        ?SeoValidationContextDTO $context = null
-    ): SeoCompanionValidationResultDTO;
-}
+```text
+Class:
+Maatify\Seo\Web\Validation\Profile\GoogleNewsSitemapValidator
+
+Normative public method signature:
+public function validate(
+    SitemapValidationDocumentDTO $document,
+    ?SeoValidationContextDTO $context = null
+): SeoCompanionValidationResultDTO
 ```
 
 Requirement: `$document->type === 'urlset'`; it inspects the child `news` of each entry. This allows document-wide 1,000-News-entry validation from the candidate document.
 
 **9. Open Graph**
 
-```php
-final class OpenGraphProtocolValidator
-{
-    public function validate(
-        array|object $meta,
-        array $options = [],
-        ?SeoValidationContextDTO $context = null
-    ): SeoCompanionValidationResultDTO;
-}
+```text
+Class:
+Maatify\Seo\Web\Validation\Profile\OpenGraphProtocolValidator
+
+Normative public method signature:
+public function validate(
+    array|object $meta,
+    array $options = [],
+    ?SeoValidationContextDTO $context = null
+): SeoCompanionValidationResultDTO
 ```
 
 It uses the same broad meta input domain already supported by `SeoMetaValidator` (`array|object`). It is not narrowed to `MetaTagsDTO`. Its activation and legacy-pairing contracts are fixed in F-13 / FIX 9–11 (presence-triggered; always embeds the exact legacy result).
 
 **10. Google Canonical**
 
-```php
-final class GoogleCanonicalValidator
-{
-    public function validate(
-        string $canonical,
-        ?SeoValidationContextDTO $context = null
-    ): SeoCompanionValidationResultDTO;
-}
+```text
+Class:
+Maatify\Seo\Web\Validation\Profile\GoogleCanonicalValidator
+
+Normative public method signature:
+public function validate(
+    string $canonical,
+    ?SeoValidationContextDTO $context = null
+): SeoCompanionValidationResultDTO
 ```
 
 It diagnoses the supplied canonical URL string. It does not modify `CanonicalUrlBuilder`.
 
 **11. Google Hreflang Cluster**
 
-```php
-final class GoogleHreflangClusterValidator
-{
-    public function validate(
-        HreflangValidationClusterDTO $cluster,
-        ?SeoValidationContextDTO $context = null
-    ): SeoCompanionValidationResultDTO;
-}
+```text
+Class:
+Maatify\Seo\Web\Validation\Profile\GoogleHreflangClusterValidator
+
+Normative public method signature:
+public function validate(
+    HreflangValidationClusterDTO $cluster,
+    ?SeoValidationContextDTO $context = null
+): SeoCompanionValidationResultDTO
 ```
 
 Input type: `Maatify\Seo\Web\Validation\Input\Hreflang\HreflangValidationClusterDTO`. The cluster is itself the complete deterministic cluster; hreflang cluster data never goes in any context field.
@@ -1442,11 +1462,14 @@ Candidate DTOs are **not** `JsonSerializable` in this remediation: they are inpu
 #### Robots.txt candidate input (FIX 3)
 
 ```php
-final readonly class Maatify\Seo\Web\Validation\Input\RobotsTxtValidationInputDTO
+namespace Maatify\Seo\Web\Validation\Input;
+
+final readonly class RobotsTxtValidationInputDTO
 {
     public function __construct(
         public string $content,
-    );
+    ) {
+    }
 }
 ```
 
@@ -1460,14 +1483,17 @@ Rules:
 #### Robots meta candidate input (FIX 4)
 
 ```php
-final readonly class Maatify\Seo\Web\Validation\Input\RobotsMetaValidationInputDTO
+namespace Maatify\Seo\Web\Validation\Input;
+
+final readonly class RobotsMetaValidationInputDTO
 {
     /**
      * @param list<string> $directives
      */
     public function __construct(
         public array $directives,
-    );
+    ) {
+    }
 }
 ```
 
@@ -1485,14 +1511,17 @@ Construction guard:
 **A. `SitemapValidationLocationDTO`**
 
 ```php
-final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapValidationLocationDTO
+namespace Maatify\Seo\Web\Validation\Input\Sitemap;
+
+final readonly class SitemapValidationLocationDTO
 {
     public function __construct(
         public string $scheme,
         public string $host,
         public ?int $port,
         public string $path,
-    );
+    ) {
+    }
 }
 ```
 
@@ -1507,7 +1536,9 @@ No Search Console, no ownership, no protocol-authority state.
 **B. `SitemapValidationDocumentDTO`**
 
 ```php
-final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapValidationDocumentDTO
+namespace Maatify\Seo\Web\Validation\Input\Sitemap;
+
+final readonly class SitemapValidationDocumentDTO
 {
     /**
      * @param list<SitemapUrlValidationInputDTO>|list<SitemapIndexEntryValidationInputDTO> $entries
@@ -1517,7 +1548,8 @@ final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapValidationD
         public array $entries,
         public ?SitemapValidationLocationDTO $location = null,
         public ?int $uncompressedSizeBytes = null,
-    );
+    ) {
+    }
 }
 ```
 
@@ -1533,7 +1565,9 @@ final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapValidationD
 **C. `SitemapUrlValidationInputDTO`**
 
 ```php
-final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapUrlValidationInputDTO
+namespace Maatify\Seo\Web\Validation\Input\Sitemap;
+
+final readonly class SitemapUrlValidationInputDTO
 {
     /**
      * @param list<SitemapImageValidationInputDTO> $images
@@ -1548,7 +1582,8 @@ final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapUrlValidati
         public array $images = [],
         public array $videos = [],
         public array $news = [],
-    );
+    ) {
+    }
 }
 ```
 
@@ -1564,12 +1599,15 @@ Only the validators apply the machine contracts fixed in this audit.
 **D. `SitemapIndexEntryValidationInputDTO`**
 
 ```php
-final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapIndexEntryValidationInputDTO
+namespace Maatify\Seo\Web\Validation\Input\Sitemap;
+
+final readonly class SitemapIndexEntryValidationInputDTO
 {
     public function __construct(
         public ?string $loc = null,
         public ?string $lastmod = null,
-    );
+    ) {
+    }
 }
 ```
 
@@ -1578,7 +1616,9 @@ No URL/date validation in the constructor.
 **E. `SitemapImageValidationInputDTO`**
 
 ```php
-final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapImageValidationInputDTO
+namespace Maatify\Seo\Web\Validation\Input\Sitemap;
+
+final readonly class SitemapImageValidationInputDTO
 {
     public function __construct(
         public ?string $loc = null,
@@ -1586,7 +1626,8 @@ final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapImageValida
         public ?string $caption = null,
         public ?string $geoLocation = null,
         public ?string $license = null,
-    );
+    ) {
+    }
 }
 ```
 
@@ -1595,7 +1636,9 @@ No semantic validation.
 **F. `SitemapVideoValidationInputDTO`**
 
 ```php
-final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapVideoValidationInputDTO
+namespace Maatify\Seo\Web\Validation\Input\Sitemap;
+
+final readonly class SitemapVideoValidationInputDTO
 {
     public function __construct(
         public ?string $thumbnailLoc = null,
@@ -1605,7 +1648,8 @@ final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapVideoValida
         public ?string $playerLoc = null,
         public ?int $duration = null,
         public ?string $publicationDate = null,
-    );
+    ) {
+    }
 }
 ```
 
@@ -1624,7 +1668,9 @@ Therefore **none** of those validations belongs in the constructor.
 **G. `SitemapNewsValidationInputDTO`**
 
 ```php
-final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapNewsValidationInputDTO
+namespace Maatify\Seo\Web\Validation\Input\Sitemap;
+
+final readonly class SitemapNewsValidationInputDTO
 {
     public function __construct(
         public ?string $publicationName = null,
@@ -1635,7 +1681,8 @@ final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapNewsValidat
         public ?string $genres = null,
         public ?string $keywords = null,
         public ?string $stockTickers = null,
-    );
+    ) {
+    }
 }
 ```
 
@@ -1648,12 +1695,15 @@ No required-field, date, language, or provider validation in the constructor.
 **`HreflangValidationLinkDTO`**
 
 ```php
-final readonly class Maatify\Seo\Web\Validation\Input\Hreflang\HreflangValidationLinkDTO
+namespace Maatify\Seo\Web\Validation\Input\Hreflang;
+
+final readonly class HreflangValidationLinkDTO
 {
     public function __construct(
         public ?string $hreflang = null,
         public ?string $url = null,
-    );
+    ) {
+    }
 }
 ```
 
@@ -1662,7 +1712,9 @@ No normalization, no URL validation, no casing normalization.
 **`HreflangValidationPageDTO`**
 
 ```php
-final readonly class Maatify\Seo\Web\Validation\Input\Hreflang\HreflangValidationPageDTO
+namespace Maatify\Seo\Web\Validation\Input\Hreflang;
+
+final readonly class HreflangValidationPageDTO
 {
     /**
      * @param list<HreflangValidationLinkDTO> $links
@@ -1670,7 +1722,8 @@ final readonly class Maatify\Seo\Web\Validation\Input\Hreflang\HreflangValidatio
     public function __construct(
         public string $pageUrl,
         public array $links,
-    );
+    ) {
+    }
 }
 ```
 
@@ -1683,14 +1736,17 @@ Structural rules:
 **`HreflangValidationClusterDTO`**
 
 ```php
-final readonly class Maatify\Seo\Web\Validation\Input\Hreflang\HreflangValidationClusterDTO
+namespace Maatify\Seo\Web\Validation\Input\Hreflang;
+
+final readonly class HreflangValidationClusterDTO
 {
     /**
      * @param list<HreflangValidationPageDTO> $pages
      */
     public function __construct(
         public array $pages,
-    );
+    ) {
+    }
 }
 ```
 
@@ -1832,17 +1888,21 @@ All references to `documentContext['sitemap.document_location']`, `documentConte
 
 `SeoCompanionDiagnosticDTO` alone cannot state machine-readably which URL/Image/Video/News item a child-level diagnostic concerns. The public DTO below is added and is required on every companion entry.
 
+**Class:** `Maatify\Seo\Web\Validation\DTO\SeoDiagnosticTargetDTO` — implements `\JsonSerializable`
+
+**Normative constructor signature:**
+
 ```php
-final readonly class Maatify\Seo\Web\Validation\DTO\SeoDiagnosticTargetDTO implements \JsonSerializable
-{
-    public function __construct(
-        public string $scope,
-        public ?int $entryIndex = null,
-        public ?int $itemIndex = null,
-        public ?int $line = null,
-    );
+public function __construct(
+    public string $scope,
+    public ?int $entryIndex = null,
+    public ?int $itemIndex = null,
+    public ?int $line = null,
+) {
 }
 ```
+
+Method bodies in illustrative PHP blocks are intentionally minimal; the normative behavior is defined by the surrounding contract text and guard rules. `jsonSerialize()` returns the serialized shape defined below.
 
 Fixed JSON shape (snake_case keys):
 
@@ -2802,7 +2862,7 @@ The documentation should qualify exactly which layer is validated.
 
 ### E. Example contains invalid Google News date
 
-`examples/sitemap-output.php` uses:
+`examples/sitemap-output.php` uses this PHP expression fragment (an example array key/value entry, not a standalone file):
 
 ```php
 publicationDate: 'as-provided'
@@ -3529,7 +3589,7 @@ If characterization discovers a material behavior not already classified `preser
 
 **Legacy compatibility:**
 
-- Characterize the exact existing method contract and prove it stays unchanged:
+- Characterize the exact existing method contract and prove it stays unchanged (shown as a method-call expression, not a standalone PHP file):
 
   ```php
   SeoMetaValidator::validate(array|object $meta, array $options = [])
