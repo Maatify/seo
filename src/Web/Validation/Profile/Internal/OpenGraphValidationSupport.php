@@ -120,7 +120,13 @@ final class OpenGraphValidationSupport
             return self::value($og, $names);
         }
 
-        return self::value($meta, $names);
+        $topLevelNames = match ($names[0] ?? null) {
+            'og:type' => ['openGraphType', 'open_graph_type'],
+            'og:url' => ['openGraphUrl', 'open_graph_url'],
+            default => $names,
+        };
+
+        return self::value($meta, $topLevelNames);
     }
 
     /**

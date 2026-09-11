@@ -372,6 +372,40 @@ foreach ($activationSignals as $label => $signal) {
     stack5AssertTrue("{$label} activates missing URL", stack5HasCode($result, 'missing_og_url'));
 }
 
+$genericTopLevelValues = stack5ValidMeta([
+    'openGraphTitle' => 'OG title',
+    'type' => 'website',
+    'url' => 'https://example.com/page',
+]);
+$genericTopLevelResult = SeoMetaValidator::validateWithCompanion($genericTopLevelValues);
+stack5AssertDiagnosticContract($genericTopLevelResult, 'missing_og_type', 'og:type');
+stack5AssertDiagnosticContract($genericTopLevelResult, 'missing_og_url', 'og:url');
+
+foreach ([
+    'camel top-level forms' => ['openGraphType' => 'website', 'openGraphUrl' => 'https://example.com/page'],
+    'snake top-level forms' => ['open_graph_type' => 'website', 'open_graph_url' => 'https://example.com/page'],
+] as $label => $topLevelForms) {
+    $result = SeoMetaValidator::validateWithCompanion(stack5ValidMeta(array_merge([
+        'openGraphTitle' => 'OG title',
+        'openGraphDescription' => 'OG description',
+        'openGraphImage' => 'https://example.com/image.jpg',
+    ], $topLevelForms)));
+    stack5AssertSame("{$label} satisfy required basics", [], stack5Codes($result));
+}
+
+foreach (['openGraph', 'og'] as $containerName) {
+    $result = SeoMetaValidator::validateWithCompanion(stack5ValidMeta([
+        $containerName => [
+            'title' => 'OG title',
+            'description' => 'OG description',
+            'image' => 'https://example.com/image.jpg',
+            'type' => 'website',
+            'url' => 'https://example.com/page',
+        ],
+    ]));
+    stack5AssertSame("nested {$containerName} forms remain complete", [], stack5Codes($result));
+}
+
 $noSignal = SeoMetaValidator::validateWithCompanion(stack5ValidMeta());
 stack5AssertSame('no Open Graph signal emits no companion diagnostics', [], stack5Codes($noSignal));
 
