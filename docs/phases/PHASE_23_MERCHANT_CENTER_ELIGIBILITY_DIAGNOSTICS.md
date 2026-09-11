@@ -17,9 +17,11 @@ The design and scope are recorded in
 - Verification Gate: `PASS`
 - Verified Draft SHA: `042d0f26066bc368da3518c9148dc1acddf7c5b7`
 - Documentation Sweep: complete
-- Final Review: pending
+- Final Review: `PASS`
+- Reviewed Draft baseline: `c3175e35c9e7d97439e8aff2cf5ce7d7bb20be0a`
+- Reviewed latest `main`: `1e2cca61fa4259da3cf20c8908b08f413b93c51b`
 
-The Phase is not marked complete until Final Review has passed.
+The Phase is Complete after Final Review passed against the latest `main`.
 
 ## Architecture boundary
 
@@ -46,4 +48,5 @@ No Google SDK, concrete HTTP client, or auto-remediation logic is introduced by 
 ## Lifecycle
 
 Documentation Sweep is recorded separately from implementation and Verification.
-Final Review remains pending, and Ready or merge are separate maintainer actions.
+Final Review passed against the latest `main`, and the Phase is Complete. Ready or
+merge remain separate maintainer actions.
