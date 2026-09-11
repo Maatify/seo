@@ -299,6 +299,16 @@ For the dateTime forms, `TZD` is required and is one of:
 
 Therefore the Sitemap protocol profile used by this library does **not** accept year-only, year-month, hour/minute-only dateTime, or zone-less dateTime forms. The same lexical policy applies to URL-Sitemap and Sitemap-Index `lastmod`; their semantic meaning differs by context as stated above.
 
+### Exact Sitemap `loc` URL/URI/IRI lexical contract (closed by the contract completeness sweep)
+
+For this remediation the Sitemap `loc` lexical acceptance/rejection set is fixed exactly and must **not** be re-derived through `FILTER_VALIDATE_URL`, `parse_url()`, or any implementation-specific parser choice. The lexical authority is the **Common Absolute-Authority URL Lexical Profile** closed in GDC-01 (normative section), applied with the **Sitemap `loc` surface policy** (`fragment_allowed = false`, `scheme_allowlist = none`, `data_special_case = false`). There is no separate Sitemap URL grammar: the F-02 surface adds only the surface policy listed here, and every normative trigger in this Audit refers to the one common profile.
+
+- **Missing:** `loc === null || trim(loc) === ''` → `sitemap_loc_missing`; a missing `loc` does **not** enter URL lexical validation.
+- **Non-empty candidate:** the validator checks the value **as supplied** (no trim/normalization/percent-decoding/IDNA/case-mutation before the lexical decision, except `trim()` used only to detect missing/whitespace-only); a non-empty value remains the original authored value.
+- A non-empty `loc` is lexically accepted only when it satisfies the **Common Absolute-Authority URL Lexical Profile** in full: absolute scheme `[A-Za-z][A-Za-z0-9+.-]*` immediately followed by `://`; non-empty authority; exact `[userinfo@]host[:port]` authority grammar (zero-or-one `@`, userinfo character set, bracketed or reg-name host, port `0..65535`); path/query grammar; no forbidden raw characters (`U+0000..U+001F`, `U+007F`, space); every `%` followed by exactly two ASCII hex digits; valid UTF-8 raw Unicode allowed; no DNS/IDNA/network resolution. The Sitemap surface **forbids fragments** (`fragment_allowed = false`), so any raw `#` separator → `sitemap_loc_invalid_uri_iri`. The generic Sitemap profile does **not** require HTTP/HTTPS only — scheme must only satisfy the absolute-scheme grammar; host/location scope semantics stay under `sitemap_location_scope_violation`. Any violated point → `sitemap_loc_invalid_uri_iri` (no additional code).
+- The same Common Profile + surface policy applies to the Sitemap Index child `loc` with the same missing-vs-invalid precedence and target `sitemap_index_entry` + child index + `field = sitemap`.
+- This contract is locked in the GDC-01 machine table, Stack 4, and Section 9; it is **not** an implementation choice.
+
 **Current implementation limitation/mismatch:**
 - `SitemapUrlDTO::isValidLastmod()`, `Shared\DTO\Sitemap\SitemapIndexEntryDTO`, and `Web\Sitemap\DTO\SitemapIndexEntryDTO` explicitly enforce regex `Y-m-d` or PHP `DateTimeInterface::ATOM` parsing.
 - `DateTimeInterface::ATOM` does not include fractional seconds, so the current implementation rejects the valid fractional-second dateTime form above. This is a **current implementation limitation**, not evidence of W3C/Sitemap conformance.
@@ -322,7 +332,7 @@ Not all of these constraints belong at the same validation level. The page URL `
 
 F-02 establishes two separate concerns for host/location/context validation:
 
-- **Sitemaps.org protocol context** (profile `sitemaps`, origin `protocol`): sitemap location/scope, applicable scheme/host/port, path scope derived from sitemap location, Sitemap Index same-site restriction, cross-submission authority semantics. These are generic Sitemap protocol rules, not Google Search Console diagnostics.
+- **Sitemaps.org protocol context** (profile `sitemaps`, origin `protocol`): sitemap location/scope, applicable scheme/host/port, path scope derived from sitemap location, Sitemap Index same-site restriction, cross-submission authority semantics (evidence key `sitemaps.cross_submission_authority`, FIX 19). These are generic Sitemap protocol rules, not Google Search Console diagnostics.
 - **Google provider context** (profile `google`, origin `provider`): `google_sitemap_host_context` emits `verified_host`/`unverified_host`/`unknown` evidence state **only** when the document explicitly concerns Google verified ownership/submission context (Search Console evidence). This provider evidence diagnostic must **not** be used as a substitute for generic Sitemap protocol location-scope validation.
 
 The protocol-level `sitemap_location_scope_violation` diagnostic (fixed in the GDC-01 machine-contract table) handles the generic Sitemaps.org scope rules using deterministic caller-supplied document/location context, without Search Console, network access, or guessed ownership.
@@ -571,6 +581,15 @@ Google's current Video SEO Best Practices apply the following thumbnail requirem
 Do not infer an actual remote file type from a URL extension alone and do not convert remote accessibility into fake offline validation.
 
 Watch-page/video indexing eligibility is a separate provider outcome and must not be treated as the validation state of `content_loc` or `player_loc`.
+
+### Exact Video URL lexical contract (closed by the contract completeness sweep)
+
+The URL-shape rules (`google_video_thumbnail_loc_invalid_url`, `google_video_content_loc_invalid_url`, `google_video_player_loc_invalid_url`) do not rely on a vague "valid URL shape" and are not an implementation choice. The lexical authority is the **Common Absolute-Authority URL Lexical Profile** closed in GDC-01, applied with the **Google Video surface policy** (`fragment_allowed = true`, `scheme_allowlist = none`, `data_special_case = false`); all three diagnostics share it (FIX 4).
+
+- **Present value:** URL-shape validation runs only when the value is `!== null && trim(value) !== ''`; missing semantics stay with the dedicated missing codes.
+- A present value is URL-shaped (lexically accepted) when it satisfies the **Common Absolute-Authority URL Lexical Profile** in full: scheme `[A-Za-z][A-Za-z0-9+.-]*` immediately followed by `://`; non-empty authority; exact `[userinfo@]host[:port]` grammar (bracketed or reg-name host, port `0..65535`); path/query grammar; no forbidden raw characters (`U+0000..U+001F`, `U+007F`, space); every `%` followed by exactly two ASCII hex digits; valid UTF-8 raw Unicode allowed; no network/DNS/remote inspection. Fragments are allowed under the Video surface policy (`fragment_allowed = true`) and are not a diagnostic cause; scheme-specific provider support is not part of these URL-shape diagnostics.
+- **Data URL anti-cascade (final contract):** a candidate value `data:` (case-insensitive) in `contentLoc` emits **only** `google_video_data_url_unsupported` (`field = content_loc`) and never `google_video_content_loc_invalid_url`; the same for `playerLoc` (`field = player_loc`). `thumbnailLoc` with a `data:` value emits `google_video_thumbnail_loc_invalid_url` **only** — no Data-URL thumbnail diagnostic exists and `google_video_data_url_unsupported` domain must not be widened to `thumbnail_loc` without an audit amendment. No `unsupported video scheme` diagnostic is introduced.
+- `FILTER_VALIDATE_URL`, `parse_url()`, and any parser/helper are implementation mechanisms only; the observable acceptance/rejection set must match this contract literally.
 
 ### Safe target architecture
 
@@ -1034,6 +1053,52 @@ Do not call title/description heuristics Google limits.
 
 This is the single contract that decides where every **new** diagnostic introduced by Stacks 2, 4, 5, and 6 lands and what it may affect. It applies to provider diagnostics, protocol-conformance diagnostics, and context/evidence diagnostics that did not exist as a `SeoValidationIssueDTO` before this remediation.
 
+### Validation candidate layer — strict domain DTOs are not validation inputs
+
+Strict domain/rendering DTOs and validation candidate inputs are **two separate architectural layers**. They must not be conflated:
+
+```text
+Raw / Candidate Validation Input
+        |
+        v
+Protocol / Provider Validators
+        |
+        v
+Companion Diagnostics
+
+
+Strict Valid Domain DTOs
+        |
+        v
+Builders / Renderers / Generators
+```
+
+- **Lane A — existing strict domain/rendering DTOs.** The following types remain exactly as they are today; the audit does **not** change their constructors or invariants:
+  - `Maatify\Seo\Shared\DTO\Sitemap\SitemapUrlDTO` — rejects invalid `loc` and invalid `lastmod`.
+  - `Maatify\Seo\Shared\DTO\Sitemap\SitemapImageDTO`
+  - `Maatify\Seo\Shared\DTO\Sitemap\SitemapVideoDTO` — rejects empty thumbnail, empty title, empty description, missing both `contentLoc` and `playerLoc`, non-positive duration, and invalid publication date.
+  - `Maatify\Seo\Shared\DTO\Sitemap\SitemapNewsDTO` — rejects required empty fields.
+  - `Maatify\Seo\Shared\DTO\Sitemap\SitemapIndexEntryDTO`
+  - `Maatify\Seo\Web\Sitemap\DTO\SitemapIndexEntryDTO`
+  - `Maatify\Seo\Web\Robots\DTO\RobotsTxtDTO`
+  - `Maatify\Seo\Web\Robots\DTO\RobotsRuleDTO` — rejects empty Allow/Disallow paths.
+  - `Maatify\Seo\Web\Hreflang\HreflangLinkDTO`
+  - `Maatify\Seo\Web\Robots\MetaRobotsBuilder`
+  
+  These are valid domain/rendering DTOs. Any current rejection behavior remains preserved **unless** a specific finding in this audit states an explicit, separate intentional correction (for example F-08 `-1` semantics).
+- **Lane B — validation candidate inputs.** This audit adds a dedicated public validation-input model. Its purpose is:
+  - to represent candidate data **before** protocol/provider validity is proven;
+  - to be able to represent missing and invalid lexical values (which strict DTO constructors reject);
+  - to perform **no** rendering;
+  - to **not** change, replace, or become a substitute for the existing DTOs;
+  - its constructor performs **no** protocol/provider validation.
+
+**Architecture Preservation Rule — fixed:**
+
+> Validation Candidate DTOs are additive validation-only inputs. They do not replace, relax, widen, or redefine the constructors or accepted states of existing strict domain/render DTOs.
+
+The strict DTO is **not** weakened merely so a validator can observe invalid candidate state; the validator uses the candidate input when it must see that state. The candidate model is exactly what makes current machine-contract diagnostics reachable — for example malformed Sitemap `lastmod`, missing Video title/description/thumbnail, both video media locations missing, invalid Video publication date, out-of-range Video duration, invalid News publication date/language, relative Hreflang URLs, and raw robots path cases — **without** weakening any strict constructor (FIX 23). No public candidate-to-domain conversion contract is introduced (`toDomainDto()`, `fromDomainDto()`, public mapper/factory, or automatic normalization service); private/internal adapters from strict DTOs to candidate input are non-observable implementation details.
+
 ### Decision
 
 For each new diagnostic produced by the remediation:
@@ -1063,9 +1128,10 @@ This subsection fixes the consumer-facing shape of the companion surface so impl
   - `origin` — one of the F-12 fixed vocabulary: `protocol` / `provider` / `heuristic` / `content-quality`;
   - `profile` — a stable profile identifier from the fixed set used by this audit (`sitemaps`, `google`, `ogp`, `rfc9309`, `seo-default`);
   - `evidence_state` — `?string`, present **only** for evidence/context diagnostics and matching exactly one of the states its defining contract fixes (for example `recognized`/`unrecognized`/`unknown`, `within_window`/`outside_window`/`unknown`, `accurate`/`inaccurate`/`unknown`, `original`/`not_original`/`unknown`, `matched`/`mismatched`/`unknown`, `accessible`/`inaccessible`/`unknown`, `relevant`/`irrelevant`/`unknown`, `verified`/`unverified`/`unknown`, `verified_host`/`unverified_host`/`unknown`);
-  - `related_legacy_code` — `?string`: the stable legacy `SeoValidationIssueDTO` code this companion record concerns, when the same subject already has a legacy issue (correlation metadata only; it never moves the legacy issue).
-  - Construction rules mirror the legacy DTO: empty `code` or `message` and unknown `severity`, `origin`, `profile`, or `evidence_state` values are construction errors. `evidence_state` values are scoped per code: a state not listed for that code is invalid for it. The construction guard must also reject any severity that does not match the fixed code severity for ordinary diagnostics, or that does not match the normative `(code, evidence_state) → severity` mapping for evidence-state diagnostics. A severity/evidence-state mismatch is never left to implementer interpretation.
-- **Correlation with the legacy result.** `SeoCompanionValidationResultDTO` exposes a nullable `legacy` property holding the `SeoValidationResultDTO` that was paired with the profile run, and `null` when the profile validator was invoked standalone. Correlation is therefore available both per-entry (`related_legacy_code`) and at the container level (`legacy`). The companion result never replaces the legacy result and never borrows its fields.
+  - `related_legacy_code` — `?string`: the stable legacy `SeoValidationIssueDTO` code this companion record concerns, when the same subject already has a legacy issue (correlation metadata only; it never moves the legacy issue);
+  - `target` — the **required** `SeoDiagnosticTargetDTO` fixed in "Diagnostic target locator — fixed contract" below. It is **not** nullable and is present on **every** companion entry, including legacy classification records. The human-readable `message` / `field` is **never** used as target identity.
+  - Construction rules mirror the legacy DTO: empty `code` or `message` and unknown `severity`, `origin`, `profile`, or `evidence_state` values are construction errors. `evidence_state` values are scoped per code: a state not listed for that code is invalid for it. The construction guard must also reject any severity that does not match the fixed code severity for ordinary diagnostics, or that does not match the normative `(code, evidence_state) → severity` mapping for evidence-state diagnostics. A severity/evidence-state mismatch is never left to implementer interpretation. An invalid `target` shape (see "Target shape guards" below) is also a construction error.
+- **Correlation with the legacy result.** `SeoCompanionValidationResultDTO` exposes a nullable `legacy` property holding the `SeoValidationResultDTO` that was paired with the profile run, and `null` when the profile validator was invoked standalone. Correlation is therefore available both per-entry (`related_legacy_code`) and at the container level (`legacy`). The companion result never replaces the legacy result and never borrows its fields. **Single exception:** `OpenGraphProtocolValidator` always embeds the exact legacy result produced by `SeoMetaValidator::validate($meta, $options)` from the same `$meta` and `$options`, because OGP compatibility intentionally reuses existing legacy OGP issues as classification records (FIX 9 / FIX 26). Robots, Sitemap, Canonical, and Hreflang standalone profile runs keep `legacy = null`.
 - **Invocation surface.** The legacy `SeoMetaValidator::validate()` is unchanged letter-for-letter and continues to return `SeoValidationResultDTO`:
 
   ```php
@@ -1090,14 +1156,20 @@ This subsection fixes the consumer-facing shape of the companion surface so impl
         "origin": "protocol",
         "profile": "sitemaps",
         "evidence_state": null,
-        "related_legacy_code": null
+        "related_legacy_code": null,
+        "target": {
+          "scope": "sitemap_document",
+          "entry_index": null,
+          "item_index": null,
+          "line": null
+        }
       }
     ]
   }
   ```
 
   Keys are snake_case; the `code`/`severity`/`origin`/`profile`/`evidence_state` vocabularies are preserved verbatim. When a profile run is paired with the legacy validator, `legacy` contains the exact `SeoValidationResultDTO` shape emitted today (`is_valid`, `has_warnings`, `errors`, `warnings`, `info`, `issues`). `SeoCompanionValidationResultDTO` carries **no** `is_valid`, `has_warnings`, score, grade, or health fields. Consumers may derive their own aggregates, but no derived aggregate may be fed back into `SeoValidationScoreCalculator`.
-- **Unified profile surface.** Profile validators (Google base Sitemap, Google Image, Google Video, Google News, Google robots.txt, robots meta, RFC 9309, canonical, hreflang cluster, OGP) emit exactly the companion entries fixed in the machine-contract tables below and in the fixed F-13 OGP contracts. A profile validator must not add a code, severity, origin, profile, field, or evidence state not listed in this audit.
+- **Unified profile surface.** Profile validators (Google base Sitemap, Google Image, Google Video, Google News, Google robots.txt, robots meta, RFC 9309, canonical, hreflang cluster, OGP) emit exactly the companion entries fixed in the machine-contract tables below and in the fixed F-13 OGP contracts. A profile validator must not add a code, severity, origin, profile, field, evidence state, or target scope not listed in this audit. Every Sitemap/Robots/Hreflang profile validator consumes the fixed **validation candidate** input types defined in "Validation candidate inputs — fixed public input contract" below, never the existing strict domain/render DTOs.
 
 ### Unified immutable context DTO — fixed public input contract
 
@@ -1108,12 +1180,11 @@ final readonly class Maatify\Seo\Web\Validation\DTO\SeoValidationContextDTO
 {
     public function __construct(
         public ?array $evidence = null,
-        public ?array $documentContext = null,
     );
 }
 ```
 
-It is the **additive public DTO** for all companion/profile validation. It has exactly these two public fields and no other public fields. No network, client, or clock dependency is introduced, and no generic extension mechanism exists. The `evidence` and `documentContext` arrays are **typed semantic maps** whose keys are the fixed, Audit-authorized keys defined in the "Evidence input keys — fixed contract", "Normative evidence shapes", and "documentContext — fixed key contract" subsections below. They are **not** an arbitrary policy-extension mechanism. Constructor validation is fixed in "Context construction guards" below.
+It is the **additive public DTO** for all companion/profile validation. It has exactly this one public field and no other public fields. There is **no** `documentContext` field: local deterministic Sitemap document state belongs to `Maatify\Seo\Web\Validation\Input\Sitemap\SitemapValidationDocumentDTO` (defined below), which is the correct home for it (FIX 7). No network, client, or clock dependency is introduced, and no generic extension mechanism exists. The `evidence` array is a **typed semantic map** whose keys are the fixed, Audit-authorized keys defined in the "Evidence input keys — fixed contract" and "Normative evidence shapes" subsections below. It is **not** an arbitrary policy-extension mechanism. Constructor validation is fixed in "Context construction guards" below.
 
 The following invocation contracts are fixed.
 
@@ -1149,9 +1220,21 @@ Parameter order is fixed: `$meta`, then `$options`, then `$context`. No overload
 
 `validateWithCompanion()` is responsible only for: legacy-result pairing; F-12 legacy classification records; F-13 Open Graph companion behavior. It is **not** a universal validation orchestrator.
 
+**Open Graph delegation — single source of truth (FIX 12):**
+
+`validateWithCompanion()` uses the **same** OGP companion behavior defined by `OpenGraphProtocolValidator`. No two independent implementations of the OGP companion rules may exist. The observable result must satisfy:
+
+```text
+validateWithCompanion(meta, options, context)
+==
+OpenGraphProtocolValidator::validate(meta, options, context)
+```
+
+with respect to the embedded legacy result, the legacy classification records, and the OGP companion diagnostics (and any ordering contract this audit fixes). Internally it is permissible for one to delegate to the other; **which** one delegates is an internal non-observable detail, as long as there is no duplicated rule logic and no observable difference.
+
 **Profile validator public signatures — fixed.**
 
-Every profile validator returns the unified `Maatify\Seo\Web\Validation\DTO\SeoCompanionValidationResultDTO` and takes the optional unified context DTO. The signatures below are fixed letter-for-letter. The domain input types are the existing repository types; no aggregate public DTO is invented. No generic placeholder such as `<existing-domain-input>` exists anywhere in the public contract.
+Every profile validator returns the unified `Maatify\Seo\Web\Validation\DTO\SeoCompanionValidationResultDTO` and takes the optional unified evidence-only context DTO. The signatures below are fixed letter-for-letter. The Sitemap/Robots/Hreflang profile inputs are the fixed **validation candidate** types defined in "Validation candidate inputs — fixed public input contract" below; the previous signatures based on strict domain DTOs (`RobotsTxtDTO`, `MetaRobotsBuilder`, `SitemapUrlDTO` lists, `array<string,list<HreflangLinkDTO>>`) are superseded and withdrawn. No generic placeholder such as `<existing-domain-input>` exists anywhere in the public contract.
 
 **1. RFC 9309 robots**
 
@@ -1159,13 +1242,13 @@ Every profile validator returns the unified `Maatify\Seo\Web\Validation\DTO\SeoC
 final class Rfc9309RobotsValidator
 {
     public function validate(
-        RobotsTxtDTO $robots,
+        RobotsTxtValidationInputDTO $input,
         ?SeoValidationContextDTO $context = null
     ): SeoCompanionValidationResultDTO;
 }
 ```
 
-Domain type: `Maatify\Seo\Web\Robots\DTO\RobotsTxtDTO`.
+Input type: `Maatify\Seo\Web\Validation\Input\RobotsTxtValidationInputDTO`.
 
 **2. Google robots.txt**
 
@@ -1173,13 +1256,13 @@ Domain type: `Maatify\Seo\Web\Robots\DTO\RobotsTxtDTO`.
 final class GoogleRobotsTxtValidator
 {
     public function validate(
-        RobotsTxtDTO $robots,
+        RobotsTxtValidationInputDTO $input,
         ?SeoValidationContextDTO $context = null
     ): SeoCompanionValidationResultDTO;
 }
 ```
 
-Domain type: `Maatify\Seo\Web\Robots\DTO\RobotsTxtDTO`.
+Input type: `Maatify\Seo\Web\Validation\Input\RobotsTxtValidationInputDTO`.
 
 **3. Google robots meta**
 
@@ -1187,113 +1270,83 @@ Domain type: `Maatify\Seo\Web\Robots\DTO\RobotsTxtDTO`.
 final class GoogleRobotsMetaValidator
 {
     public function validate(
-        MetaRobotsBuilder $robots,
+        RobotsMetaValidationInputDTO $input,
         ?SeoValidationContextDTO $context = null
     ): SeoCompanionValidationResultDTO;
 }
 ```
 
-Domain type: `Maatify\Seo\Web\Robots\MetaRobotsBuilder`. The validator reads the authored directive state from the builder. It does not replace the builder and does not introduce a new robots-meta DTO.
+Input type: `Maatify\Seo\Web\Validation\Input\RobotsMetaValidationInputDTO`. The validator interprets directives; `MetaRobotsBuilder` remains a generation/domain DTO unchanged. No public adapter/factory contract from the builder to candidate input is added.
 
 **4. Sitemap protocol**
-
-Runtime signature:
 
 ```php
 final class SitemapProtocolValidator
 {
     public function validate(
-        array $entries,
+        SitemapValidationDocumentDTO $document,
         ?SeoValidationContextDTO $context = null
     ): SeoCompanionValidationResultDTO;
 }
 ```
 
-Normative PHPDoc/input contract:
-
-```text
-$entries is exactly one homogeneous list of:
-
-A) list<Maatify\Seo\Shared\DTO\Sitemap\SitemapUrlDTO>
-
-OR
-
-B) list<Maatify\Seo\Shared\DTO\Sitemap\SitemapIndexEntryDTO>
-
-OR
-
-C) list<Maatify\Seo\Web\Sitemap\DTO\SitemapIndexEntryDTO>
-```
-
-A mixed URL/index-entry list is **not** accepted. Both existing Sitemap Index DTO namespaces remain supported. If a supplied non-empty array contains an unsupported or mixed domain type, validation invocation is invalid and must use the library's existing invalid-argument exception family; it is **not** converted into an SEO diagnostic. No new Sitemap document aggregate DTO is introduced.
+Input type: `Maatify\Seo\Web\Validation\Input\Sitemap\SitemapValidationDocumentDTO`.
 
 **5. Google base Sitemap**
 
 ```php
 final class GoogleSitemapValidator
 {
-    /**
-     * @param list<SitemapUrlDTO> $urls
-     */
     public function validate(
-        array $urls,
+        SitemapValidationDocumentDTO $document,
         ?SeoValidationContextDTO $context = null
     ): SeoCompanionValidationResultDTO;
 }
 ```
 
-`SitemapUrlDTO` here is `Maatify\Seo\Shared\DTO\Sitemap\SitemapUrlDTO`.
+Requirement: `$document->type === 'urlset'`; any other type is invalid invocation (library invalid-argument exception family), not an SEO diagnostic.
 
 **6. Google Image Sitemap**
 
 ```php
 final class GoogleImageSitemapValidator
 {
-    /**
-     * @param list<SitemapUrlDTO> $urls
-     */
     public function validate(
-        array $urls,
+        SitemapValidationDocumentDTO $document,
         ?SeoValidationContextDTO $context = null
     ): SeoCompanionValidationResultDTO;
 }
 ```
 
-It validates the `images` lists carried by the supplied URL entries.
+Requirement: `$document->type === 'urlset'`; it inspects the child `images` of each entry.
 
 **7. Google Video Sitemap**
 
 ```php
 final class GoogleVideoSitemapValidator
 {
-    /**
-     * @param list<SitemapUrlDTO> $urls
-     */
     public function validate(
-        array $urls,
+        SitemapValidationDocumentDTO $document,
         ?SeoValidationContextDTO $context = null
     ): SeoCompanionValidationResultDTO;
 }
 ```
 
-It validates the `videos` lists carried by the supplied URL entries. The parent page `<loc>` for a video is `$urls[$urlIndex]->loc`; no duplicate parent-page-loc field is required in `documentContext`.
+Requirement: `$document->type === 'urlset'`; it inspects the child `videos` of each entry. The parent page loc for a video is `$document->entries[$urlIndex]->loc`; no duplicate parent-loc field exists in any context or document field.
 
 **8. Google News Sitemap**
 
 ```php
 final class GoogleNewsSitemapValidator
 {
-    /**
-     * @param list<SitemapUrlDTO> $urls
-     */
     public function validate(
-        array $urls,
+        SitemapValidationDocumentDTO $document,
         ?SeoValidationContextDTO $context = null
     ): SeoCompanionValidationResultDTO;
 }
 ```
 
-It validates the `news` lists carried by the supplied URL entries. This allows document-wide 1,000-News-entry validation without inventing another document DTO.
+Requirement: `$document->type === 'urlset'`; it inspects the child `news` of each entry. This allows document-wide 1,000-News-entry validation from the candidate document.
 
 **9. Open Graph**
 
@@ -1302,12 +1355,13 @@ final class OpenGraphProtocolValidator
 {
     public function validate(
         array|object $meta,
+        array $options = [],
         ?SeoValidationContextDTO $context = null
     ): SeoCompanionValidationResultDTO;
 }
 ```
 
-It uses the same broad meta input domain already supported by `SeoMetaValidator` (`array|object`). It is not narrowed to `MetaTagsDTO`.
+It uses the same broad meta input domain already supported by `SeoMetaValidator` (`array|object`). It is not narrowed to `MetaTagsDTO`. Its activation and legacy-pairing contracts are fixed in F-13 / FIX 9–11 (presence-triggered; always embeds the exact legacy result).
 
 **10. Google Canonical**
 
@@ -1325,40 +1379,17 @@ It diagnoses the supplied canonical URL string. It does not modify `CanonicalUrl
 
 **11. Google Hreflang Cluster**
 
-Runtime signature:
-
 ```php
 final class GoogleHreflangClusterValidator
 {
     public function validate(
-        array $cluster,
+        HreflangValidationClusterDTO $cluster,
         ?SeoValidationContextDTO $context = null
     ): SeoCompanionValidationResultDTO;
 }
 ```
 
-Normative shape:
-
-```text
-array<string, list<Maatify\Seo\Web\Hreflang\HreflangLinkDTO>>
-```
-
-The associative key is the fully-qualified localized page URL; the value is that page's complete supplied alternate-link set. Example (contract illustration only):
-
-```php
-[
-    'https://example.com/en/' => [
-        HreflangLinkDTO(...),
-        HreflangLinkDTO(...),
-    ],
-    'https://example.com/fr/' => [
-        HreflangLinkDTO(...),
-        HreflangLinkDTO(...),
-    ],
-]
-```
-
-This primary input is itself the complete deterministic cluster. Hreflang cluster data does **not** go in `documentContext`, and no new `HreflangClusterDTO` is introduced in this remediation.
+Input type: `Maatify\Seo\Web\Validation\Input\Hreflang\HreflangValidationClusterDTO`. The cluster is itself the complete deterministic cluster; hreflang cluster data never goes in any context field.
 
 **Key authorization rule:**
 
@@ -1382,6 +1413,295 @@ The following classes/namespaces are fixed public contracts in this Audit. An im
 
 If existing repository namespace evidence proves that one of these names collides with an already-existing class, that collision is recorded as an AP-11 blocker and is resolved by an audit amendment — not by renaming at implementation time.
 
+### Validation candidate inputs — fixed public input contract
+
+This subsection fixes the validation candidate (Lane B) model. The following types are public contracts; the profile validators above consume them. **No** new diagnostic code is added merely because a candidate DTO can carry a malformed state (FIX 23); the candidate layer only makes the already-locked machine-contract diagnostics reachable.
+
+**Candidate representability is not equivalent to diagnostic authorization (fixed).** A Candidate DTO may intentionally carry a malformed/null value even where the current remediation has **no** diagnostic for that field. A validator may emit only diagnostics explicitly present in GDC-01 and in F-13. If a candidate state has been explicitly classified as no-diagnostic/deferred by this Audit, it stays silent. This rule prevents the implementer from using broad Candidate DTO shapes as permission to invent validation rules.
+
+#### Candidate construction rule — fixed (FIX 2)
+
+Every Candidate DTO in this remediation is:
+
+- `final readonly`;
+- input-only;
+- performs **no** `trim()`, **no** normalization, **no** URL validation, **no** date parsing, **no** provider validation, **no** protocol validation, and **no** numeric-range validation beyond the structural PHP constraints explicitly listed below;
+- preserves the string **exactly as supplied by the caller**.
+
+Constructor guards are allowed only for:
+- PHP type/container shape;
+- list membership/type;
+- fixed structural discriminators (for example `urlset` / `sitemapindex`);
+- non-negative document byte count;
+- the structural location-object shape defined below.
+
+Candidate DTOs are **not** `JsonSerializable` in this remediation: they are input contracts, not output contracts.
+
+**General targeting identity (FIX 18).** Evidence and diagnostic targets index into `SitemapValidationDocumentDTO::$entries` and its child lists; they never use URL strings, titles, or hashes as identity.
+
+#### Robots.txt candidate input (FIX 3)
+
+```php
+final readonly class Maatify\Seo\Web\Validation\Input\RobotsTxtValidationInputDTO
+{
+    public function __construct(
+        public string $content,
+    );
+}
+```
+
+Rules:
+- `$content` may be empty.
+- No `trim()`. Line endings remain exactly as supplied. Byte content remains exactly as supplied.
+- `strlen($content)` is the document byte source for the Google 500 KiB diagnostic (`robots_google_document_size_exceeds_parse_limit`).
+- The validators interpret lines/rules; the constructor performs no interpretation.
+- `RobotsTxtDTO` is **not** used as validation input for the RFC/Google profiles; it remains the generation/domain DTO unchanged.
+
+#### Robots meta candidate input (FIX 4)
+
+```php
+final readonly class Maatify\Seo\Web\Validation\Input\RobotsMetaValidationInputDTO
+{
+    /**
+     * @param list<string> $directives
+     */
+    public function __construct(
+        public array $directives,
+    );
+}
+```
+
+Construction guard:
+- must be a list;
+- every element is a string;
+- no `trim()`, no normalization;
+- empty strings are allowed as candidate input;
+- the constructor does not interpret directives.
+
+`MetaRobotsBuilder` remains unchanged. Implementations may later use an internal/private adapter from `MetaRobotsBuilder::toArray()` to candidate input, but **no public adapter/factory contract** is added in this audit.
+
+#### Sitemap validation candidate model (FIX 5)
+
+**A. `SitemapValidationLocationDTO`**
+
+```php
+final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapValidationLocationDTO
+{
+    public function __construct(
+        public string $scheme,
+        public string $host,
+        public ?int $port,
+        public string $path,
+    );
+}
+```
+
+Structural guards only:
+- `scheme !== ''`;
+- `host !== ''`;
+- `port === null || port > 0`;
+- `path` starts with `/`.
+
+No Search Console, no ownership, no protocol-authority state.
+
+**B. `SitemapValidationDocumentDTO`**
+
+```php
+final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapValidationDocumentDTO
+{
+    /**
+     * @param list<SitemapUrlValidationInputDTO>|list<SitemapIndexEntryValidationInputDTO> $entries
+     */
+    public function __construct(
+        public string $type,
+        public array $entries,
+        public ?SitemapValidationLocationDTO $location = null,
+        public ?int $uncompressedSizeBytes = null,
+    );
+}
+```
+
+`type` allowed only: `urlset` | `sitemapindex`.
+
+- For `urlset`: `entries` is a homogeneous `list<SitemapUrlValidationInputDTO>`.
+- For `sitemapindex`: `entries` is a homogeneous `list<SitemapIndexEntryValidationInputDTO>`.
+- Empty list is allowed.
+- Mixed candidate entry types is an invalid invocation shape (library invalid-argument exception family), not an SEO diagnostic.
+- `uncompressedSizeBytes`: `null` allowed; otherwise `>= 0`.
+- No protocol/provider validation inside the constructor.
+
+**C. `SitemapUrlValidationInputDTO`**
+
+```php
+final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapUrlValidationInputDTO
+{
+    /**
+     * @param list<SitemapImageValidationInputDTO> $images
+     * @param list<SitemapVideoValidationInputDTO> $videos
+     * @param list<SitemapNewsValidationInputDTO> $news
+     */
+    public function __construct(
+        public ?string $loc = null,
+        public ?string $lastmod = null,
+        public ?string $changefreq = null,
+        public int|float|null $priority = null,
+        public array $images = [],
+        public array $videos = [],
+        public array $news = [],
+    );
+}
+```
+
+The constructor checks only that `images`, `videos`, and `news` are lists of the specified types. It does **not** reject:
+- null/empty `loc`;
+- malformed URL strings;
+- malformed `lastmod`;
+- unknown `changefreq`;
+- out-of-protocol `priority` range.
+
+Only the validators apply the machine contracts fixed in this audit.
+
+**D. `SitemapIndexEntryValidationInputDTO`**
+
+```php
+final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapIndexEntryValidationInputDTO
+{
+    public function __construct(
+        public ?string $loc = null,
+        public ?string $lastmod = null,
+    );
+}
+```
+
+No URL/date validation in the constructor.
+
+**E. `SitemapImageValidationInputDTO`**
+
+```php
+final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapImageValidationInputDTO
+{
+    public function __construct(
+        public ?string $loc = null,
+        public ?string $title = null,
+        public ?string $caption = null,
+        public ?string $geoLocation = null,
+        public ?string $license = null,
+    );
+}
+```
+
+No semantic validation.
+
+**F. `SitemapVideoValidationInputDTO`**
+
+```php
+final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapVideoValidationInputDTO
+{
+    public function __construct(
+        public ?string $thumbnailLoc = null,
+        public ?string $title = null,
+        public ?string $description = null,
+        public ?string $contentLoc = null,
+        public ?string $playerLoc = null,
+        public ?int $duration = null,
+        public ?string $publicationDate = null,
+    );
+}
+```
+
+This type **must** be able to represent:
+- missing thumbnail;
+- missing title;
+- missing description;
+- both content/player missing;
+- negative/zero/out-of-range duration;
+- malformed publication date;
+- data URL;
+- parent-equal media URL.
+
+Therefore **none** of those validations belongs in the constructor.
+
+**G. `SitemapNewsValidationInputDTO`**
+
+```php
+final readonly class Maatify\Seo\Web\Validation\Input\Sitemap\SitemapNewsValidationInputDTO
+{
+    public function __construct(
+        public ?string $publicationName = null,
+        public ?string $publicationLanguage = null,
+        public ?string $publicationDate = null,
+        public ?string $title = null,
+        public ?string $access = null,
+        public ?string $genres = null,
+        public ?string $keywords = null,
+        public ?string $stockTickers = null,
+    );
+}
+```
+
+No required-field, date, language, or provider validation in the constructor.
+
+#### Hreflang validation candidate model (FIX 6)
+
+`HreflangLinkDTO` is strict and performs URL validation/normalization, so it cannot diagnose relative/non-qualified candidate URLs. The candidate model below is the validation input.
+
+**`HreflangValidationLinkDTO`**
+
+```php
+final readonly class Maatify\Seo\Web\Validation\Input\Hreflang\HreflangValidationLinkDTO
+{
+    public function __construct(
+        public ?string $hreflang = null,
+        public ?string $url = null,
+    );
+}
+```
+
+No normalization, no URL validation, no casing normalization.
+
+**`HreflangValidationPageDTO`**
+
+```php
+final readonly class Maatify\Seo\Web\Validation\Input\Hreflang\HreflangValidationPageDTO
+{
+    /**
+     * @param list<HreflangValidationLinkDTO> $links
+     */
+    public function __construct(
+        public string $pageUrl,
+        public array $links,
+    );
+}
+```
+
+Structural rules:
+- `pageUrl` is non-empty because it is the cluster identity;
+- `links` is a list of `HreflangValidationLinkDTO`;
+- no normalization of `pageUrl`;
+- no provider validation.
+
+**`HreflangValidationClusterDTO`**
+
+```php
+final readonly class Maatify\Seo\Web\Validation\Input\Hreflang\HreflangValidationClusterDTO
+{
+    /**
+     * @param list<HreflangValidationPageDTO> $pages
+     */
+    public function __construct(
+        public array $pages,
+    );
+}
+```
+
+Structural rules:
+- list only;
+- every item is an `HreflangValidationPageDTO`;
+- `pageUrl` identities must be unique exact strings within the cluster;
+- a duplicate page identity is an **invalid invocation shape**, not an SEO diagnostic.
+
+No crawling, no ISO membership lookup.
+
 ### Evidence input keys — fixed contract
 
 Because `SeoValidationContextDTO::$evidence` is a public surface, its keys are fixed here and are not arbitrary. The table below is the complete normative list of evidence keys, their consuming profile validator, the diagnostics they feed, and the only allowed states. A state value outside the allowed set is a construction error for that key.
@@ -1390,6 +1710,7 @@ Because `SeoValidationContextDTO::$evidence` is a public surface, its keys are f
 |---|---|---|---|
 | `google_sitemap.lastmod_accuracy` | `GoogleSitemapValidator` | `google_sitemap_lastmod_accuracy` | `accurate` / `inaccurate` / `unknown` |
 | `google_sitemap.host_verification` | `GoogleSitemapValidator` | `google_sitemap_host_context` | `verified_host` / `unverified_host` / `unknown` |
+| `sitemaps.cross_submission_authority` | `SitemapProtocolValidator` | `sitemap_location_scope_violation` | `authorized` / `unauthorized` / `unknown` |
 | `google_image.cross_domain_verification` | `GoogleImageSitemapValidator` | `google_image_cross_domain_verification` | `verified` / `unverified` / `unknown` |
 | `google_image.crawlability` | `GoogleImageSitemapValidator` | `google_image_crawlability_context` | `accessible` / `inaccessible` / `unknown` |
 | `google_video.relevance` | `GoogleVideoSitemapValidator` | `google_video_relevance_context` | `relevant` / `irrelevant` / `unknown` |
@@ -1398,31 +1719,74 @@ Because `SeoValidationContextDTO::$evidence` is a public surface, its keys are f
 | `google_news.original_publication` | `GoogleNewsSitemapValidator` | `google_news_original_publication_evidence` | `original` / `not_original` / `unknown` |
 | `google_news.publication_name_match` | `GoogleNewsSitemapValidator` | `google_news_name_exact_match_evidence` | `matched` / `mismatched` / `unknown` |
 | `google_news.freshness` | `GoogleNewsSitemapValidator` | `google_news_freshness_evidence` | `within_window` / `outside_window` / `unknown` |
+| `google_news.title_content_conformance` | `GoogleNewsSitemapValidator` | `google_news_title_content_evidence` | `conforming` / `nonconforming` / `unknown` |
 | `robots_meta.unavailable_after_recognizability` | `GoogleRobotsMetaValidator` | `robots_meta_unavailable_after_recognizability` | `recognized` / `unrecognized` / `unknown` |
+
+**`sitemaps.cross_submission_authority` — fixed (FIX 19).**
+
+This is a new evidence key at the **protocol/sitemaps evidence boundary**. Shape:
+
+```text
+array<int, 'authorized'|'unauthorized'|'unknown'>
+```
+
+Indexed by the URL entry index inside a `urlset` candidate document. It is:
+- consumed **only** by `SitemapProtocolValidator`;
+- **not** Google Search Console evidence;
+- **not** used for the Sitemap Index same-site rule;
+- backed by **no** network lookup and **no** ownership inference.
+
+Sitemap Index documents do **not** consume this evidence key at all (FIX 21).
+
+**`google_news.title_content_conformance` — fixed.**
+
+This is a new evidence key at the **provider/News content-evidence boundary**. Shape:
+
+```text
+array<int, array<int, 'conforming'|'nonconforming'|'unknown'>>
+```
+
+Target:
+
+```text
+[urlIndex][newsIndex]
+```
+
+It is:
+- consumed **only** by `GoogleNewsSitemapValidator`;
+- used **only** to feed the `google_news_title_content_evidence` diagnostic (severity mapping `conforming` → info, `nonconforming` → warning, `unknown` → info; origin `provider`, profile `google`, `field = title`, target `sitemap_news` + `[urlIndex][newsIndex]`);
+- caller-supplied evidence covering the existing F-05 title-content requirement, including article-title correspondence and the documented exclusion semantics already stated in F-05 (title must not include author, publication name, or publication date);
+- **not** inferable from the title string alone — no local inference is permitted;
+- mapped to `unknown` when the evidence is missing;
+- **not** emitted for an item whose title itself is missing (that item emits `google_news_title_missing` only).
+
+**Evidence registry closure (fixed).** This key is the **only** new evidence key added by the contract completeness sweep. No evidence key is added for deferred Video remote facts (remote file type, thumbnail format/dimensions/stability/accessibility/transparency, Googlebot accessibility of referenced video resources, watch-page/video indexing eligibility), and no evidence key is added for robots MIME/HTTP transport context. The existing `sitemaps.cross_submission_authority` key remains unchanged.
 
 **General targeting rule.**
 
-Evidence associated with Sitemap child collections is indexed by the exact zero-based positions in the supplied `$urls` input. For nested child data:
+Evidence associated with Sitemap child collections is indexed by the exact zero-based positions in the supplied candidate document entries. For nested child data:
 
 ```text
-$urlIndex   = position in $urls
+$urlIndex   = position in SitemapValidationDocumentDTO::$entries
 $childIndex = position inside images/videos/news
 ```
 
-URL strings, titles, object hashes, and invented IDs are **not** used as identity. This permits duplicate URLs/objects without ambiguity.
+URL strings, titles, object hashes, and invented IDs are **not** used as identity. This permits duplicate URLs/objects without ambiguity. These indices must match the `SeoDiagnosticTargetDTO` indices fixed below. For `urlset` candidate documents, `$urlIndex` is the position in `SitemapValidationDocumentDTO::$entries`; child indices are `$imageIndex`, `$videoIndex`, `$newsIndex`. Example: evidence `google_video.relevance[2][1] = irrelevant` produces a diagnostic with `target.scope = sitemap_video`, `target.entryIndex = 2`, `target.itemIndex = 1`.
 
 **Normative evidence shapes — targeting and cardinality.**
 
-- `google_sitemap.lastmod_accuracy` → `array<int, 'accurate'|'inaccurate'|'unknown'>` indexed by `$urlIndex`; `evidence[$urlIndex]` describes `$urls[$urlIndex]->lastmod`.
+- `google_sitemap.lastmod_accuracy` → `array<int, 'accurate'|'inaccurate'|'unknown'>` indexed by `$urlIndex`; `evidence[$urlIndex]` describes the candidate URL entry at that position in `SitemapValidationDocumentDTO::$entries`.
 - `google_sitemap.host_verification` → document/site-level scalar `'verified_host'|'unverified_host'|'unknown'`; it is not per-URL evidence.
-- `google_image.cross_domain_verification` → `array<int, array<int, 'verified'|'unverified'|'unknown'>>` mapped to `$urls[$urlIndex]->images[$imageIndex]`.
-- `google_image.crawlability` → `array<int, array<int, 'accessible'|'inaccessible'|'unknown'>>` mapped to `$urls[$urlIndex]->images[$imageIndex]`.
-- `google_video.relevance` → `array<int, array<int, 'relevant'|'irrelevant'|'unknown'>>` mapped to `$urls[$urlIndex]->videos[$videoIndex]`.
-- `google_video.title_host_page_match` → `array<int, array<int, 'matches'|'differs'|'unknown'>>` mapped to `$urls[$urlIndex]->videos[$videoIndex]`.
-- `google_video.description_host_page_match` → `array<int, array<int, 'matches'|'differs'|'unknown'>>` mapped to `$urls[$urlIndex]->videos[$videoIndex]`.
-- `google_news.original_publication` → `array<int, array<int, 'original'|'not_original'|'unknown'>>` mapped to `$urls[$urlIndex]->news[$newsIndex]`.
-- `google_news.publication_name_match` → `array<int, array<int, 'matched'|'mismatched'|'unknown'>>` mapped to `$urls[$urlIndex]->news[$newsIndex]`.
-- `google_news.freshness` → `array<int, array<int, 'within_window'|'outside_window'|'unknown'>>` mapped to `$urls[$urlIndex]->news[$newsIndex]`.
+- `sitemaps.cross_submission_authority` → `array<int, 'authorized'|'unauthorized'|'unknown'>` indexed by `$urlIndex` in a `urlset` candidate document; consumed only by `SitemapProtocolValidator`.
+- `google_image.cross_domain_verification` → `array<int, array<int, 'verified'|'unverified'|'unknown'>>` mapped to candidate URL entry `$urlIndex` → image `$imageIndex`.
+- `google_image.crawlability` → `array<int, array<int, 'accessible'|'inaccessible'|'unknown'>>` mapped to candidate URL entry `$urlIndex` → image `$imageIndex`.
+- `google_video.relevance` → `array<int, array<int, 'relevant'|'irrelevant'|'unknown'>>` mapped to candidate URL entry `$urlIndex` → video `$videoIndex`.
+- `google_video.title_host_page_match` → `array<int, array<int, 'matches'|'differs'|'unknown'>>` mapped to candidate URL entry `$urlIndex` → video `$videoIndex`.
+- `google_video.description_host_page_match` → `array<int, array<int, 'matches'|'differs'|'unknown'>>` mapped to candidate URL entry `$urlIndex` → video `$videoIndex`.
+- `google_news.original_publication` → `array<int, array<int, 'original'|'not_original'|'unknown'>>` mapped to candidate URL entry `$urlIndex` → news `$newsIndex`.
+- `google_news.publication_name_match` → `array<int, array<int, 'matched'|'mismatched'|'unknown'>>` mapped to candidate URL entry `$urlIndex` → news `$newsIndex`.
+- `google_news.freshness` → `array<int, array<int, 'within_window'|'outside_window'|'unknown'>>` mapped to candidate URL entry `$urlIndex` → news `$newsIndex`.
+- `google_news.title_content_conformance` → `array<int, array<int, 'conforming'|'nonconforming'|'unknown'>>` mapped to candidate URL entry `$urlIndex` → news `$newsIndex`.
 - `robots_meta.unavailable_after_recognizability` → scalar `'recognized'|'unrecognized'|'unknown'`.
 
 **Evidence consumption rules:**
@@ -1441,41 +1805,18 @@ URL strings, titles, object hashes, and invented IDs are **not** used as identit
 - Unknown top-level evidence keys remain ignored and may not create diagnostics or semantics.
 - Absent evidence is never converted into a warning.
 
-**`documentContext` — fixed key contract.**
+**Sitemap document state — sourced from the candidate document (FIX 7).**
 
-`SeoValidationContextDTO::$documentContext` is **not** a prose-defined catch-all. Its complete allowed normative keys in this remediation are exactly:
+There is **no** generic `documentContext` field and **no** `SeoValidationContextDTO::$documentContext`. Local deterministic Sitemap document state is carried by `SitemapValidationDocumentDTO` itself, which is the correct and only home for it:
 
-**`sitemap.document_location`**
+- **Document location** → `SitemapValidationDocumentDTO::$location` (a `SitemapValidationLocationDTO`, or `null`). Consumed only by `SitemapProtocolValidator` for `sitemap_location_scope_violation`. No Search Console data and no ownership claim belong here.
+- **Document type** → `SitemapValidationDocumentDTO::$type` (`'urlset'` or `'sitemapindex'`). A contradiction between candidate entry element types and `$type` is invalid invocation/context, not an SEO diagnostic.
+- **Document byte size** → `SitemapValidationDocumentDTO::$uncompressedSizeBytes` (`int >= 0` or `null`). Feeds `sitemap_document_size_exceeds_boundary`. It represents the actual uncompressed serialized document byte count supplied by the caller/serialization layer. It is **not** estimated from entry count and not derived from `$type`.
+- **Video parent page loc** → the parent candidate `SitemapUrlValidationInputDTO::$loc` at `$document->entries[$urlIndex]`, never a context field.
+- **Hreflang cluster** → `HreflangValidationClusterDTO`, the primary input to `GoogleHreflangClusterValidator`, never a context field.
+- **Generic document count** → URL/Index/News/Image counts are derived directly from the supplied candidate document arrays.
 
-```text
-array{
-    scheme: string,
-    host: string,
-    port: int|null,
-    path: string
-}
-```
-
-- Meaning: the actual location of the Sitemap document being validated.
-- Rules: `scheme` non-empty; `host` non-empty; `port` positive integer or `null`; `path` starts with `/`.
-- This is caller-supplied deterministic data. No Search Console data and no ownership claim belongs here.
-- Consumed **only** by `SitemapProtocolValidator` for `sitemap_location_scope_violation`.
-
-**`sitemap.document_type`**
-
-Allowed: `'urlset'` or `'sitemapindex'`. Used when the document type cannot be determined solely from an empty `$entries` list, and for explicit consistency checking. For non-empty input the supplied value must agree with the domain type: `urlset` → `SitemapUrlDTO`; `sitemapindex` → either existing `SitemapIndexEntryDTO` namespace. A contradiction between domain input and explicit `sitemap.document_type` is invalid invocation/context, not an SEO diagnostic.
-
-**`sitemap.uncompressed_size_bytes`**
-
-Shape: `int >= 0`. Feeds `sitemap_document_size_exceeds_boundary`. It represents the actual uncompressed serialized document byte count supplied by the caller/serialization layer. It is **not** estimated from entry count.
-
-These are the only `documentContext` keys required by this remediation. The previous vague permitted-use items are removed:
-
-- Parent page `loc` — comes directly from `SitemapUrlDTO::loc`, never from `documentContext`.
-- Hreflang cluster data — the cluster is the primary input to `GoogleHreflangClusterValidator`, never `documentContext`.
-- Generic document count — URL/Index/News/Image counts are derived directly from the supplied arrays.
-
-Unknown `documentContext` keys may be ignored but must not create new diagnostics or new semantics.
+All references to `documentContext['sitemap.document_location']`, `documentContext['sitemap.document_type']`, `documentContext['sitemap.uncompressed_size_bytes']`, parent loc inside `documentContext`, and hreflang cluster inside `documentContext` are withdrawn.
 
 **Context construction guards — fixed.**
 
@@ -1484,11 +1825,252 @@ Unknown `documentContext` keys may be ignored but must not create new diagnostic
 - For recognized `$evidence` keys: enforce the exact value shape (scalar / indexed / nested) and the allowed states defined above.
 - Negative and non-integer list indices are invalid for indexed evidence.
 - An invalid recognized evidence value (shape or state) is a construction error.
-- For recognized `$documentContext` keys: enforce the exact shape/value contract defined above; a violation is a construction error.
 - Unknown top-level keys are ignored by validators: they must not create diagnostics and must not introduce semantics.
 - No extension registry is invented.
 
+### Diagnostic target locator — fixed contract (FIX 13)
+
+`SeoCompanionDiagnosticDTO` alone cannot state machine-readably which URL/Image/Video/News item a child-level diagnostic concerns. The public DTO below is added and is required on every companion entry.
+
+```php
+final readonly class Maatify\Seo\Web\Validation\DTO\SeoDiagnosticTargetDTO implements \JsonSerializable
+{
+    public function __construct(
+        public string $scope,
+        public ?int $entryIndex = null,
+        public ?int $itemIndex = null,
+        public ?int $line = null,
+    );
+}
+```
+
+Fixed JSON shape (snake_case keys):
+
+```json
+{
+  "scope": "sitemap_video",
+  "entry_index": 0,
+  "item_index": 1,
+  "line": null
+}
+```
+
+### Allowed target scopes — closed set (FIX 14)
+
+The only allowed `scope` values are:
+
+- `robots_document`
+- `robots_rule`
+- `robots_meta`
+- `sitemap_document`
+- `sitemap_url`
+- `sitemap_index_entry`
+- `sitemap_image`
+- `sitemap_video`
+- `sitemap_news`
+- `meta`
+- `canonical`
+- `hreflang_page`
+- `hreflang_link`
+
+There is **no** generic arbitrary scope registry.
+
+### Target shape guards — fixed (FIX 15)
+
+- `robots_document` — `entryIndex` null, `itemIndex` null, `line` null.
+- `robots_rule` — `line` **required**, 1-based source line number; `entryIndex` null; `itemIndex` null.
+- `robots_meta` — all indexes/line null.
+- `sitemap_document` — all indexes/line null.
+- `sitemap_url` — `entryIndex` required, zero-based; `itemIndex` null; `line` null.
+- `sitemap_index_entry` — same as `sitemap_url` (`entryIndex` = child index, zero-based).
+- `sitemap_image` — `entryIndex` = URL index, `itemIndex` = image index, both zero-based; `line` null.
+- `sitemap_video` — `entryIndex` = URL index, `itemIndex` = video index, both zero-based; `line` null.
+- `sitemap_news` — `entryIndex` = URL index, `itemIndex` = news index, both zero-based; `line` null.
+- `meta` — indexes/line null.
+- `canonical` — indexes/line null.
+- `hreflang_page` — `entryIndex` = page index; `itemIndex` null; `line` null.
+- `hreflang_link` — `entryIndex` = page index, `itemIndex` = link index; `line` null.
+
+Any invalid target shape is a construction error. Negative indices are invalid. `line < 1` is invalid.
+
+### Normative target mapping — fixed (FIX 17)
+
+**Robots:**
+- `robots_google_document_size_exceeds_parse_limit` → `robots_document`.
+- `robots_google_document_invalid_utf8` → `robots_document`.
+- Path/RFC/Google robots.txt rule diagnostics → `robots_rule` + exact 1-based source line.
+- `robots_rfc9309_product_token_invalid` → `robots_rule` + exact 1-based source line.
+- `robots_rfc9309_path_pattern_invalid` → `robots_rule` + exact 1-based source line.
+- `robots_rfc9309_control_character_invalid` → `robots_rule` + exact 1-based source line.
+- `robots_google_sitemap_url_not_fully_qualified` → `robots_rule` + exact 1-based source line.
+- Robots meta diagnostics → `robots_meta`.
+
+**Sitemap protocol:**
+- Document count/size: `sitemap_url_count_exceeds_limit`, `sitemap_index_count_exceeds_limit`, `sitemap_document_size_exceeds_boundary` → `sitemap_document`.
+- URL-entry lexical/location diagnostics → `sitemap_url` + URL `entryIndex`.
+- `sitemap_loc_missing` and `sitemap_loc_invalid_uri_iri` → `sitemap_url` + URL `entryIndex` when the entry is a URL Sitemap entry (`field = loc`), and `sitemap_index_entry` + `entryIndex` when the entry is a Sitemap Index child (`field = sitemap`).
+- `sitemap_changefreq_invalid` and `sitemap_priority_out_of_range` → `sitemap_url` + URL `entryIndex`.
+- Sitemap Index child location/lastmod diagnostics → `sitemap_index_entry` + `entryIndex`.
+- `sitemap_lastmod_invalid_lexical` → `sitemap_url` + `entryIndex` for a URL Sitemap, `sitemap_index_entry` + `entryIndex` for a Sitemap Index.
+- For `sitemap_location_scope_violation`: URL-sitemap URL violation → `sitemap_url`; Sitemap Index child violation → `sitemap_index_entry`.
+
+**Google base Sitemap:**
+- Per-URL: `priority`, `changefreq`, `lastmod` accuracy → `sitemap_url` + `entryIndex`.
+- `google_sitemap_host_context` → `sitemap_document`.
+
+**Google Image:**
+- `google_image_count_exceeds_limit` → parent `sitemap_url` + URL `entryIndex`.
+- Per-image evidence diagnostic → `sitemap_image` + `[urlIndex][imageIndex]`.
+
+**Google Video:**
+- Every child-video diagnostic → `sitemap_video` + `[urlIndex][videoIndex]`, including missing fields, URL-shape diagnostics (`google_video_thumbnail_loc_invalid_url`, `google_video_content_loc_invalid_url`, `google_video_player_loc_invalid_url`), duration, publication date, parent-loc equality, description length, data URL (including both Data-URL diagnostics sharing the same code with `field = content_loc` and `field = player_loc`), relevance, title match, description match, and `content_loc` preference.
+
+**Google News:**
+- Per-News-entry diagnostics/evidence → `sitemap_news` + `[urlIndex][newsIndex]`, including the four required-field missing diagnostics (`google_news_publication_name_missing`, `google_news_language_missing`, `google_news_publication_date_missing`, `google_news_title_missing`) and the title-content evidence diagnostic `google_news_title_content_evidence`.
+- `google_news_multiple_entries_per_url` → `sitemap_url` + URL index.
+- `google_news_document_count_exceeds_limit` → `sitemap_document`.
+
+**Meta / OGP / legacy classifications:**
+- → `meta`.
+
+**Canonical:**
+- → `canonical`.
+
+**Hreflang:**
+- Cluster page-level (self reference, reciprocity, alternate-set consistency) → `hreflang_page` + page index.
+- Specific alternate URL not fully qualified → `hreflang_link` + page index + link index.
+- `hreflang_tag_invalid_syntax` → `hreflang_link` + page index + link index.
+
+**Evidence targeting uses candidate document indices (FIX 18).** The zero-based evidence indexing binds to `SitemapValidationDocumentDTO::$entries` (not any strict `SitemapUrlDTO` list): `$urlIndex = position in SitemapValidationDocumentDTO::$entries`, and child indices `$imageIndex` / `$videoIndex` / `$newsIndex` must match `SeoDiagnosticTargetDTO`. No URL strings or titles are used as identity.
+
+### Cross-submission authority evidence — exact logic (FIX 19–21)
+
+These rules are fixed and must not be left to implementation interpretation.
+
+**Protocol cross-submission authority evidence (FIX 19):** `sitemaps.cross_submission_authority` is the evidence key at the **protocol/sitemaps evidence boundary** (`array<int, 'authorized'|'unauthorized'|'unknown'>`), indexed by URL entry index inside a `urlset` candidate document. It is consumed only by `SitemapProtocolValidator`; it is **not** Search Console evidence; it is **not** used for the Sitemap Index same-site rule; there is no network lookup and no ownership inference.
+
+**Exact logic (FIX 20), for a URL Sitemap:**
+- If a candidate URL is within the normal protocol scope inferred from `SitemapValidationDocumentDTO::$location` → no scope violation.
+- If a candidate URL is outside the normal scope, consult `sitemaps.cross_submission_authority[$urlIndex]`:
+  - `authorized` → no `sitemap_location_scope_violation` emitted; supplied authority evidence permits the specific cross-submission state described in F-02.
+  - `unauthorized` → emit `sitemap_location_scope_violation` (`error`, origin `protocol`, profile `sitemaps`, `field = loc`, target `sitemap_url` + URL index).
+  - `unknown` or missing → **no protocol error emitted.** This is an EVIDENCE BOUNDARY: absence of authority proof is not converted into a fabricated failure, and it is not described as a proven pass either. No new diagnostic is added for the `unknown` state in this remediation.
+
+**Sitemap Index rule (FIX 21):** For `type = sitemapindex`, the `sitemaps.cross_submission_authority` evidence is **not applied**. The Sitemap Index same-site restriction remains as fixed: a Sitemap Index child location is checked directly against document location + candidate child location; a proven deterministic violation emits `sitemap_location_scope_violation` with `field = sitemap` and target `sitemap_index_entry` + child index. No Search Console, no `sitemaps.cross_submission_authority`, no Google host verification.
+
+**Google host verification stays separate (FIX 22):** `google_sitemap.host_verification` (states `verified_host` / `unverified_host` / `unknown`) is consumed **only** by `GoogleSitemapValidator`, feeds `google_sitemap_host_context` (origin `provider`, profile `google`, target `sitemap_document`), and is **never** used in `sitemap_location_scope_violation` or in protocol cross-submission authority.
+
+### Common Absolute-Authority URL Lexical Profile — one closed internal lexical model
+
+This is **not** a public PHP class or interface. It is a **normative parsing/acceptance algorithm only** — the observable lexical acceptance/rejection set for every URL-shaped validation surface in this Audit. A later implementation may realize it through private/internal helpers, but the observable result must match this contract exactly. The following surfaces **all depend on this profile** and add only the surface-specific wording recorded later:
+
+1. Sitemap `<loc>` (URL Sitemap entries);
+2. Sitemap Index child `<loc>`;
+3. Google Video URL-shaped fields (`thumbnail_loc`, `content_loc`, `player_loc`);
+4. Google Hreflang alternate URLs (`HreflangValidationLinkDTO::$url`);
+5. Google robots.txt `Sitemap:` directive values.
+
+There is no second, duplicated, or divergent lexical grammar anywhere in this Audit. Wherever a trigger depends on URL/IRI/authority/host/port/path/query/fragment lexical validity, the acceptance set is this profile plus the explicit surface-specific policy for that field.
+
+#### Common input rule
+
+The lexical decision operates on the string **as supplied**. Prohibited **before** the lexical decision: `trim()`/whitespace stripping, URL normalization, percent-decoding, IDNA conversion, hostname lowercase mutation, and dot-segment normalization. `trim()` is allowed **only** to detect missing/whitespace-only when the surface contract has missing semantics. Once a value is determined to be non-missing, the original supplied bytes/string are inspected verbatim.
+
+#### Common UTF-8 / Unicode rule
+
+- Raw non-ASCII data is allowed (raw Unicode).
+- The candidate must be a valid UTF-8 string; invalid UTF-8 inside a URL candidate **fails** the surface lexical predicate.
+- Prohibited before/during the decision: Unicode normalization (NFC/NFD), case folding, IDNA/punycode conversion, transliteration.
+- Raw Unicode hostname/path/query is allowed as long as the remaining lexical contract passes. This is the library's lexical policy and does not claim DNS validity.
+
+#### Common forbidden raw characters
+
+A URL candidate under this profile is rejected if it contains any raw `U+0000..U+001F`, `U+007F`, or `U+0020` (SPACE). Silent stripping is prohibited. HTAB is inside the control range and is therefore rejected inside a URL value; CR/LF are rejected inside a URL value.
+
+#### Percent-encoding rule
+
+Any raw `%` must be followed by **exactly two ASCII hexadecimal digits** (`0-9`, `A-F`, `a-f`). Lexically accepted: `%20`, `%2F`, `%af`. Rejected: `%`, `%2`, `%ZZ`, `%G0`. No percent-decoding occurs during the lexical decision.
+
+#### Scheme grammar
+
+Every absolute-authority surface uses the scheme grammar `[A-Za-z][A-Za-z0-9+.-]*`, and the scheme must be followed literally by `://` (except the `data:` special handling recorded for Google Video). Scheme-valid examples: `http`, `https`, `ftp`, `custom`, `custom+v1`, `a.b`, `x-y`. Scheme-invalid: `1http`, `_http`, `-http`. A scheme-valid candidate does not imply the provider supports that scheme; scheme-support classification is a separate rule.
+
+#### Exact authority extraction
+
+After `scheme://`, the authority is the substring from the first character after `//` up to (and excluding) the **first occurring** `/`, `?`, or `#`, or (if none occurs) the end of the string. The authority must not be empty. Therefore the following are rejected (empty/nonexistent authority): `https:///path` and `https://`.
+
+#### Exact authority grammar
+
+Authority contract: `[userinfo@]host[:port]`, parsed with the exact rules below.
+
+- Raw `@`: zero or one raw `@` only. More than one raw `@` → malformed authority. If one raw `@` exists: the part before it is `userinfo`, the part after it is `hostport`, and **both** must be non-empty. Lexically accepted shapes: `user@example.com`, `user:pass@example.com`. Rejected: `@example.com` (empty userinfo, `@` first), `user@` (empty hostport), `a@b@example.com` (two `@`). The presence of userinfo is accepted lexically only — no credential/network validation.
+
+#### Userinfo character grammar
+
+If userinfo exists, the only raw ASCII characters allowed are: `ALPHA`, `DIGIT`, `-`, `.`, `_`, `~`, `!`, `$`, `&`, `'`, `(`, `)`, `*`, `+`, `,`, `;`, `=`, `:`, plus valid `%HH` and valid raw UTF-8 non-ASCII Unicode. Raw `/`, `?`, `#`, `[`, `]`, `@`, space, and control characters are not allowed inside userinfo. No percent-decoding.
+
+#### Host grammar — two forms only
+
+After the optional userinfo, the `hostport` is exactly one of:
+
+1. a bracketed host (starts with `[`), or
+2. a non-bracketed reg-name host.
+
+#### Bracketed host
+
+If the `hostport` begins with `[`, there must be a matching `]` before any optional port. Bracket contents must be non-empty and contain no nested `[` or `]`. Raw ASCII allowed inside brackets: `ALPHA`, `DIGIT`, `:`, `.`, `-`, `_`, `~`, `!`, `$`, `&`, `'`, `(`, `)`, `*`, `+`, `,`, `;`, `=`, plus valid `%HH`. Raw Unicode is **not** allowed inside a bracket host in this library lexical profile. This parsing contract does **not** claim IPv6/IP-literal semantic validity — it is a closed bracketed-host lexical shape only. After the closing `]`, only end-of-authority or `:port` is allowed; any other characters after `]` → malformed authority. Structurally accepted: `[::1]`, `[2001:db8::1]`, `[::1]:8080`. Rejected: `[`, `[]`, `[::1`, `[::1]abc`.
+
+#### Non-bracketed host
+
+If the `hostport` does not begin with `[`, the host is the substring before the optional port `:`. The non-bracketed host must be non-empty. Raw ASCII allowed: `ALPHA`, `DIGIT`, `-`, `.`, `_`, `~`, `!`, `$`, `&`, `'`, `(`, `)`, `*`, `+`, `,`, `;`, `=`, plus valid `%HH` and valid raw UTF-8 non-ASCII Unicode. Not allowed raw in a non-bracket host: `:`, `[`, `]`, `@`, `/`, `?`, `#`, space, control. Therefore an unbracketed IPv6-style host containing `:` is not accepted. No DNS validation, no TLD validation, no label-length validation, no IDNA conversion, and no requirement that the host resolves. Lexically accepted examples: `example.com`, `sub.example.com`, `localhost`, `مثال.اختبار`, `xn--example`. Acceptance of the shape does not imply DNS validity.
+
+#### Port grammar
+
+Optional port begins with `:` **after** the host. If `:` exists, the port must be non-empty `[0-9]+`, and the numeric value must be in `0..65535`. Leading zeros are lexically allowed. Accepted: `:0`, `:80`, `:443`, `:0080`, `:65535`. Rejected: `:` (empty), `:-1`, `:+80`, `:abc`, `:65536`. Port parsing is decimal ASCII only. No network lookup.
+
+#### Path extraction and grammar
+
+After the authority, if the next character is `/`, the path begins there. If the next character is `?`, `#`, or end-of-string, the path is the empty string. Raw ASCII allowed in the path: `ALPHA`, `DIGIT`, `-`, `.`, `_`, `~`, `!`, `$`, `&`, `'`, `(`, `)`, `*`, `+`, `,`, `;`, `=`, `:`, `@`, `/`, plus valid `%HH` and valid raw UTF-8 non-ASCII Unicode. Raw `?` starts the query, raw `#` starts the fragment. Raw space, control characters, and raw backslash `\` are not allowed in the path. No percent-decoding and no dot-segment normalization; a string such as `/a/../b` stays a lexical path **as supplied**. This contract does not decide resource equivalence.
+
+#### Query grammar
+
+If `?` occurs after the authority/path, the query begins after `?` and ends before the first `#` or end-of-string. Raw ASCII allowed: `ALPHA`, `DIGIT`, `-`, `.`, `_`, `~`, `!`, `$`, `&`, `'`, `(`, `)`, `*`, `+`, `,`, `;`, `=`, `:`, `@`, `/`, `?`, plus valid `%HH` and valid raw UTF-8 non-ASCII Unicode. Raw `#`, space, control, and raw backslash `\` are rejected. An empty query after `?` is lexically allowed.
+
+#### Fragment grammar
+
+Fragments start after the first `#`, when the surface permits fragments. The same character set as the query applies (`ALPHA`, `DIGIT`, `-`, `.`, `_`, `~`, `!`, `$`, `&`, `'`, `(`, `)`, `*`, `+`, `,`, `;`, `=`, `:`, `@`, `/`, `?`, plus valid `%HH` and raw Unicode). Space/control/backslash are rejected. An empty fragment after `#` is lexically allowed only on surfaces that permit fragments. If a surface forbids fragments, any raw `#` separator → lexical failure.
+
+#### Common profile does NOT prove
+
+This profile does not prove: DNS existence; routability; actual HTTP accessibility; TLS validity; redirect behavior; provider ownership; Search Console verification; MIME type; remote resource type; IDNA equivalence; semantic IPv4/IPv6 validity beyond the fixed lexical shape; or provider scheme support unless a surface-specific rule says otherwise.
+
 ### Fixed machine contracts for all new diagnostics
+
+**Complete Normative Runtime Registry (fixed).** The normative runtime machine registry for Stacks 2/4/5/6 consists **only** of:
+
+- all GDC-01 machine table rows (including every code added by the contract completeness sweep below and above);
+- the fixed F-13 OGP new diagnostics (`missing_og_type`, `missing_og_url`);
+- the fixed Normative Legacy Classification Table.
+
+Everything else is exactly one of:
+
+- strict invocation/constructor behavior explicitly documented;
+- serialization/output guarantee;
+- parser semantics;
+- explicitly deferred / no-runtime-diagnostic scope.
+
+**No prose rule anywhere else in this Audit implicitly authorizes a new runtime diagnostic.** A rule that is not a machine-table row, an F-13 OGP diagnostic, a legacy classification record, a documented invocation/constructor rule, a serialization/output guarantee, or parser semantics is explicitly deferred / no-runtime-diagnostic scope until a separately approved contract defines otherwise.
+
+**Diagnostic precedence / anti-cascade rule (fixed).** When a field is missing and has a dedicated missing diagnostic, the missing diagnostic is emitted and no invalid lexical/URL diagnostic is also emitted for the same absence. When the field is present but malformed, the malformed/invalid diagnostic is emitted instead. Evidence diagnostics that require a substantive field are not emitted when that required field is missing. Fixed examples:
+
+- Video thumbnail missing → `google_video_thumbnail_loc_missing`, **not** also `google_video_thumbnail_loc_invalid_url`.
+- News publication date missing → `google_news_publication_date_missing`, **not** also `google_news_publication_date_invalid`.
+- News language missing → `google_news_language_missing`, **not** also `google_news_language_invalid`.
+- Sitemap `loc` missing → `sitemap_loc_missing`, **not** also `sitemap_loc_invalid_uri_iri`.
+
+This rule is a hard anti-cascade constraint; the same absence must never yield both a missing diagnostic and a malformed diagnostic of the same field.
+
+**Reachability contract (FIX 23).** Every diagnostic required from the RFC robots, Google robots.txt, Sitemap protocol, Google Video, Google News, and Google Hreflang profiles whose malformed state is rejected by a strict DTO constructor is reachable because the profiles consume the validation candidate input layer — without weakening any strict DTO. Explicitly reachable-in-this-layer examples (no new codes; each maps to its machine code below): malformed Sitemap `lastmod` → `sitemap_lastmod_invalid_lexical`; missing Sitemap `loc` → `sitemap_loc_missing`; malformed non-empty Sitemap `loc` → `sitemap_loc_invalid_uri_iri`; invalid `changefreq` → `sitemap_changefreq_invalid`; out-of-range/non-finite `priority` → `sitemap_priority_out_of_range`; Video missing title/description/thumbnail and both media locations missing → `google_video_title_missing` / `google_video_description_missing` / `google_video_thumbnail_loc_missing` / `google_video_content_or_player_loc_missing`; Video non-empty-but-malformed thumbnail/content/player URL → `google_video_thumbnail_loc_invalid_url` / `google_video_content_loc_invalid_url` / `google_video_player_loc_invalid_url`; invalid Video publication date → `google_video_publication_date_invalid`; out-of-range Video duration → `google_video_duration_out_of_range`; News missing required fields → `google_news_publication_name_missing` / `google_news_language_missing` / `google_news_publication_date_missing` / `google_news_title_missing`; News invalid publication date/language → `google_news_publication_date_invalid` / `google_news_language_invalid`; relative/missing/malformed Hreflang URL → `hreflang_url_not_fully_qualified`; malformed Hreflang tag syntax → `hreflang_tag_invalid_syntax`; raw robots path cases → `robots_google_present_path_leading_slash` / `robots_rfc9309_leading_wildcard_compatibility`; RFC product-token/path-pattern/control-character cases → `robots_rfc9309_product_token_invalid` / `robots_rfc9309_path_pattern_invalid` / `robots_rfc9309_control_character_invalid`; Google Sitemap directive URL → `robots_google_sitemap_url_not_fully_qualified`. None of these requires changing a strict constructor.
 
 Every stable `code`, `severity`, `origin`, `profile`, `field`, and `evidence_state` below is part of GDC-01. A diagnostic absent from these tables and from the fixed F-13 OGP contracts may not be introduced by an implementation stack. All rows are GDC-01 companion-only: none enters the legacy result, `is_valid`, `has_warnings`, or `SeoValidationScoreCalculator`. Severity convention: `error` is reserved for provable protocol-invalid conditions (Stack 4 protocol rules); provider contract violations and conservative library-policy boundaries are `warning`; status/recommendation/evidence-gap entries are `info`. For ordinary diagnostics, severity is fixed per code; for evidence-state diagnostics, severity is fixed by the normative `(code, evidence_state) → severity` mapping in the table (for example `inaccurate` → warning, `accurate` → info). The pre-existing legacy missing-OGP warnings keep their fixed legacy severity as documented in F-13.
 
@@ -1497,13 +2079,18 @@ Every stable `code`, `severity`, `origin`, `profile`, `field`, and `evidence_sta
 | Code | Severity | Origin | Profile | Field | Evidence state | Contract |
 |---|---|---|---|---|---|---|
 | `robots_google_document_size_exceeds_parse_limit` | warning | provider | `google` | `document` | null | Document exceeds 512,000 bytes (500 KiB); Google ignores content after this limit (F-06). Not RFC invalidity; companion-only, not legacy result. |
+| `robots_google_document_invalid_utf8` | warning | provider | `google` | `document` | null | Raw `RobotsTxtValidationInputDTO::$content` is not valid UTF-8 (F-06 Google UTF-8/plain-text contract). Independent of the 500 KiB diagnostic; both may coexist for the same document. Companion-only, not legacy result. |
 | `robots_google_present_path_leading_slash` | warning | provider | `google` | `path` | null | Google Allow/Disallow present-path leading-`/` rule (F-06): a non-empty path that does not begin with `/` is a provider-profile warning; companion-only, not legacy result. |
+| `robots_google_sitemap_url_not_fully_qualified` | warning | provider | `google` | `sitemap` | null | A parsed `Sitemap:` directive value that is missing/whitespace-only, or a present non-empty value that fails the **Common Absolute-Authority URL Lexical Profile** under the **Google robots Sitemap surface policy** (`fragment_allowed = false`, `scheme_allowlist = none`, `data_special_case = false`), emits this code. Missing/whitespace-only uses `trim()` only to detect the empty state; the present non-empty value is judged **as supplied** through the profile (scheme + `://` required, exact authority grammar, host required, port grammar fixed, valid percent escapes, raw Unicode allowed when valid UTF-8, cross-host allowed, query allowed, fragment rejected). DNS/network are not checked; multiple `Sitemap:` directives are allowed with no count limit and no user-agent-group coupling. This is the **only** URL diagnostic for the `Sitemap:` field — no Sitemap-protocol, scope, host-verification, or generic URL-exception diagnostic is added. `FILTER_VALIDATE_URL` is never the contract. Target `robots_rule` + exact 1-based source line. Companion-only, not legacy result. |
 
 #### Stack 2 — RFC 9309 robots (protocol profile `rfc9309`)
 
 | Code | Severity | Origin | Profile | Field | Evidence state | Contract |
 |---|---|---|---|---|---|---|
 | `robots_rfc9309_leading_wildcard_compatibility` | warning | protocol | `rfc9309` | `path` | null | Leading-`*` on a non-empty path is a non-fatal RFC compatibility diagnostic (F-06); companion-only, not legacy result. |
+| `robots_rfc9309_product_token_invalid` | error | protocol | `rfc9309` | `user_agent` | null | Parsed `User-agent` product-token is neither `*` nor the fixed RFC 9309 identifier grammar already recorded in F-06 (for example an identifier containing a digit). Not an invocation exception: the raw candidate document is valid validator input and the validator diagnoses the protocol-invalid token. Target `robots_rule` + exact 1-based source line. Companion-only, not legacy result. |
+| `robots_rfc9309_path_pattern_invalid` | error | protocol | `rfc9309` | `path` | null | Non-empty `path-pattern` satisfies neither the accepted `/`-started form nor the special leading-`*` compatibility case (F-06). Empty Allow/Disallow patterns are valid and emit no diagnostic; ordinary non-empty paths starting `/` emit no path-start diagnostic; a non-empty path starting `*` emits only `robots_rfc9309_leading_wildcard_compatibility` and not this code. The F-06 leading-`*` compatibility policy remains untouched. Target `robots_rule` + exact 1-based source line. Companion-only, not legacy result. |
+| `robots_rfc9309_control_character_invalid` | error | protocol | `rfc9309` | `user_agent` or `path` | null | A forbidden non-line control character appears inside a parsed semantic token/value. Normal CRLF/LF document line separators are **not** diagnostics; only a forbidden control character inside a parsed semantic value emits this. `field` is `user_agent` or `path` according to the parsed rule; no arbitrary field strings. Target `robots_rule` + exact 1-based source line. Companion-only, not legacy result. |
 
 #### Stack 2 — Google robots meta (provider profile `google`)
 
@@ -1520,9 +2107,25 @@ Every stable `code`, `severity`, `origin`, `profile`, `field`, and `evidence_sta
 | `sitemap_url_count_exceeds_limit` | error | protocol | `sitemaps` | `urlset` | — | URL sitemap exceeds 50,000 URLs (sitemaps.org source-backed limit). |
 | `sitemap_index_count_exceeds_limit` | error | protocol | `sitemaps` | `sitemapindex` | — | Sitemap Index exceeds 50,000 sitemap entries (sitemaps.org source-backed limit). |
 | `sitemap_document_size_exceeds_boundary` | error | protocol | `sitemaps` | `null` | — | Uncompressed document exceeds 52,428,800 bytes (50 MB), a byte-defined sitemaps.org limit. Document-level rule applies to both URL sitemap and Sitemap Index; `field` is `null`. |
-| `sitemap_lastmod_invalid_lexical` | error | protocol | `sitemaps` | `lastmod` | — | `lastmod` fails the fixed F-02 lexical forms (including year-only, year-month, hour/minute-only, zone-less dateTime). |
-| `sitemap_loc_length_exceeds_measure_boundary` | warning | protocol | `sitemaps` | `loc` | — | EVIDENCE BOUNDARY + conservative library policy (F-02 exact measurement contract): byte measure regards a value ≥ 2,048 bytes as exceed-the-library-boundary. **Not** labeled a proven violation of the source's unit-undefined character limit. |
-| `sitemap_location_scope_violation` | error | protocol | `sitemaps` | `loc` (or `sitemap` for Sitemap Index child location) | — | EVIDENCE BOUNDARY + deterministic caller-supplied context: the caller-supplied document/location context proves deterministically that a URL violates the applicable Sitemaps.org location/scope protocol (scheme, host, port, path scope). When the violation concerns a Sitemap Index child sitemap location rather than a page `<loc>`, `field = sitemap`. No network, no Search Console, no guessed ownership. When context is insufficient to prove the violation, no diagnostic is emitted; the absence of proof must not be fabricated into a pass or failure. |
+| `sitemap_loc_missing` | error | protocol | `sitemaps` | `loc` (URL) / `sitemap` (Index child) | null | Entry-level missing-`loc` rule: emit only when `loc === null or trim(loc) === ''` (the `trim()` check exists **only** to detect missing/whitespace-only; a missing `loc` does **not** enter URL lexical validation). For a URL Sitemap entry: `field = loc`, target `sitemap_url` + URL entry index. For a Sitemap Index entry: `field = sitemap`, target `sitemap_index_entry` + child index. Missing `loc` emits this diagnostic **only** and never also `sitemap_loc_invalid_uri_iri`, and a missing/invalid `loc` never enters scope validation (no `sitemap_location_scope_violation` for the same entry). Companion-only, not legacy result. |
+| `sitemap_loc_invalid_uri_iri` | error | protocol | `sitemaps` | `loc` (URL) / `sitemap` (Index child) | null | A non-empty supplied `loc` fails the **Common Absolute-Authority URL Lexical Profile** under the **Sitemap `loc` surface policy** (`fragment_allowed = false`, `scheme_allowlist = none`, `data_special_case = false`). The value is judged **as supplied** (no trim, normalization, percent-decoding, IDNA, case mutation, or dot-segment work precedes the decision); valid UTF-8 raw Unicode is allowed; invalid UTF-8 fails; forbidden raw characters (`U+0000..U+001F`, `U+007F`, space), malformed `%HH`, malformed authority/userinfo/host/port/path/query, and any `#` fragment cause rejection. Fragment rejection is surface-specific: the Sitemap `loc` surface forbids fragments. Missing/whitespace-only uses `sitemap_loc_missing` instead; the two never co-emit for the same absence. No additional code is emitted with this one. Same field/target mapping as `sitemap_loc_missing` (URL: `field = loc`, `sitemap_url`; Index child: `field = sitemap`, `sitemap_index_entry`). `FILTER_VALIDATE_URL`, `parse_url()`, and any parser/helper are implementation mechanisms only, never the contract. XML escaping failure is **not** part of this diagnostic. Companion-only, not legacy result. |
+| `sitemap_lastmod_invalid_lexical` | error | protocol | `sitemaps` | `lastmod` | — | `lastmod` fails the fixed F-02 lexical forms (including year-only, year-month, hour/minute-only, zone-less dateTime). Missing/null `lastmod` is a valid absence and emits no diagnostic. For a URL Sitemap: target `sitemap_url` + `entryIndex`. For a Sitemap Index: target `sitemap_index_entry` + `entryIndex`. Target mapping is fixed per document type. |
+| `sitemap_changefreq_invalid` | error | protocol | `sitemaps` | `changefreq` | null | Emitted only when a non-null/non-empty candidate `changefreq` is outside the fixed Sitemap vocabulary already represented by the current strict DTO contract. Null means absent and emits no diagnostic. Target `sitemap_url` + `entryIndex`. Companion-only, not legacy result. |
+| `sitemap_priority_out_of_range` | error | protocol | `sitemaps` | `priority` | null | Emitted when a non-null `priority` is non-finite, `< 0.0`, or `> 1.0`. Null means absent. Target `sitemap_url` + `entryIndex`. Companion-only, not legacy result. |
+| `sitemap_loc_length_exceeds_measure_boundary` | warning | protocol | `sitemaps` | `loc` | — | EVIDENCE BOUNDARY + conservative library policy (F-02 exact measurement contract): byte measure regards a value ≥ 2,048 bytes as exceed-the-library-boundary. **Not** labeled a proven violation of the source's unit-undefined character limit. Precedence fixed: a missing `loc` emits no length boundary; a non-empty malformed `loc` that also measures ≥ 2,048 bytes emits **both** `sitemap_loc_invalid_uri_iri` (one lexical structural diagnostic) and `sitemap_loc_length_exceeds_measure_boundary` (one deterministic library measurement) — these are two independent dispositions, not a duplicate cascade. |
+| `sitemap_location_scope_violation` | error | protocol | `sitemaps` | `loc` (or `sitemap` for Sitemap Index child location) | — | EVIDENCE BOUNDARY + deterministic caller-supplied context: the caller-supplied document/location context (`SitemapValidationDocumentDTO::$location`) proves deterministically that a URL violates the applicable Sitemaps.org location/scope protocol. **Anti-cascade:** scope validation runs **only after lexical acceptance** under the Common Absolute-Authority URL Lexical Profile for the given `loc`; a missing `loc` or one failing `sitemap_loc_invalid_uri_iri` never produces this diagnostic for the same entry. Scope identity for a URL Sitemap uses **only** `scheme` (ASCII case-insensitive), `host` (raw ASCII letters case-insensitive, non-ASCII compared exactly as supplied), `effective port` (http default 80, https default 443, any other scheme keeps null or its explicit number with no invented default), and the URL-Sitemap path scope: document-directory prefix (substring from the document path start through the last `/`, inclusive) matched byte-for-byte by the candidate path (empty candidate path treated as `/`; raw lexical path as supplied, no percent-decoding, no dot-segment normalization). Query is ignored for scope; userinfo is ignored for scope identity. When the violation concerns a Sitemap Index child sitemap location rather than a page `<loc>`, `field = sitemap`, and the Index same-site rule compares **only** scheme/host/effective-port (no path-prefix requirement) and never consumes cross-submission authority. Cross-submission uses only `sitemaps.cross_submission_authority` (FIX 19–21): `authorized` → no error; `unauthorized` → error; `unknown`/missing → EVIDENCE BOUNDARY, no diagnostic. No network, no Search Console, no guessed ownership. Targets: `sitemap_url` + URL index when `field = loc`, `sitemap_index_entry` + child index when `field = sitemap`. |
+
+**Sitemap serialization rules are NOT candidate diagnostics (fixed).** UTF-8 XML serialization, XML entity escaping, and canonical percent/URI output escaping are **serialization/output guarantees**, not companion diagnostics in Stack 4. Stack 3 and the serialization tests prove them; the candidate validation layer does **not** re-check XML serialized output. No codes such as `sitemap_xml_not_utf8` or `sitemap_xml_not_escaped` (or any similar code) are introduced by this Audit.
+
+**Sitemap `loc` lexical contract is the Common Profile (fixed).** The trigger for `sitemap_loc_invalid_uri_iri` is the **Common Absolute-Authority URL Lexical Profile** closed in this GDC-01 section, applied with the **Sitemap `loc` surface policy**: `fragment_allowed = false`, `scheme_allowlist = none`, `data_special_case = false`. There is no separate Sitemap-specific URL grammar here and none elsewhere in this Audit — the observable acceptance/rejection set is the common profile literally, with only the surface policy as the difference. `FILTER_VALIDATE_URL`, `parse_url()`, and any implementation-specific parser/validator/regex/helper are **not** the lexical contract; they may only be used as implementation mechanisms whose observable result matches this contract exactly.
+
+- **Missing:** `loc === null || trim(loc) === ''` → `sitemap_loc_missing`, and **does not** enter URL lexical validation.
+- **Non-empty candidate normalization boundary:** the validator checks the value **as supplied**; `trim()` is used **only** to detect missing/whitespace-only; a non-empty value remains the original authored value and is judged through the common profile.
+- **Fragment:** the Sitemap `loc` surface forbids fragments (`fragment_allowed = false`), so any raw `#` separator → `sitemap_loc_invalid_uri_iri`.
+- **Anti-cascade:** a missing `loc` or one failing the profile never enters scope validation (no `sitemap_location_scope_violation` for the same entry).
+- **No additional code:** lexical failure emits `sitemap_loc_invalid_uri_iri` only.
+
+**Sitemap Index child `loc` (FIX 3).** `SitemapIndexEntryValidationInputDTO::$loc` uses the exact same Common Profile with the same surface policy and the same missing-vs-invalid precedence: missing → `sitemap_loc_missing` only; non-empty failing the profile → `sitemap_loc_invalid_uri_iri` only. Targets stay `scope = sitemap_index_entry`, `entryIndex = child index`, `field = sitemap`. There is **no** different lexical contract for the Index child URL.
 
 #### Stack 4 — Google base Sitemap (provider profile `google`)
 
@@ -1541,23 +2144,41 @@ Every stable `code`, `severity`, `origin`, `profile`, `field`, and `evidence_sta
 | `google_image_cross_domain_verification` | warning / info | provider | `google` | `image` | `verified` / `unverified` / `unknown` | Cross-domain hosting requires Search Console verification (F-03); `unverified` → warning, `verified` → info, `unknown` → info (evidence gap). |
 | `google_image_crawlability_context` | warning / info | provider | `google` | `image` | `accessible` / `inaccessible` / `unknown` | External crawlability evidence (F-03); `inaccessible` → warning, `accessible` → info, `unknown` → info (evidence gap). |
 
+**Google Image current machine scope — fixed boundary.** This sweep adds **no** Google Image `loc`/`title`/`caption`/`geoLocation`/`license`/URL-shape diagnostics. Although `SitemapImageValidationInputDTO` can represent null/malformed fields, the current F-03 approved machine scope authorizes only: the image count diagnostic, the cross-domain verification evidence diagnostic, the crawlability evidence diagnostic, and the legacy-field compatibility classification. Candidate representability does **not** itself authorize a diagnostic: `GoogleImageSitemapValidator` emits no new missing/URL-shape diagnostic beyond the already-approved GDC-01 table above, and no implementer may invent one. Any broader Image required-field/URL-shape provider contract requires a separate audit amendment.
+
 #### Stack 4 — Google Video (provider profile `google`)
 
 | Code | Severity | Origin | Profile | Field | Evidence state | Contract |
 |---|---|---|---|---|---|---|
-| `google_video_title_missing` | warning | provider | `google` | `title` | — | Required per Google Video contract (F-04). |
-| `google_video_description_missing` | warning | provider | `google` | `description` | — | Required per Google Video contract (F-04). |
-| `google_video_thumbnail_loc_missing` | warning | provider | `google` | `thumbnail_loc` | — | Required per Google Video contract (F-04). |
-| `google_video_content_or_player_loc_missing` | warning | provider | `google` | `content_loc` | — | At least one of `content_loc`/`player_loc` required (F-04). |
+| `google_video_title_missing` | warning | provider | `google` | `title` | — | Required per Google Video contract (F-04). `missing := value === null  or  trim(value) === ''`. Target `sitemap_video` + `[urlIndex][videoIndex]`. |
+| `google_video_description_missing` | warning | provider | `google` | `description` | — | Required per Google Video contract (F-04). `missing := value === null  or  trim(value) === ''`. Target `sitemap_video` + `[urlIndex][videoIndex]`. |
+| `google_video_thumbnail_loc_missing` | warning | provider | `google` | `thumbnail_loc` | — | Required per Google Video contract (F-04). `missing := value === null  or  trim(value) === ''`. Missing/whitespace-only uses this code and never also `google_video_thumbnail_loc_invalid_url`. Target `sitemap_video` + `[urlIndex][videoIndex]`. |
+| `google_video_thumbnail_loc_invalid_url` | warning | provider | `google` | `thumbnail_loc` | — | `thumbnailLoc` is non-empty (`!== null && trim(value) !== ''`) but fails the **Common Absolute-Authority URL Lexical Profile** under the **Google Video surface policy** (shared by all three `*_invalid_url` diagnostics: `fragment_allowed = true`, `scheme_allowlist = none`, `data_special_case = false`). Missing/whitespace-only uses `google_video_thumbnail_loc_missing` instead; the two never emit together for the same item. A `data:`-prefixed `thumbnailLoc` has **no** Data-URL diagnostic in this remediation (`google_video_data_url_unsupported` is locked to `content_loc`/`player_loc` only), so it fails the profile (no `://`) and emits `google_video_thumbnail_loc_invalid_url` alone. Target `sitemap_video` + `[urlIndex][videoIndex]`. |
+| `google_video_content_loc_invalid_url` | warning | provider | `google` | `content_loc` | — | `contentLoc` is present/non-empty but fails the **Common Absolute-Authority URL Lexical Profile** under the **Google Video surface policy** (`fragment_allowed = true`, `scheme_allowlist = none`, `data_special_case = false`). If the value starts the case-insensitive semantic `data:` form, emit **only** `google_video_data_url_unsupported` (field `content_loc`) and never this code solely because `://` is absent (anti-cascade). Target `sitemap_video` + `[urlIndex][videoIndex]`. |
+| `google_video_player_loc_invalid_url` | warning | provider | `google` | `player_loc` | — | `playerLoc` is present/non-empty but fails the **Common Absolute-Authority URL Lexical Profile** under the **Google Video surface policy** (`fragment_allowed = true`, `scheme_allowlist = none`, `data_special_case = false`). If the value starts the case-insensitive semantic `data:` form, emit **only** `google_video_data_url_unsupported` (field `player_loc`) and never this code solely because `://` is absent (anti-cascade). Target `sitemap_video` + `[urlIndex][videoIndex]`. |
+| `google_video_content_or_player_loc_missing` | warning | provider | `google` | `content_loc` | — | At least one of `content_loc`/`player_loc` required (F-04). Emits **only when both** `contentLoc === null  or  trim(contentLoc) === ''` **and** `playerLoc === null  or  trim(playerLoc) === ''`. If exactly one media location is present but malformed, its URL-shape diagnostic (`google_video_content_loc_invalid_url` / `google_video_player_loc_invalid_url`) is used instead, not this code. Target `sitemap_video` + `[urlIndex][videoIndex]`. |
 | `google_video_description_length_exceeds_measure_boundary` | warning | provider | `google` | `description` | — | EVIDENCE BOUNDARY + conservative library policy (F-02): byte measure regards a value > 2,048 bytes as exceed-the-library-boundary. **Not** labeled a proven violation of the source's unit-undefined character maximum. |
 | `google_video_duration_out_of_range` | warning | provider | `google` | `duration` | — | Outside 1..28,800 seconds (F-04). |
-| `google_video_publication_date_invalid` | warning | provider | `google` | `publication_date` | — | Fails the two documented date forms (F-04). |
+| `google_video_publication_date_invalid` | warning | provider | `google` | `publication_date` | — | Fails the two documented date forms (F-04). Emitted only when `publicationDate` is non-null/non-empty (absent value emits no diagnostic). |
 | `google_video_media_loc_equals_parent_loc` | warning | provider | `google` | `content_loc` or `player_loc` | — | `content_loc` or `player_loc` equals the parent page `<loc>` (F-04). Uses the same code but separate diagnostic entries per violated field: `field = content_loc` when content_loc is the violator, `field = player_loc` when player_loc is the violator; both may emit independently if both are present. |
-| `google_video_data_url_unsupported` | warning | provider | `google` | `content_loc` | — | Data URLs are unsupported for video URLs (F-04). |
+| `google_video_data_url_unsupported` | warning | provider | `google` | `content_loc` OR `player_loc` | — | Data URLs are unsupported for video URLs (F-04). **Machine scope is locked to `content_loc` and `player_loc` only** — `thumbnail_loc` is deliberately excluded. A case-insensitive value starting the semantic `data:` form emits exactly one machine contract per offending media field: `field = content_loc` when `contentLoc` is a Data URL, `field = player_loc` when `playerLoc` is a Data URL. If **both** locations are Data URLs, emit **two** diagnostics with the same code and same target but `field = content_loc` and `field = player_loc` respectively. No separate codes are created for content versus player Data URLs. **Explicit anti-cascade (FIX 4):** a content/player value starting `data:` emits **only** this diagnostic for the relevant field; it never also emits the corresponding `*_invalid_url` solely because the value lacks `://` — the Data URL check runs before the Common Profile only for these two locked fields. `thumbnailLoc` with value `data:...` receives **no** Data-URL diagnostic and falls under `google_video_thumbnail_loc_invalid_url` (it fails the Common Profile for lack of `://`). Target `sitemap_video` + `[urlIndex][videoIndex]`. |
 | `google_video_relevance_context` | warning / info | provider | `google` | `null` | `relevant` / `irrelevant` / `unknown` | Do-not-list-unrelated-video requirement (F-04); `irrelevant` → warning, `relevant` → info, `unknown` → info (evidence gap). |
 | `google_video_title_host_page_match` | warning / info | provider | `google` | `title` | `matches` / `differs` / `unknown` | Title should match host page (recommendation, F-04); `differs` → warning, `matches` → info, `unknown` → info (evidence gap). |
 | `google_video_description_host_page_match` | warning / info | provider | `google` | `description` | `matches` / `differs` / `unknown` | Description must match description displayed on host page (F-04); `differs` → warning, `matches` → info, `unknown` → info (evidence gap). Separate from `google_video_relevance_context` which concerns video-to-page topical relevance. |
 | `google_video_content_loc_preference` | info | provider | `google` | `content_loc` | — | `content_loc` preferred when available (recommendation, F-04). |
+
+**Video remote-evidence boundary — no additional runtime diagnostic in Stacks 0–8 for:** actual remote video file type; actual thumbnail file format; actual thumbnail dimensions; actual thumbnail stability; actual thumbnail accessibility; actual thumbnail transparency; actual Googlebot accessibility of referenced video resources; watch-page/video indexing eligibility. These facts are explicitly **`DEFER PROVIDER EVIDENCE CONTRACT`** for a later approved contract; no implementer may invent evidence keys or codes for them in Stack 4.
+
+**Video scheme handling — closed outcome.** The current remediation supports only the deterministic rules already fixed: the ordinary URL-shape diagnostics above (`google_video_thumbnail_loc_invalid_url`, `google_video_content_loc_invalid_url`, `google_video_player_loc_invalid_url`) and the explicit Data URL diagnostic (`google_video_data_url_unsupported`). No generic `unsupported_video_scheme` diagnostic is introduced and no closed streaming-protocol taxonomy is invented. The HTTP/HTTPS/FTP/streaming-protocol source evidence recorded in F-04 remains **documentation evidence only** until a separately approved closed machine contract exists. This is an explicit scope decision, not implementer discretion.
+
+**Google Video URL-shape contract is the Common Profile (fixed, FIX 4).** The three diagnostics `google_video_thumbnail_loc_invalid_url`, `google_video_content_loc_invalid_url`, and `google_video_player_loc_invalid_url` share **one** lexical contract: the **Common Absolute-Authority URL Lexical Profile** closed in this GDC-01 section, applied with the **Google Video surface policy** (`fragment_allowed = true`, `scheme_allowlist = none`, `data_special_case = false`). There is no separate Video-specific URL grammar. `FILTER_VALIDATE_URL`, `parse_url()`, and any implementation-specific parser/validator/regex/helper are **not** the lexical contract; they may only be used as implementation mechanisms whose observable acceptance/rejection set matches this contract literally.
+
+- **Present value:** URL-shape validation runs only when the value is `!== null && trim(value) !== ''`. Missing semantics are unchanged (the dedicated missing code is used instead).
+- **Fragment:** the Video surface allows fragments (`fragment_allowed = true`); a `#...` fragment is lexically allowed and is **not** a diagnostic cause in this remediation.
+- **Scheme:** `scheme_allowlist = none` — the scheme must satisfy the absolute-scheme grammar; scheme-specific provider support is **not** part of these URL-shape diagnostics (handled by the closed scheme-handling outcome below).
+- **Anti-cascade:** a present malformed value emits only the corresponding `*_invalid_url`; no cascade into `google_video_content_or_player_loc_missing` (that code requires both media locations missing) and no cascade into `google_video_media_loc_equals_parent_loc` (that comparison runs only after the field is lexically usable).
+- **Data URL final contract:** `contentLoc` starting `data:` (case-insensitive) → `google_video_data_url_unsupported` with `field = content_loc` **only**; `playerLoc` starting `data:` → `google_video_data_url_unsupported` with `field = player_loc` **only**; `thumbnailLoc` starting `data:` → `google_video_thumbnail_loc_invalid_url` **only** (the Data-URL diagnostic is locked to `content_loc`/`player_loc`; no Data-URL thumbnail diagnostic exists and none may be added without an audit amendment).
+- No `unsupported scheme` diagnostic is introduced (consistent with the closed scheme-handling outcome above).
 
 #### Stack 4 — Google News (provider profile `google`)
 
@@ -1565,12 +2186,26 @@ Every stable `code`, `severity`, `origin`, `profile`, `field`, and `evidence_sta
 |---|---|---|---|---|---|---|
 | `google_news_multiple_entries_per_url` | warning | provider | `google` | `news` | — | More than one `<news:news>` under a single URL (F-05 provider cardinality). |
 | `google_news_document_count_exceeds_limit` | warning | provider | `google` | `news` | — | More than 1,000 `<news:news>` entries in one document (F-05 provider limit). |
-| `google_news_publication_date_invalid` | warning | provider | `google` | `publication_date` | — | Fails the four documented date forms (F-05). |
-| `google_news_language_invalid` | warning | provider | `google` | `language` | — | Fails the 2/3-letter ISO 639 lexical form including the `zh-cn`/`zh-tw` exceptions (F-05). |
+| `google_news_publication_name_missing` | warning | provider | `google` | `name` | null | Required field missing (F-05). `missing := value === null  or  trim(value) === ''`. Target `sitemap_news` + `[urlIndex][newsIndex]`. |
+| `google_news_language_missing` | warning | provider | `google` | `language` | null | Required field missing (F-05). `missing := value === null  or  trim(value) === ''`. Target `sitemap_news` + `[urlIndex][newsIndex]`. |
+| `google_news_publication_date_missing` | warning | provider | `google` | `publication_date` | null | Required field missing (F-05). `missing := value === null  or  trim(value) === ''`. Target `sitemap_news` + `[urlIndex][newsIndex]`. |
+| `google_news_title_missing` | warning | provider | `google` | `title` | null | Required field missing (F-05). `missing := value === null  or  trim(value) === ''`. Target `sitemap_news` + `[urlIndex][newsIndex]`. |
+| `google_news_publication_date_invalid` | warning | provider | `google` | `publication_date` | — | Fails the four documented date forms (F-05). Emitted **only when** `publicationDate` is present/non-empty but its lexical form is invalid; missing `publicationDate` emits only `google_news_publication_date_missing` and never this code. |
+| `google_news_language_invalid` | warning | provider | `google` | `language` | — | Fails the 2/3-letter ISO 639 lexical form including the `zh-cn`/`zh-tw` exceptions (F-05). Emitted **only when** `language` is present/non-empty but invalid; missing `language` emits only `google_news_language_missing` and never this code. |
 | `google_news_publication_name_parenthetical` | warning | provider | `google` | `name` | — | Parenthetical content present in `news:name` (locally decidable, F-05). |
+| `google_news_title_content_evidence` | warning / info | provider | `google` | `title` | `conforming` / `nonconforming` / `unknown` | Caller-supplied evidence covering the existing F-05 title-content requirement, including article-title correspondence and the documented exclusion semantics already stated in F-05 (`title` must not include the author name, publication name, or publication date). **No local inference from the title string alone.** `missing`/absent evidence maps to `unknown`; severity: `conforming` → info, `nonconforming` → warning, `unknown` → info (evidence gap). Missing title emits `google_news_title_missing` and no title-content evidence diagnostic for that item. Target `sitemap_news` + `[urlIndex][newsIndex]`. |
 | `google_news_original_publication_evidence` | warning / info | provider | `google` | `publication_date` | `original` / `not_original` / `unknown` | Publication date claims original first-publication time (F-05); `not_original` → warning, `original` → info, `unknown` → info (evidence gap). |
 | `google_news_name_exact_match_evidence` | warning / info | provider | `google` | `name` | `matched` / `mismatched` / `unknown` | Exact Google News publication-name identity (F-05); `mismatched` → warning, `matched` → info, `unknown` → info (evidence gap). |
 | `google_news_freshness_evidence` | warning / info | provider | `google` | `null` | `within_window` / `outside_window` / `unknown` | "Last two days" rule (F-05); `outside_window` → warning, `within_window` → info, `unknown` → info (evidence gap); no local clock arithmetic. |
+
+**News missing-vs-invalid precedence (fixed).** For a required News field with a dedicated missing diagnostic, missing and invalid are mutually exclusive outcomes for the same absent/present state:
+
+- `publicationDate` missing → **only** `google_news_publication_date_missing`; do **not** also emit `google_news_publication_date_invalid`.
+- `publicationDate` present but lexical form invalid → **only** `google_news_publication_date_invalid`.
+- `language` missing → **only** `google_news_language_missing`; do **not** also emit `google_news_language_invalid`.
+- `language` present but invalid → **only** `google_news_language_invalid`.
+
+**Legacy Google News fields (fixed).** `access`, `genres`, `keywords`, and `stockTickers` remain compatibility fields. Their status in this remediation is **documentation/provider-status classification only**: no runtime diagnostic, no removal, no deprecation implementation, and no candidate validation failure. Any future runtime provider diagnostic for these fields requires a separately approved contract.
 
 #### Stack 6 — Canonical and Hreflang (provider profile `google`)
 
@@ -1580,7 +2215,45 @@ Every stable `code`, `severity`, `origin`, `profile`, `field`, and `evidence_sta
 | `hreflang_self_reference_missing` | warning | provider | `google` | `href` | — | A URL's own localized version missing from its supplied alternate set (F-15). |
 | `hreflang_reciprocal_link_missing` | warning | provider | `google` | `href` | — | Missing return/reciprocal link in the supplied cluster (F-15). |
 | `hreflang_alternate_set_inconsistent` | warning | provider | `google` | `href` | — | Inconsistent alternate sets across supplied localized URLs (F-15). |
-| `hreflang_url_not_fully_qualified` | warning | provider | `google` | `href` | — | Alternate URL not fully qualified where the Google profile requires it (F-15). |
+| `hreflang_url_not_fully_qualified` | warning | provider | `google` | `href` | null | Alternate URL not fully qualified where the Google profile requires it (F-15). This single code covers **missing and non-fully-qualified** candidate URLs for `HreflangValidationLinkDTO::$url`; the trigger is the **Common Absolute-Authority URL Lexical Profile** closed in this GDC-01 section applied under the **Hreflang URL surface policy** (`fragment_allowed = true`, `data_special_case = false`, `scheme_allowlist = none`). No separate missing/invalid/relative URL code is introduced and no duplicate URL diagnostic is emitted for one link. Target `hreflang_link` + page index + link index. Companion-only, not legacy result. |
+| `hreflang_tag_invalid_syntax` | warning | provider | `google` | `hreflang` | null | Candidate `hreflang` is `null`, whitespace-only, or fails the **exact fixed hreflang tag-syntax grammar** locked under this table (FIX 6). This diagnostic covers **syntax only**; satisfying the lexical shape does **not** prove ISO 639 / ISO 3166 / ISO 15924 membership — those registries remain DEFERRED exactly as F-15 states. Casing difference alone is never a diagnostic (`hreflang_noncanonical_case` or equivalent is not introduced). Target `hreflang_link` + page index + link index. Companion-only, not legacy result. |
+
+**Hreflang URL contract is the Common Profile (fixed, FIX 5).** For `hreflang_url_not_fully_qualified`, the trigger is the **Common Absolute-Authority URL Lexical Profile** closed in this GDC-01 section applied under the **Hreflang URL surface policy** (`fragment_allowed = true`, `data_special_case = false`, `scheme_allowlist = none`); there is no separate hreflang URL grammar and no alternative "fully-qualified symbol" test anywhere in this Audit. `FILTER_VALIDATE_URL` and any implementation-specific parser/validator/regex/helper are **not** the lexical contract for this validation surface and may only be used as implementation mechanisms whose observable acceptance/rejection set matches this contract literally.
+
+Emit `hreflang_url_not_fully_qualified` for `HreflangValidationLinkDTO::$url` when:
+
+```text
+url === null
+OR trim(url) === ''
+```
+
+or when a non-empty value fails the Common Profile at any point: the **as-supplied** value must be valid UTF-8 with a scheme `[A-Za-z][A-Za-z0-9+.-]*` immediately followed by `://`; a non-empty authority; the exact `[userinfo@]host[:port]` authority grammar (bracketed or reg-name host, port `0..65535`); path/query grammar; no forbidden raw characters (`U+0000..U+001F`, `U+007F`, space); every `%` followed by exactly two ASCII hex digits; raw Unicode allowed. No network/DNS/IDNA validation — the profile is purely lexical. Under the Hreflang surface policy a `#...` fragment is **not** a rejection cause; `data:`-prefixed values are normal candidates (no Data-URL special case) and fail the profile when they lack `://`.
+
+Do not use `FILTER_VALIDATE_URL` as a normative contract, and perform no membership/provider-host inference. Exactly one `hreflang_url_not_fully_qualified` diagnostic is emitted per failed link (no duplicate and no cascade).
+
+**Exact Hreflang tag-syntax grammar (fixed, FIX 6).** For `hreflang_tag_invalid_syntax`, the candidate is structurally valid if and only if it is, case-insensitively, exactly `x-default`, or matches one of:
+
+```text
+language
+language-region
+language-script
+language-script-region
+```
+
+- **`language`** — ASCII alphabetic only: `[A-Za-z]{2,3}`. This is **lexical shape only** and does not prove ISO membership.
+- **`script`** — ASCII alphabetic only: `[A-Za-z]{4}`.
+- **`region`** — either `[A-Za-z]{2}` or `[0-9]{3}`.
+- **`separator`** — only `-` is accepted by the validation profile candidate syntax; `_` is **not** valid profile syntax.
+
+Examples structurally valid: `en`, `en-US`, `zh-Hant`, `zh-Hans-US`, `es-419`, `x-default`.
+
+Examples structurally invalid: `''` (empty/whitespace-only), `en_`, `en_US`, `e`, `engl`, `en-USA`, `zh-Hant-US-extra`, `-US`, `en-`.
+
+Again: valid lexical syntax does **not** prove registry membership. No ISO dataset is introduced. Casing differences alone remain non-diagnostic — for example `EN-us`, `zh-hant` may satisfy the lexical syntax; normalization/canonical casing is separate behavior.
+
+**Hreflang cluster computation (fixed, FIX 7).** A candidate link is excluded from cluster-edge computation if and only if it produces either `hreflang_tag_invalid_syntax` or `hreflang_url_not_fully_qualified` using the **Common Profile + Hreflang surface policy** and the **Exact Hreflang tag-syntax grammar** fixed above; no additional exclusion conditions are invented. The excluded link may still produce its own link-level diagnostic, and no cascade diagnostics are added solely because that invalid link was excluded; cluster-level diagnostics (reciprocity, self-reference matching, alternate-set equality) are computed from the structurally usable links only.
+
+**Hreflang page identity (fixed).** `HreflangValidationPageDTO::$pageUrl` remains a non-empty unique exact-string structural identity and carries no page-URL diagnostic in this remediation. The page identity is invocation structure; fully-qualified alternate-link validation happens through each `HreflangValidationLinkDTO::$url`. `pageUrl` is never reinterpreted as another alternate link.
 
 ### Normative Legacy Classification Table — fixed
 
@@ -1613,6 +2286,7 @@ For every row:
 ```text
 evidence_state = null
 related_legacy_code = same value as code
+target = { scope: 'meta', entry_index: null, item_index: null, line: null }
 ```
 
 Example record:
@@ -1626,11 +2300,17 @@ Example record:
   "origin": "heuristic",
   "profile": "seo-default",
   "evidence_state": null,
-  "related_legacy_code": "missing_og_description"
+  "related_legacy_code": "missing_og_description",
+  "target": {
+    "scope": "meta",
+    "entry_index": null,
+    "item_index": null,
+    "line": null
+  }
 }
 ```
 
-The `message` reflects/correlates with the same legacy issue and creates no new semantic rule. No legacy classification rows other than the seven above are added in this remediation.
+The `message` reflects/correlates with the same legacy issue and creates no new semantic rule. No legacy classification rows other than the seven above are added in this remediation (FIX 27).
 
 ### What legally belongs only in the companion surface
 
@@ -1650,7 +2330,7 @@ None of these may be plumbed into the legacy result or the score.
 
 ### Consequence for implementers
 
-An implementation stack that produces, serializes, or scores a new diagnostic through the legacy `SeoValidationResultDTO` or `SeoValidationScoreCalculator` violates this contract, regardless of internal naming. Stack 5 must expose the companion surface additively without altering legacy serialized shapes, F-12 scoring, or `SeoMetaValidator::validate()`, and must return the single unified result type `SeoCompanionValidationResultDTO` from every profile validator without introducing per-profile result variants or an alternative legacy-pairing mechanism. New diagnostic codes, severities, origins, profiles, fields, or evidence states other than those fixed in the tables above (and in F-13) are out of contract.
+An implementation stack that produces, serializes, or scores a new diagnostic through the legacy `SeoValidationResultDTO` or `SeoValidationScoreCalculator` violates this contract, regardless of internal naming. Stack 5 must expose the companion surface additively without altering legacy serialized shapes, F-12 scoring, or `SeoMetaValidator::validate()`, and must return the single unified result type `SeoCompanionValidationResultDTO` from every profile validator without introducing per-profile result variants or an alternative legacy-pairing mechanism. New diagnostic codes, severities, origins, profiles, fields, evidence states, or **target scopes** other than those fixed in the tables above (and in F-13) are out of contract. Every companion entry (including every legacy classification record) carries the required `SeoDiagnosticTargetDTO` fixed above; an entry without a valid target violates this contract.
 
 ---
 
@@ -1704,6 +2384,45 @@ Because `OpenGraphBuilder` supports multiple images and currently emits each ima
 
 This subsection fixes the executable outcome, replacing "characterize then migrate" with closed contracts. The OGP protocol profile recognizes four required basics — `og:title`, `og:type`, `og:image`, `og:url` — and treats `og:description` and `og:site_name` as optional. The mapping to the legacy validator and the companion surface is fixed as follows.
 
+**OGP activation — presence-triggered (FIX 10):**
+
+OGP validation is **not** mandatory for every page. OGP profile validation is **presence-triggered**, reusing the existing compatibility activation boundary in `SeoMetaValidator`. The OGP profile is active only when at least one of the following signals is present in the supplied `$meta`:
+
+- nested `openGraph` is array/object;
+- nested `og` is array/object;
+- `openGraphTitle`;
+- `open_graph_title`;
+- `openGraphDescription`;
+- `open_graph_description`;
+- `openGraphImage`;
+- `open_graph_image`.
+
+If none of these signals is present:
+- no OGP protocol diagnostic is emitted;
+- no OGP legacy classification record is emitted;
+- a fully absent OGP section is **not** a protocol error in this remediation.
+
+Activation is **not** extended by `og:type` or `og:url` alone in this round. This is an intentional compatibility decision (FIX 10).
+
+**Legacy embedding — single exception (FIX 9 / FIX 26):**
+
+`OpenGraphProtocolValidator` is the **exception** to the standalone-profile `legacy = null` rule. It always produces:
+
+```php
+$legacy = SeoMetaValidator::validate($meta, $options);
+```
+
+and embeds that result **unchanged** under `SeoCompanionValidationResultDTO::$legacy`. The reason: OGP compatibility intentionally reuses the existing legacy OGP issues as classification records. The exception is explicit, never implicit.
+
+**No duplicate OGP semantics (FIX 11):** when the OGP profile is active:
+- the existing legacy `missing_og_title` stays a legacy warning;
+- the existing legacy `missing_og_image` stays a legacy warning;
+- the existing legacy `missing_og_description` stays a legacy heuristic warning;
+- the new `missing_og_type` stays a companion protocol warning;
+- the new `missing_og_url` stays a companion protocol warning.
+
+`OpenGraphProtocolValidator` expresses a missing required title/image through the **existing** GDC-01 legacy classification records — `missing_og_title` (protocol, `ogp`, related legacy code `missing_og_title`) and `missing_og_image` (protocol, `ogp`, related legacy code `missing_og_image`). It does **not** add duplicate new codes `ogp_missing_title` or `ogp_missing_image`. `missing_og_description` remains a heuristic (`seo-default`) classification record only — it is **not** an OGP protocol requirement. The only new companion diagnostics for missing OGP basics are `missing_og_type` and `missing_og_url`.
+
 **Fate of `missing_og_description`:**
 
 - `og:description` is optional under OGP, so the OGP protocol profile emits **no** issue for a missing description.
@@ -1723,7 +2442,7 @@ This subsection fixes the executable outcome, replacing "characterize then migra
 - These new codes must not collide with any legacy code and must not be emitted by `SeoMetaValidator::validate()` into the legacy result.
 - When invoked through `validateWithCompanion()`, the legacy classification records for `missing_og_title`, `missing_og_image`, and `missing_og_description` appear **only** when the corresponding legacy issue is actually present in the produced legacy result, and the new `missing_og_type` / `missing_og_url` diagnostics are added exactly once by the fixed F-13 OGP companion protocol validation.
 
-**Relationship to the legacy result and score:** unchanged for all pre-existing legacy issues; off-result and off-score for all new protocol diagnostics. `SeoMetaValidator::validate()` keeps returning the existing `SeoValidationResultDTO` contract; the OGP profile results are delivered through the companion surface (GDC-01) and the dedicated social builders.
+**Relationship to the legacy result and score:** unchanged for all pre-existing legacy issues; off-result and off-score for all new protocol diagnostics. `SeoMetaValidator::validate()` keeps returning the existing `SeoValidationResultDTO` contract; the OGP profile results are delivered through the companion surface (GDC-01) and the dedicated social builders. **Single OGP rule source (FIX 12):** `SeoMetaValidator::validateWithCompanion()` must produce the same observable companion result as `OpenGraphProtocolValidator::validate($meta, $options, $context)` for the same inputs — embedded legacy result, legacy classification records, and OGP companion diagnostics. No two independent implementations of the OGP companion rules may exist; internal delegation direction is an implementation detail.
 
 **What Stack 5 may not decide:** it may not drop `missing_og_description` from the legacy result, may not promote missing `og:type`/`og:url` to `error`, may not add these to scoring, and may not invent additional required or optional OGP fields beyond the surface documented in this finding.
 
@@ -1858,7 +2577,15 @@ Separate and unify:
    - complete/consistent alternate groups
    - fully-qualified URLs
 
-The Google hreflang cluster validator consumes the fixed cluster input shape `array<string, list<Maatify\Seo\Web\Hreflang\HreflangLinkDTO>>` (fully-qualified localized page URL → complete alternate-link set) as its primary input; cluster data is never supplied through `documentContext`, and no new `HreflangClusterDTO` is introduced. The host or caller supplies the deterministic cluster input; the validator performs no crawling.
+The Google hreflang cluster validator consumes the fixed candidate cluster input `Maatify\Seo\Web\Validation\Input\Hreflang\HreflangValidationClusterDTO` (a list of `HreflangValidationPageDTO` pages, each with a non-empty unique `pageUrl` and a list of `HreflangValidationLinkDTO` links) as its primary input. Because `HreflangLinkDTO` performs strict URL validation/normalization, the validation candidate types carry the raw candidate state needed to diagnose relative/non-qualified alternate URLs. Cluster data is never supplied through any context field, and no new `HreflangClusterDTO` is introduced. The host or caller supplies the deterministic cluster input; the validator performs no crawling.
+
+### Exact hreflang predicates (closed by the contract completeness sweep)
+
+The two lexical triggers for hreflang diagnostics are **exact** and are not implementation choices; they are locked in GDC-01, Stack 6, and Section 9 (FIX 5, FIX 6).
+
+**Fully-qualified alternate URL contract (`hreflang_url_not_fully_qualified`).** Emit when `url === null || trim(url) === ''`, or when a non-empty value fails the **Common Absolute-Authority URL Lexical Profile** under the **Hreflang URL surface policy** (`fragment_allowed = true`, `data_special_case = false`, `scheme_allowlist = none`): as-supplied valid UTF-8; scheme `[A-Za-z][A-Za-z0-9+.-]*` immediately followed by `://`; non-empty authority; exact `[userinfo@]host[:port]` grammar; no forbidden raw characters; no malformed percent escape; raw Unicode allowed; no network/DNS/IDNA validation; fragment accepted by the surface policy. Exactly one diagnostic per failed link. `FILTER_VALIDATE_URL` is not the contract; no membership/provider-host inference.
+
+**Tag-syntax grammar (`hreflang_tag_invalid_syntax`).** The candidate is structurally valid if and only if it is, case-insensitively, exactly `x-default`, or matches `language`, `language-region`, `language-script`, or `language-script-region` with: `language = [A-Za-z]{2,3}` (lexical shape only — no ISO membership); `script = [A-Za-z]{4}`; `region = [A-Za-z]{2}` or `[0-9]{3}`; separator only `-` (`_` is not valid). Structurally invalid examples include `''`, `en_`, `en_US`, `e`, `engl`, `en-USA`, `zh-Hant-US-extra`, `-US`, `en-`. Valid lexical shape does **not** prove registry membership; casing differences alone remain non-diagnostic (`EN-us`, `zh-hant` may satisfy the syntax).
 
 ### What must not be done
 
@@ -2268,6 +2995,30 @@ Every new protocol/provider/context diagnostic introduced by Stacks 2/4/5/6 is d
 
 Sitemap `<loc>` and Google Video `description` boundaries follow the F-02 exact measurement contract exactly as two separate things: the **source-backed rule** (a unit-undefined character limit in each source) and the **library deterministic policy** (an explicitly labeled EVIDENCE BOUNDARY converting it to UTF-8 bytes via `strlen()` on the value as supplied, before URI/IRI normalization/percent-encoding or XML escaping). A value **below** the byte threshold is conservative proof that it is also below the same numeric threshold under Unicode code-point or grapheme counting, because the UTF-8 byte count is never smaller than those counts for valid UTF-8 text; a value **at/above** it emits `sitemap_loc_length_exceeds_measure_boundary` / `google_video_description_length_exceeds_measure_boundary` as a conservative library-policy warning, never as a claim of a proven protocol/provider violation — failing the byte boundary is not proof that the source-defined character limit is exceeded, since multi-byte text may exceed the byte threshold while remaining below the same character-count threshold. Stack 4 must not substitute `mb_strlen`, grapheme counting, or post-encoding measurement, and must not reinterpret the boundary as an implementer choice. Any other textual limit whose unit the source does not fix must receive the same two-part treatment.
 
+## AP-14 — Strict domain DTOs are not validation candidate containers
+
+A DTO whose constructor guarantees valid rendering/domain state must not be weakened merely so a profile validator can inspect invalid candidate data. Validation uses the dedicated candidate-input layer (`Maatify\Seo\Web\Validation\Input`, plus its `Sitemap` / `Hreflang` sub-namespaces). Adding a candidate type never relaxes, extends, or re-invokes a strict DTO's accepted states.
+
+## AP-15 — Every companion diagnostic has a machine-readable target
+
+`SeoCompanionDiagnosticDTO::$target` is required on every companion entry. The human-readable `message` cannot be used as target identity; item/entry identity is structural (`entry_index` / `item_index` / `line` within a fixed scope).
+
+## AP-16 — Every remediation rule has one observable disposition
+
+Every normative rule required by a Stack must be explicitly classified as **exactly one** of:
+
+- **companion diagnostic** — a machine-contract row in GDC-01, an F-13 OGP diagnostic, or a legacy classification record;
+- **legacy classification** — a Normative Legacy Classification Table record (metadata, not a new diagnostic);
+- **strict invocation/constructor rule** — documented, deterministic input-safety or structural behavior (for example `SeoInvalidArgumentException` for control-character injection, invalid target shapes, invalid candidate invocation shapes);
+- **parser/serialization guarantee** — raw `#` comment semantics, percent-encoded literal path data, UTF-8/entity/URI escaping output guarantees;
+- **deferred / no-runtime-diagnostic scope** — explicitly deferred provider/transport/registry facts that produce no runtime diagnostic in this remediation.
+
+No implementation task may infer a new diagnostic merely because a Finding discusses a standard/provider rule, and no prose rule outside the normative registry may be read as authorizing one.
+
+**Lexical contracts are locked (addendum, FIX 10).** Whenever a companion diagnostic's trigger depends on URL/IRI/hreflang lexical validity, the lexical authority is the **Common Absolute-Authority URL Lexical Profile** closed in GDC-01 applied with the per-surface policy (Sitemap `loc` and Index child `loc`: `fragment_allowed = false`; Google Video URL-shaped fields: `fragment_allowed = true` + `data:` special for `content_loc`/`player_loc` only; hreflang alternate URLs: `fragment_allowed = true`; Google robots `Sitemap:` values: `fragment_allowed = false` + missing/whitespace-only under the same code), and it is part of the machine contract — **not** an implementation choice. Implementation libraries, PHP built-ins, regex helpers, URI parsers, and internal utilities may only be used as implementation mechanisms; they must not redefine the observable acceptance/rejection set. `FILTER_VALIDATE_URL` is not an authoritative lexical contract for any of those validation surfaces.
+
+**Lexical ambiguity is closed (addendum, closure round).** The authority/userinfo/host/port/path/query/fragment lexical ambiguity between the absolute-authority surfaces (Sitemap `loc`, Sitemap Index child `loc`, Google Video URL-shaped fields, hreflang alternate URLs, Google robots `Sitemap:` values) is closed by **one shared contract** — the Common Absolute-Authority URL Lexical Profile — with only the surface-specific fragment/missing/Data-URL rules recorded above as permitted differences. No parser library or PHP built-in defines the contract; any internal parser must conform to the recorded acceptance set. Sitemap scope comparison (scheme/host/effective-port/path-prefix/same-site/cross-submission) is a separate fixed semantics under `sitemap_location_scope_violation` and is **not** delegated to parser behavior. Everything that can be cased — the exact authority grammar, the exact userinfo/host/port grammar, the exact path/query/fragment grammar, and each surface trigger — has exactly one observable disposition, so the AP-16 single-disposition rule holds with no residual implementer discretion.
+
 ---
 
 # 7. Safe Remediation Order
@@ -2338,6 +3089,18 @@ Create the architecture distinction between:
 
 Use the F-12 classification contract and the GDC-01 global diagnostics contract: keep `SeoValidationIssueDTO`, `SeoValidationResultDTO`, their legacy serialization, `SeoMetaValidator::validate()`, and current scoring behavior compatible. Classification is additive companion metadata with the fixed origin vocabulary and stable profile identifiers defined in F-12; every **new** diagnostic defined by this audit is delivered through the GDC-01 companion surface and never mutates the legacy result or score.
 
+### Foundation deliverable (FIX 29)
+
+Stack 1 establishes the foundation types, with **no** provider business rules invented here:
+
+- `Maatify\Seo\Web\Validation\DTO\SeoCompanionDiagnosticDTO`;
+- `Maatify\Seo\Web\Validation\DTO\SeoCompanionValidationResultDTO`;
+- `Maatify\Seo\Web\Validation\DTO\SeoDiagnosticTargetDTO`;
+- the evidence-only `Maatify\Seo\Web\Validation\DTO\SeoValidationContextDTO`;
+- the validation candidate input DTO foundations under `Maatify\Seo\Web\Validation\Input` (and its `Sitemap` / `Hreflang` sub-namespaces), fixed in GDC-01.
+
+The candidate DTOs and the strict domain/rendering DTOs remain two separate layers; Stack 1 must not relax or modify any strict DTO constructor.
+
 ### Important constraint
 
 This stack must avoid changing user-facing behavior.
@@ -2360,26 +3123,39 @@ Robots has:
 ### Order
 
 1. Characterize current `RobotsRuleDTO`, `RobotsTxtDTO`, renderer, ordering, and exception behavior.
-2. Implement the RFC 9309 product-token contract (`identifier` or `*`) and valid empty Allow/Disallow patterns.
-3. Apply the F-06 leading-`*` policy exactly: preserve existing builder/rendering compatibility; do not call it normative published-ABNF conformance; emit the fixed non-fatal RFC compatibility diagnostic `robots_rfc9309_leading_wildcard_compatibility` (warning, origin `protocol`, profile `rfc9309`) through the GDC-01 companion surface; do not rewrite it; keep the Google-profile path diagnostic `robots_google_present_path_leading_slash` separate and also companion-only.
-4. Implement RFC path/comment semantics, including raw `#`, percent-encoded literal special characters, and matching/encoding boundaries relevant to generated output.
-5. Prevent CR/LF/control-character directive injection across rule values, rule comments, and top-level comments.
-6. Preserve `crawl-delay` as the existing non-standard compatibility extension; do not represent it as RFC or Google behavior and do not invent a new extension framework in this stack.
-7. Add an explicit Google robots.txt profile for:
+2. Introduce the raw robots validation candidate inputs `Maatify\Seo\Web\Validation\Input\RobotsTxtValidationInputDTO` and `Maatify\Seo\Web\Validation\Input\RobotsMetaValidationInputDTO`. The RFC/Google robots validators consume candidate inputs only; the strict robots generation DTOs (`RobotsRuleDTO`, `RobotsTxtDTO`, `MetaRobotsBuilder`, renderer) stay unchanged (FIX 29).
+3. Implement the RFC 9309 product-token contract (`identifier` or `*`) and valid empty Allow/Disallow patterns. A parsed `User-agent` whose product-token is neither `*` nor the fixed F-06 identifier grammar (for example an identifier containing a digit) emits the protocol diagnostic `robots_rfc9309_product_token_invalid` (error) through the GDC-01 companion surface; the raw candidate document remains valid validator input and this is never an invocation exception.
+4. Apply the F-06 leading-`*` policy exactly: preserve existing builder/rendering compatibility; do not call it normative published-ABNF conformance; emit the fixed non-fatal RFC compatibility diagnostic `robots_rfc9309_leading_wildcard_compatibility` (warning, origin `protocol`, profile `rfc9309`) through the GDC-01 companion surface; do not rewrite it; keep the Google-profile path diagnostic `robots_google_present_path_leading_slash` separate and also companion-only. A non-empty path that satisfies neither the accepted `/`-started form nor the special leading-`*` compatibility case emits `robots_rfc9309_path_pattern_invalid` (error, protocol diagnostic); an empty Allow/Disallow pattern and an ordinary non-empty `/`-started path emit no path-start diagnostic.
+5. Implement RFC path/comment semantics, including raw `#` as **parser semantics** (comment interpretation per F-06), percent-encoded literal special characters as path data (matching/path semantics), and matching/encoding boundaries relevant to generated output. A raw `#` is **never** a diagnostic — Stack 2 must not invent a `raw_hash_invalid` code.
+6. Prevent CR/LF/control-character directive injection across rule values, rule comments, and top-level comments. In the raw candidate validator, a forbidden non-line control character inside a parsed semantic token/value emits `robots_rfc9309_control_character_invalid` (error, field `user_agent` or `path` according to the parsed rule); normal CRLF/LF document line separators are not diagnostics. In the **structured strict DTO/generator lane**, CR/LF/control-character injection through structured values/comments is a **hard input-safety contract**, not a companion diagnostic: structured construction must reject embedded forbidden control content through `Maatify\Seo\Exception\SeoInvalidArgumentException` where the existing structured API accepts user-agent values, Allow/Disallow values, rule comments, top-level robots comments, and Sitemap directive values. No silent sanitization, no silent truncation, and no companion diagnostic in place of the exception. The exact internal exception factory/message is an implementation detail; the exception class is fixed.
+7. Preserve `crawl-delay` as the existing non-standard compatibility extension; do not represent it as RFC or Google behavior and do not invent a new extension framework in this stack.
+8. Add an explicit Google robots.txt profile for:
    - UTF-8/plain-text output;
-   - 500 KiB document boundary;
+   - 500 KiB document boundary (byte source: `strlen(RobotsTxtValidationInputDTO::$content)`);
+   - raw document UTF-8 validity → `robots_google_document_invalid_utf8` (warning, provider, GDC-01 companion-only), independent of and co-existing with the 500 KiB diagnostic;
    - Google path behavior for present Allow/Disallow values;
-   - Google `Sitemap:` fully-qualified URL semantics;
+   - Google `Sitemap:` URL semantics → `robots_google_sitemap_url_not_fully_qualified` (warning, provider, field `sitemap`, target `robots_rule` + exact 1-based source line) when the directive value is missing/whitespace-only (**no separate missing code**) or a present non-empty value fails the **Common Absolute-Authority URL Lexical Profile** under the Google robots Sitemap surface policy (`fragment_allowed = false`, `scheme_allowlist = none`, `data_special_case = false`, cross-host allowed, query allowed, no count limit, user-agent-group independent);
    - Unicode/non-URL-encoded Sitemap paths;
    - multiplicity without a documented limit;
    - cross-host Sitemap URLs;
    - independence from user-agent groups.
-8. Replace the Google-profile reliance on ASCII-only `FILTER_VALIDATE_URL` with the F-06 fixed acceptance contract for the `Sitemap:` field; do not weaken unrelated generic URL contracts.
-9. Fix `max-snippet:-1` and `max-video-preview:-1`.
-10. Add typed `indexifembedded` support while preserving the raw escape hatch; emit `robots_meta_indexifembedded_without_noindex` (warning, origin `provider`, profile `google`, GDC-01 companion-only) when `noindex` is absent — never a builder construction barrier.
-11. Correct `noarchive` documentation.
-12. Implement F-10 exactly: keep `unavailableAfter()` raw-compatible; emit `robots_meta_unavailable_after_missing` for the provider-path missing/empty value; consume only explicit `recognized` / `unrecognized` / `unknown` evidence for non-empty provider recognizability; do not invent a closed date grammar; all `unavailable_after` diagnostics are GDC-01 companion-only.
-13. Update examples/tests/docs.
+9. Replace the Google-profile reliance on ASCII-only `FILTER_VALIDATE_URL` with the fixed Common Profile + Google robots Sitemap surface policy for the `Sitemap:` field; do not weaken unrelated generic URL contracts.
+10. Fix `max-snippet:-1` and `max-video-preview:-1`.
+11. Add typed `indexifembedded` support while preserving the raw escape hatch; emit `robots_meta_indexifembedded_without_noindex` (warning, origin `provider`, profile `google`, GDC-01 companion-only) when `noindex` is absent — never a builder construction barrier.
+12. Correct `noarchive` documentation.
+13. Implement F-10 exactly: keep `unavailableAfter()` raw-compatible; emit `robots_meta_unavailable_after_missing` for the provider-path missing/empty value; consume only explicit `recognized` / `unrecognized` / `unknown` evidence for non-empty provider recognizability; do not invent a closed date grammar; all `unavailable_after` diagnostics are GDC-01 companion-only.
+14. Update examples/tests/docs.
+
+### Robots outcome ownership — fixed (contract completeness sweep)
+
+Stack 2 must explicitly distinguish every Robots rule outcome as exactly one of:
+
+- **Companion diagnostics** — the Robots machine codes fixed in GDC-01: `robots_rfc9309_leading_wildcard_compatibility`, `robots_rfc9309_product_token_invalid`, `robots_rfc9309_path_pattern_invalid`, `robots_rfc9309_control_character_invalid`, `robots_google_document_size_exceeds_parse_limit`, `robots_google_document_invalid_utf8`, `robots_google_present_path_leading_slash`, `robots_google_sitemap_url_not_fully_qualified`, plus the robots-meta codes `robots_meta_indexifembedded_without_noindex`, `robots_meta_unavailable_after_missing`, and `robots_meta_unavailable_after_recognizability`.
+- **Parser semantics** — raw `#` comment interpretation and percent-encoded literal handling; these are parser behavior and are never diagnostics.
+- **Hard structured-input safety** — `SeoInvalidArgumentException` for control-character injection through the structured APIs (user-agent values, Allow/Disallow values, rule comments, top-level robots comments, Sitemap directive values); no silent sanitization/truncation and no companion diagnostic instead.
+- **Deferred** — HTTP MIME/transport verification (`DEFER TRANSPORT CONTEXT`) is outside Stacks 0–8; no MIME/content-type diagnostic and no transport context/evidence key is added.
+
+No other Robots outcome is permitted.
 
 ### Stop condition
 
@@ -2402,6 +3178,10 @@ Remove duplicate serialization logic without removing public APIs.
 5. Implement the fixed F-01 decision for extended DTO data: the canonical path emits `alternates`, `images`, `videos`, and `news` exactly as `SitemapXmlStringRenderer` does today, conditionally declaring the corresponding namespaces, and **both** `SitemapGeneratorService` and `SitemapXmlStringRenderer` produce identical extended-child output for equivalent `SitemapUrlDTO` input. `SitemapGeneratorService` dropping extended children is the intentional correction, not a preserved limitation.
 6. `SitemapGenerationResultDTO` (`xml`, `entry_count`, `type`) is unchanged; `entry_count` counts URL entries only.
 
+### Critical constraint (FIX 29)
+
+Stack 3 is the **rendering architecture**. It continues to rely on the existing strict rendering/domain DTOs (`SitemapUrlDTO`, `SitemapImageDTO`, `SitemapVideoDTO`, `SitemapNewsDTO`, the two `SitemapIndexEntryDTO` namespaces) as its input surface. The validation candidate DTOs (`SitemapValidationDocumentDTO`, `SitemapUrlValidationInputDTO`, and the rest) **do not** enter the renderer/generator. Stack 3 (rendering) and Stack 4 (validation candidate/profile architecture) use different input layers; mixing them is forbidden.
+
 ### Stop condition
 
 There must be one rule implementation for equivalent sitemap output, while both existing public index-entry DTO entry points remain available. No public entry point may silently drop extended DTO data; `SitemapGeneratorService` and `SitemapXmlStringRenderer` must produce identical extended-child XML for equivalent DTO input. If characterization exposes behavior whose preserve/change decision is not fixed by this audit, assert the AP-11 gate and stop that path.
@@ -2414,20 +3194,28 @@ There must be one rule implementation for equivalent sitemap output, while both 
 
 Add layered validation without collapsing protocol, provider, content-context, and remote-evidence rules into one constructor.
 
+### Input model (FIX 29)
+
+Stack 4 validates through the fixed candidate document/input DTOs (`SitemapValidationDocumentDTO` and its entry/image/video/news candidate types). Protocol and provider validators consume candidate inputs; child-level diagnostics carry deterministic machine targets (`SeoDiagnosticTargetDTO`); protocol authority evidence sits behind the fixed evidence boundary; and **no** strict rendering DTO constructor is relaxed by this stack.
+
 ### Required coverage
 
 #### Base sitemap
-- URL sitemap count limit: 50,000 URLs; over-limit emits `sitemap_url_count_exceeds_limit` (error, GDC-01 companion-only).
-- Sitemap Index count limit: 50,000 Sitemaps; over-limit emits `sitemap_index_count_exceeds_limit` (error, GDC-01 companion-only).
-- uncompressed byte-size limits: 50 MB (52,428,800 bytes); over-limit emits `sitemap_document_size_exceeds_boundary` (error, GDC-01 companion-only).
-- page `<loc>`: the sitemaps.org source rule is "less than 2,048 characters" without a defined unit. The F-02 exact measurement contract separates that source rule from the library deterministic policy (EVIDENCE BOUNDARY): measure UTF-8 bytes of the value as supplied (`strlen(loc) < 2048`), before URI/IRI normalization/percent-encoding, and emit `sitemap_loc_length_exceeds_measure_boundary` (warning, GDC-01 companion-only) as a conservative library-policy boundary — never worded as a proven protocol violation.
-- Generic Sitemaps.org protocol location/scope: uses **only** `sitemap_location_scope_violation` (error, origin `protocol`, profile `sitemaps`, GDC-01 companion-only), consuming `documentContext['sitemap.document_location']` as its sole input evidence. No Search Console, no Google ownership state, no network, and no guessed ownership; `google_sitemap_host_context` is never used to prove or disprove Sitemaps.org protocol scope.
-- Google verified ownership/submission evidence: uses **only** `google_sitemap_host_context` (origin `provider`, profile `google`, GDC-01 companion-only), consuming `evidence['google_sitemap.host_verification']` with states `verified_host` / `unverified_host` / `unknown`. It is independent provider evidence; no offline host verification is fabricated, and it is never a substitute for generic Sitemap protocol location-scope validation.
-- Sitemaps.org location/scope protocol validation: modeled as `sitemap_location_scope_violation` (error, origin `protocol`, profile `sitemaps`, GDC-01 companion-only), emitting with `field = loc` for page-URL scope violations or `field = sitemap` for Sitemap Index child location scope violations; emitted only when caller-supplied document/location context deterministically proves the violation; no network, no Search Console, no guessed ownership.
-- UTF-8 encoding requirements.
-- XML entity escaping and URL URI/IRI escaping requirements.
+- URL sitemap count limit: 50,000 URLs; over-limit emits `sitemap_url_count_exceeds_limit` (error, GDC-01 companion-only; target `sitemap_document`).
+- Sitemap Index count limit: 50,000 Sitemaps; over-limit emits `sitemap_index_count_exceeds_limit` (error, GDC-01 companion-only; target `sitemap_document`).
+- uncompressed byte-size limits: 50 MB (52,428,800 bytes); over-limit emits `sitemap_document_size_exceeds_boundary` (error, GDC-01 companion-only; target `sitemap_document`); byte source is `SitemapValidationDocumentDTO::$uncompressedSizeBytes`, never estimated from entry count.
+- page `<loc>`: the sitemaps.org source rule is "less than 2,048 characters" without a defined unit. The F-02 exact measurement contract separates that source rule from the library deterministic policy (EVIDENCE BOUNDARY): measure UTF-8 bytes of the value as supplied (`strlen(loc) < 2048`), before URI/IRI normalization/percent-encoding, and emit `sitemap_loc_length_exceeds_measure_boundary` (warning, GDC-01 companion-only; target `sitemap_url` + URL `entryIndex`) as a conservative library-policy boundary — never worded as a proven protocol violation.
+- missing entry-level `loc`: `loc === null || trim(loc) === ''` emits `sitemap_loc_missing` (error; `field = loc`, target `sitemap_url` + URL `entryIndex` for a URL Sitemap entry; `field = sitemap`, target `sitemap_index_entry` + child index for a Sitemap Index child). Missing `loc` never also emits `sitemap_loc_invalid_uri_iri`.
+- malformed non-empty `loc`: a non-empty supplied `loc` that fails the **Common Absolute-Authority URL Lexical Profile** under the **Sitemap `loc` surface policy** (`fragment_allowed = false`) emits `sitemap_loc_invalid_uri_iri` (error; same field/target mapping as `sitemap_loc_missing`). The profile is applied to the value **as supplied** (no trim/normalization/percent-decoding/IDNA/dot-segment work) and is the sole identical lexical contract locked in F-02/GDC-01 — there is no separate Sitemap-specific grammar; `FILTER_VALIDATE_URL` and any parser/helper are implementation mechanisms only, never the contract. The same profile+policy applies to the Sitemap Index child `loc` (`field = sitemap`, target `sitemap_index_entry` + child index) with the same missing-vs-invalid precedence. XML escaping failure is **not** part of this diagnostic.
+- `changefreq` vocabulary: a non-null/non-empty candidate outside the fixed Sitemap vocabulary already represented by the strict DTO contract emits `sitemap_changefreq_invalid` (error, GDC-01 companion-only; target `sitemap_url` + URL `entryIndex`); null `changefreq` means absent and emits nothing.
+- `priority` limits: a non-null `priority` that is non-finite, `< 0.0`, or `> 1.0` emits `sitemap_priority_out_of_range` (error, GDC-01 companion-only; target `sitemap_url` + URL `entryIndex`); null `priority` means absent.
+- Generic Sitemaps.org protocol location/scope: uses **only** `sitemap_location_scope_violation` (error, origin `protocol`, profile `sitemaps`, GDC-01 companion-only), consuming `SitemapValidationDocumentDTO::$location` as its sole document-location input. No Search Console, no Google ownership state, no network, and no guessed ownership; `google_sitemap_host_context` is never used to prove or disprove Sitemaps.org protocol scope. Cross-submission authority uses only the `sitemaps.cross_submission_authority` evidence key per the FIX 19–21 exact logic (authorized → no scope error; unauthorized → scope error; unknown/missing → EVIDENCE BOUNDARY, no fabricated error).
+- Google verified ownership/submission evidence: uses **only** `google_sitemap_host_context` (origin `provider`, profile `google`, GDC-01 companion-only; target `sitemap_document`), consuming `evidence['google_sitemap.host_verification']` with states `verified_host` / `unverified_host` / `unknown`. It is independent provider evidence; no offline host verification is fabricated, and it is never a substitute for generic Sitemap protocol location-scope validation and never a cross-submission authority.
+- Sitemaps.org location/scope protocol validation: modeled as `sitemap_location_scope_violation` (error, origin `protocol`, profile `sitemaps`, GDC-01 companion-only), emitting with `field = loc` (target `sitemap_url` + URL index) for page-URL scope violations or `field = sitemap` (target `sitemap_index_entry` + child index) for Sitemap Index child location scope violations; emitted only when caller-supplied document/location context deterministically proves the violation; no network, no Search Console, no guessed ownership. URL-sitemap cross-submission follows FIX 20; the Sitemap Index same-site rule never consumes `sitemaps.cross_submission_authority` (FIX 21).
+- UTF-8 encoding requirements — **serialization/output guarantee** (Stack 3; not a candidate-validation disposition).
+- XML entity escaping and URL URI/IRI escaping requirements — **serialization/output guarantee** (Stack 3; not a candidate-validation disposition). XML escaping failure is not `sitemap_loc_invalid_uri_iri`.
 - `lastmod` must implement exactly these library protocol-profile forms: `YYYY-MM-DD`, `YYYY-MM-DDThh:mm:ssTZD`, and `YYYY-MM-DDThh:mm:ss.sTZD` with one-or-more fractional digits; dateTime requires `Z` or `±hh:mm` timezone designator.
-- year-only, year-month, hour/minute-only, zone-less dateTime, and malformed forms are out of contract and emit `sitemap_lastmod_invalid_lexical` (error, GDC-01 companion-only).
+- year-only, year-month, hour/minute-only, zone-less dateTime, and malformed forms are out of contract and emit `sitemap_lastmod_invalid_lexical` (error, GDC-01 companion-only). Target mapping is fixed per document type: URL Sitemap entry → `sitemap_url` + `entryIndex`; Sitemap Index child → `sitemap_index_entry` + `entryIndex`. Missing/null `lastmod` is a valid absence and emits no diagnostic.
 - fractional-second characterization and intentional correction of the current helper mismatch.
 - URL-sitemap vs Sitemap-Index `lastmod` semantics.
 - verification of XMLWriter UTF-8 and serialization guarantees.
@@ -2446,10 +3234,12 @@ All Base-sitemap code/severity/origin/profile/field contracts are fixed in the G
 - cross-domain Search Console verification context → `google_image_cross_domain_verification` evidence diagnostic (GDC-01 companion-only).
 - external crawlability context → `google_image_crawlability_context` evidence diagnostic (GDC-01 companion-only).
 - provider diagnostics here are GDC-01 companion-only.
+- **Image diagnostic-scope freeze (contract completeness sweep):** no Google Image `loc`/`title`/`caption`/`geoLocation`/`license`/URL-shape missing or malformed diagnostic is added in this remediation. Although `SitemapImageValidationInputDTO` can represent null/malformed fields, the current F-03 approved machine scope remains intentionally limited to the count diagnostic, the two evidence diagnostics, and the legacy-field compatibility classification. Candidate representability does not expand this scope; `GoogleImageSitemapValidator` emits no new missing/URL-shape diagnostic.
 
 #### Google Video
 - characterize current DTO and raw-array behavior.
-- required title/description/thumbnail plus content/player presence → `google_video_title_missing`, `google_video_description_missing`, `google_video_thumbnail_loc_missing`, `google_video_content_or_player_loc_missing` (warning, GDC-01 companion-only).
+- required title/description/thumbnail plus content/player presence → `google_video_title_missing`, `google_video_description_missing`, `google_video_thumbnail_loc_missing`, `google_video_content_or_player_loc_missing` (warning, GDC-01 companion-only). Missing is `value === null || trim(value) === ''` for the required textual values; `google_video_content_or_player_loc_missing` emits only when **both** `contentLoc` and `playerLoc` are missing (null/whitespace-only), and a single present-but-malformed media location uses its URL-shape diagnostic instead.
+- non-empty-but-malformed media/thumbnail URL shapes → `google_video_thumbnail_loc_invalid_url`, `google_video_content_loc_invalid_url`, `google_video_player_loc_invalid_url` (warning, GDC-01 companion-only; target `sitemap_video` + `[urlIndex][videoIndex]`), using the **Common Absolute-Authority URL Lexical Profile** under the **Google Video surface policy** (`fragment_allowed = true`, `scheme_allowlist = none`) applied to non-empty values (`!== null && trim(value) !== ''`); `FILTER_VALIDATE_URL` is not the contract. A missing thumbnail uses `google_video_thumbnail_loc_missing`, never both codes. Special case: a `data:`-prefixed `content_loc`/`player_loc` emits `google_video_data_url_unsupported` only (never its `*_invalid_url`); a `data:`-prefixed `thumbnail_loc` emits `google_video_thumbnail_loc_invalid_url` only (no Data-URL thumbnail code).
 - title host-page match as a provider recommendation → `google_video_title_host_page_match` evidence diagnostic.
 - description: Google's source rule is "a maximum of 2,048 characters" without a defined unit. The F-02 exact measurement contract separates that rule from the library deterministic policy (EVIDENCE BOUNDARY): measure UTF-8 bytes of the value as supplied (`strlen(description) <= 2048`) before XML escaping/CDATA wrapping, and emit `google_video_description_length_exceeds_measure_boundary` (warning, GDC-01 companion-only) as a conservative library-policy boundary — never worded as a proven provider violation. Host-page consistency is a separate evidence diagnostic `google_video_description_host_page_match` (field `description`, states `matches`/`differs`/`unknown`), distinct from `google_video_relevance_context` (topical relevance) and from `google_video_title_host_page_match` (title consistency).
 - duration 1..28,800 → `google_video_duration_out_of_range` (warning, GDC-01 companion-only).
@@ -2458,26 +3248,29 @@ All Base-sitemap code/severity/origin/profile/field contracts are fixed in the G
 - host-page relevance requirement → `google_video_relevance_context` evidence diagnostic.
 - `content_loc` preference as a provider recommendation, not validity → `google_video_content_loc_preference` (info, GDC-01 companion-only).
 - supported file-type list exactly as documented, without invented extension aliases.
-- Data URLs unsupported → `google_video_data_url_unsupported` (warning, GDC-01 companion-only).
-- protocol evidence handled exactly as documented: HTTP/FTP explicitly named, HTTPS demonstrated by Google's own examples, streaming protocols unsupported; no false claim that Google literally publishes `HTTP/HTTPS/FTP only`.
+- Data URLs unsupported → `google_video_data_url_unsupported` (warning, GDC-01 companion-only) with `field = content_loc` when `contentLoc` is a Data URL, `field = player_loc` when `playerLoc` is a Data URL, and **two** same-code diagnostics (content and player) when both locations are Data URLs; no separate codes are created. **Anti-cascade (FIX 4):** a content/player value starting the semantic form `data:` emits only `google_video_data_url_unsupported` for that locked field and never also the corresponding `*_invalid_url` solely because it lacks `://`. `thumbnailLoc` with a `data:` value has **no** Data-URL diagnostic (the machine domain is locked to `content_loc`/`player_loc`) and emits `google_video_thumbnail_loc_invalid_url` only.
+- protocol evidence handled exactly as documented: HTTP/FTP explicitly named, HTTPS demonstrated by Google's own examples, streaming protocols unsupported; no false claim that Google literally publishes `HTTP/HTTPS/FTP only`. No generic `unsupported_video_scheme` diagnostic and no closed streaming-protocol taxonomy is introduced; HTTP/HTTPS/FTP/streaming source evidence remains **documentation evidence only** until a separately approved closed machine contract exists.
 - thumbnail formats: BMP, GIF, JPEG, PNG, WebP, SVG, AVIF.
 - thumbnail minimum 60x30, stable URL, Googlebot/Googlebot Images accessibility, and transparency requirement.
 - deterministic/context rules separated from remote format/accessibility evidence.
-- title/description XML escaping/CDATA output semantics.
+- **Video remote-evidence deferral (contract completeness sweep):** no additional runtime diagnostic is created in Stacks 0–8 for actual remote video file type; actual thumbnail file format, dimensions, stability, accessibility, or transparency; actual Googlebot accessibility of referenced video resources; or watch-page/video indexing eligibility. These are explicitly `DEFER PROVIDER EVIDENCE CONTRACT` pending a separately approved contract; no implementer may invent evidence keys or codes for them in Stack 4.
+- title/description XML escaping/CDATA output semantics — **serialization/output guarantee**, not a candidate-validation disposition.
 - watch-page/video indexing eligibility kept outside Sitemap DTO validity.
 - all Video provider/context diagnostics are GDC-01 companion-only; code/severity/origin/profile/field contracts are fixed in the GDC-01 machine-contract tables.
 
 #### Google News
 - four exact publication-date forms → `google_news_publication_date_invalid` (warning, GDC-01 companion-only).
+- required-field missing diagnostics (contract completeness sweep): `google_news_publication_name_missing` (field `name`), `google_news_language_missing` (field `language`), `google_news_publication_date_missing` (field `publication_date`), and `google_news_title_missing` (field `title`) — all `warning`, origin `provider`, profile `google`, target `sitemap_news` + `[urlIndex][newsIndex]`. Missing is `value === null || trim(value) === ''`.
+- **missing-vs-invalid precedence (fixed):** `publicationDate` missing → `google_news_publication_date_missing` only; present but invalid lexical form → `google_news_publication_date_invalid` only. `language` missing → `google_news_language_missing` only; present but invalid → `google_news_language_invalid` only. The missing and invalid codes never co-emit for the same field.
 - publication date means original first publication time, not Sitemap-addition time → `google_news_original_publication_evidence` evidence diagnostic.
 - language contract: two/three-letter ISO 639 plus `zh-cn` / `zh-tw` exceptions → `google_news_language_invalid` (warning, GDC-01 companion-only).
 - publication-name exact-match semantics and parenthetical omission rule → `google_news_publication_name_parenthetical` (locally decidable) and `google_news_name_exact_match_evidence`.
-- title semantics.
+- title semantics: structurally valid `title` is diagnosed only by `google_news_title_missing` when absent; when present, title-content conformance (article-title correspondence and the documented exclusion semantics of F-05) is supplied by caller evidence under `google_news.title_content_conformance` and emitted as `google_news_title_content_evidence` (`conforming` → info, `nonconforming` → warning, `unknown` → info). No local inference from the title string alone, and no title-content evidence for a missing-title item.
 - one News entry per URL provider cardinality, while preserving the public list contract until migration is deliberate → `google_news_multiple_entries_per_url` (warning, GDC-01 companion-only).
 - 1,000 total News entries per Sitemap → `google_news_document_count_exceeds_limit` (warning, GDC-01 companion-only).
 - "last two days" is a context/evidence diagnostic only → `google_news_freshness_evidence` consuming caller-supplied `within_window` / `outside_window` / `unknown` evidence; do not derive a hard boundary from `publicationDate` plus a clock/reference time.
 - no hidden `now()`/global time and no invented `48 hours` or calendar-day arithmetic.
-- legacy optional News-field provider-status classification.
+- legacy optional News fields (`access`, `genres`, `keywords`, `stockTickers`) are **documentation/provider-status classification only** in this remediation: no runtime diagnostic, no removal, no deprecation implementation, no candidate validation failure. Any future runtime provider diagnostic requires a separately approved contract.
 - canonical example correction for `publicationDate: 'as-provided'`.
 - all News provider/context diagnostics are GDC-01 companion-only; code/severity/origin/profile/field contracts are fixed in the GDC-01 machine-contract tables.
 
@@ -2502,7 +3295,7 @@ Stop mixing heuristic recommendations with protocol validity.
 5. Preserve `strlen()` byte measurement as the title/description heuristic measurement unit for this remediation; do not substitute code-point or grapheme measurement.
 6. Add characterization tests for ASCII and Arabic/Unicode title/description lengths that lock the current byte-based thresholds before refactoring validation architecture.
 7. Declare Twitter/X provider conformance out of scope until an official-source revalidation is conducted.
-8. Implement the OGP profile for the four required basics and the current exposed optional surface: determiner, locale, site_name, HTTP/HTTPS URL datatype, audio/video root URLs, image structured properties, multiple-image array preference/order, root/structured-property association, and `og:image:alt` as a protocol-level recommendation. Emit the new `missing_og_type` / `missing_og_url` protocol diagnostics (`warning`, origin `protocol`, profile `ogp`, `evidence_state`/`related_legacy_code` null) as GDC-01 companion-only; keep the pre-existing `missing_og_title`, `missing_og_image`, and `missing_og_description` legacy issues in the legacy result and score unchanged. Companion classification for those three is exactly the legacy classification record fixed in the GDC-01 Normative Legacy Classification Table (origin `protocol`, profile `ogp` for `missing_og_title`/`missing_og_image`; origin `heuristic`, profile `seo-default` for `missing_og_description`), emitted only when the corresponding legacy issue is actually present.
+8. Implement the OGP profile for the four required basics and the current exposed optional surface: determiner, locale, site_name, HTTP/HTTPS URL datatype, audio/video root URLs, image structured properties, multiple-image array preference/order, root/structured-property association, and `og:image:alt` as a protocol-level recommendation. The OGP profile is **presence-triggered** (FIX 10): active only when one of the fixed presence signals exists; a fully absent OGP section is not a protocol error and produces no OGP classification records. Emit the new `missing_og_type` / `missing_og_url` protocol diagnostics (`warning`, origin `protocol`, profile `ogp`, `evidence_state`/`related_legacy_code` null, target `meta`) as GDC-01 companion-only; keep the pre-existing `missing_og_title`, `missing_og_image`, and `missing_og_description` legacy issues in the legacy result and score unchanged; do **not** add duplicate codes such as `ogp_missing_title` / `ogp_missing_image`. Companion classification for those three is exactly the legacy classification record fixed in the GDC-01 Normative Legacy Classification Table (origin `protocol`, profile `ogp` for `missing_og_title`/`missing_og_image`; origin `heuristic`, profile `seo-default` for `missing_og_description`), emitted only when the corresponding legacy issue is actually present. `OpenGraphProtocolValidator::validate(array|object $meta, array $options = [], ...)` always embeds the exact legacy result from `SeoMetaValidator::validate($meta, $options)` under `legacy` (FIX 9 / FIX 26), and `SeoMetaValidator::validateWithCompanion()` shares that single OGP rule implementation with identical observable output (FIX 12).
 9. Keep heuristic warnings participating in scores exactly as current warnings do, including the existing default 5-point warning penalty; any future scoring change requires a separate explicit contract change.
 10. Align dedicated social builders and legacy `MetaTagsDTO` path without adding origin/profile keys to legacy JSON payloads.
 
@@ -2522,11 +3315,14 @@ Do not change existing score math, heuristic score participation, issue severity
 ### Hreflang
 
 - unify Web and Sitemap hreflang parsing / normalization semantics.
-- use conventional BCP 47 casing when normalization is performed, without treating casing alone as provider invalidity.
+- use conventional BCP 47 casing when normalization is performed, without treating casing alone as provider invalidity. **Casing difference alone is never a diagnostic** — no `hreflang_noncanonical_case` (or equivalent) code exists; tests may verify normalization equivalence only.
 - preserve `x-default`.
-- validate deterministically knowable Google structural rules from supplied data, including fully-qualified alternate URLs → `hreflang_url_not_fully_qualified` (warning, GDC-01 companion-only).
-- `GoogleHreflangClusterValidator` accepts the fixed cluster input shape `array<string, list<Maatify\Seo\Web\Hreflang\HreflangLinkDTO>>` (fully-qualified localized page URL → that page's complete alternate-link set). The cluster input is itself the complete deterministic cluster; cluster data is never supplied through `documentContext`, and no `HreflangClusterDTO` is introduced.
+- validate deterministically knowable Google structural rules from supplied data. `hreflang_url_not_fully_qualified` (warning, GDC-01 companion-only) is the single code for alternate URL issues: emit when `HreflangValidationLinkDTO::$url` is `null`, `trim(url) === ''`, or fails the **Common Absolute-Authority URL Lexical Profile** under the **Hreflang URL surface policy** (`fragment_allowed = true`, `data_special_case = false`, `scheme_allowlist = none`) locked in GDC-01/F-15/Section 9 — as-supplied lexical acceptance (absolute scheme `[A-Za-z][A-Za-z0-9+.-]*` immediately followed by `://`, non-empty authority, exact `[userinfo@]host[:port]` grammar, no forbidden raw characters, no malformed percent escape, valid UTF-8 raw Unicode allowed, no network/DNS/IDNA). `FILTER_VALIDATE_URL` is not the contract. No separate missing/invalid URL code and no duplicate per-link URL diagnostic.
+- add the tag-syntax code `hreflang_tag_invalid_syntax` (warning, origin `provider`, profile `google`, field `hreflang`, GDC-01 companion-only): emitted when candidate `hreflang` is `null`, whitespace-only, or fails the **exact fixed tag-syntax grammar** (FIX 6) locked in GDC-01/F-15/Section 9 — case-insensitive `x-default`, or `language` (`[A-Za-z]{2,3}`), `language-region`, `language-script`, `language-script-region` (script `[A-Za-z]{4}`, region `[A-Za-z]{2}` or `[0-9]{3}`, separator only `-`). It asserts **syntax only** and must not claim ISO 639 / ISO 3166 / ISO 15924 membership; `x-default` remains valid.
+- `GoogleHreflangClusterValidator` accepts the fixed candidate cluster input `Maatify\Seo\Web\Validation\Input\Hreflang\HreflangValidationClusterDTO` (list of `HreflangValidationPageDTO` pages, each with a non-empty unique `pageUrl` and a list of `HreflangValidationLinkDTO` links). The cluster input is itself the complete deterministic cluster; cluster data is never supplied through any context field, and no `HreflangClusterDTO` is introduced.
 - add cluster-level validation with the fixed GDC-01 codes `hreflang_self_reference_missing`, `hreflang_reciprocal_link_missing`, and `hreflang_alternate_set_inconsistent` (all warning, origin `provider`, profile `google`, field `href`, GDC-01 companion-only).
+- **structural-invalid link exclusion (fixed, FIX 7):** a candidate link is excluded from semantic cluster-edge computation (reciprocity, self-reference matching, alternate-set equality) **if and only if** it produces `hreflang_tag_invalid_syntax` or `hreflang_url_not_fully_qualified` under the Common Profile + Hreflang surface policy and the fixed tag-syntax grammar above; no additional exclusion condition is invented. The excluded link may still produce its own link-level diagnostic; cluster-level diagnostics are computed from the structurally usable links only; no cascade diagnostic is added solely because a structurally invalid link was excluded.
+- `HreflangValidationPageDTO::$pageUrl` remains a non-empty unique exact-string structural identity (invocation structure) with no page-URL diagnostic in this remediation; it is never reinterpreted as another alternate link.
 - **do not implement ISO 639-1 / ISO 3166-1 / ISO 15924 membership tables in this remediation** and do not claim full provider code-membership validation; that requires the separate versioned standards-data contract defined by F-15.
 - preserve deterministic behavior and host ownership; no crawling is introduced.
 
@@ -2683,6 +3479,24 @@ Sitemap `<loc>` (`< 2048`) and Google Video `description` (`<= 2048`) are source
 
 All new diagnostics flow through the unified `SeoCompanionValidationResultDTO` with `SeoCompanionDiagnosticDTO` entries, correlated to the legacy result via the embedded `legacy` property and per-entry `related_legacy_code`. Every profile validator returns this same type; custom per-profile result variants and alternative public methods are prohibited (GDC-01 public access contract).
 
+## ADR-16
+
+**Separate candidate-validation inputs from strict domain/render DTOs.**
+
+Strict DTO relaxation is rejected because a DTO whose constructor provably guarantees valid rendering/domain state cannot honestly carry invalid candidate data; candidate inputs are additive and do not replace existing DTOs; Stack 3 (rendering) and Stack 4 (validation) consume different input layers by design. Candidate constructors perform representation/shape only, never protocol/provider validation.
+
+## ADR-17
+
+**Companion diagnostics use stable structural target locators.**
+
+`SeoDiagnosticTargetDTO` is required on every companion entry; scopes are the fixed closed set (13 values); entry/item indexes are zero-based against candidate lists; robots path diagnostics carry an exact 1-based source line; URL strings, titles, messages, and fields are never target identity. An invalid target shape is a construction error.
+
+## ADR-18
+
+**Machine contract completeness and anti-cascade policy.**
+
+The Candidate DTO expansion in the validation candidate layer exposed previously unreachable rule gaps (missing `loc`, invalid `changefreq`, out-of-range `priority`, invalid `hreflang` syntax, missing News required fields) — the candidate layer makes the already-locked machine-contract diagnostics reachable and, because Candidate representability does **not** authorize diagnostics, it may not by itself widen the diagnostic scope. A field that is missing and has a dedicated missing diagnostic emits the missing diagnostic and never also a malformed/lexical diagnostic for the same absence (missing-vs-invalid precedence). Invalid hreflang links are excluded from cluster-edge computation so that structurally invalid link data cannot fabricate valid/invalid cluster edges or cascade synthetic cluster diagnostics. Remote/context facts without an approved evidence contract (Video remote-facts, robots MIME/transport) are explicitly deferred rather than guessed, because a deferred fact must never be converted into a locally fabricated pass/fail. URL/IRI/hreflang lexical validity for the Sitemap, Google Video, and hreflang validation surfaces, and for Google robots `Sitemap:` values, is defined by the **Common Absolute-Authority URL Lexical Profile** closed in GDC-01 applied with the per-surface policy (FIX 2/3/4/5/6): the authority/userinfo/host/port/path/query/fragment lexical ambiguity is closed by one shared contract, no parser library or PHP built-in defines the contract, any internal parser must conform to the recorded acceptance set, and `FILTER_VALIDATE_URL` may never act as the authoritative lexical contract for those surfaces. Sitemap scope comparison (scheme/host/effective-port, document-directory path prefix, Sitemap Index same-site, cross-submission authority) is a separate fixed semantics under `sitemap_location_scope_violation` and is not delegated to parser behavior.
+
 ---
 
 # 9. Test Strategy Required for the Remediation
@@ -2749,12 +3563,35 @@ Purpose: prove locally deterministic protocol behavior without silently importin
 - uncompressed-size boundary at 52,428,800 bytes valid and the over-boundary case emitting `sitemap_document_size_exceeds_boundary` (error, GDC-01 companion-only).
 - page URL `<loc>` length under the F-02 two-part contract: the source rule is "less than 2,048 characters" with no defined unit; the library policy measures UTF-8 bytes of the value as supplied (`strlen`), before URI/IRI normalization/percent-encoding. Assert 2,047 bytes are **conservatively below** the numeric character threshold under code-point/grapheme interpretations, and 2,048+ bytes emitting `sitemap_loc_length_exceeds_measure_boundary` as a `warning` GDC-01 companion diagnostic whose message/state is worded as a conservative library-policy boundary, **not** as a proven protocol violation (failing the byte boundary is not proof that the character limit is exceeded).
 - a percent-encoded or normalized variant of a `<loc>` is **not** re-measured after escaping; escaping correctness is asserted separately from the length boundary.
+- missing URLset `loc` (`loc === null || trim(loc) === ''`) emits only `sitemap_loc_missing` (error, `field = loc`, target `sitemap_url` + URL `entryIndex`); a missing `loc` never enters URL lexical validation and never also `sitemap_loc_invalid_uri_iri`.
+- malformed URLset `loc` (non-empty value failing the F-02 URL/URI/IRI lexical contract) emits `sitemap_loc_invalid_uri_iri` (error, target `sitemap_url` + URL `entryIndex`).
+- missing Sitemap Index child `loc` emits only `sitemap_loc_missing` (error, `field = sitemap`, target `sitemap_index_entry` + child index).
+- malformed Sitemap Index child `loc` emits `sitemap_loc_invalid_uri_iri` (error, target `sitemap_index_entry` + child index).
+- **Sitemap URL/IRI lexically-accepted cases (fixed, Common Profile + Sitemap `loc` surface policy):** `https://example.com/path`, `http://example.com/`, `https://example.com/مسار`, `custom+scheme://example.com/path` each emit **no** `sitemap_loc_invalid_uri_iri` and **no** `sitemap_loc_missing` (non-empty value satisfying the Common Profile literally).
+- **Sitemap URL/IRI lexically-rejected cases (fixed, Common Profile + Sitemap `loc` surface policy):** `example.com/path` (no scheme), `/path` (no scheme), `https:///path` (empty authority), `https://` (empty authority), `https://example.com/a b` (raw space), `https://example.com/%ZZ` (malformed percent escape), `https://example.com/abc%` (malformed percent escape), `https://example.com/path#fragment` (fragment rejected by the Sitemap surface), `https://@example.com/path` (empty userinfo), `https://example.com:abc/path` (malformed port), `https://example.com:65536/path` (out-of-range port) each emit **only** `sitemap_loc_invalid_uri_iri` (error, `field = loc`, target `sitemap_url` + URL `entryIndex`).
+- missing-vs-malformed precedence for the Common Profile: missing → **only** `sitemap_loc_missing`; malformed non-empty → **only** `sitemap_loc_invalid_uri_iri`; no single case emits both.
+- the Common-Profile accepted/rejected cases above also apply to the Sitemap Index child `loc` with `field = sitemap`, target `sitemap_index_entry` + child index, and the same missing-vs-invalid precedence.
+- a malformed non-empty `loc` with byte length ≥ 2,048 emits **both** `sitemap_loc_invalid_uri_iri` and `sitemap_loc_length_exceeds_measure_boundary` (two independent dispositions, not a duplicate cascade); a missing `loc` never produces the length-boundary code.
+- **no `FILTER_VALIDATE_URL` behavior may be used as the expected contract** in any Sitemap `loc` lexical test; the expected acceptance/rejection set must be asserted literally from the Common Profile + Sitemap `loc` surface policy.
+- invalid `changefreq` (non-null/non-empty candidate outside the fixed Sitemap vocabulary) emits `sitemap_changefreq_invalid` (error, target `sitemap_url` + `entryIndex`); null `changefreq` emits nothing.
+- `priority` below `0.0` emits `sitemap_priority_out_of_range` (error, target `sitemap_url` + `entryIndex`).
+- `priority` above `1.0` emits `sitemap_priority_out_of_range`.
+- non-finite `priority` (for example `NAN`/`INF`) emits `sitemap_priority_out_of_range`; null `priority` emits nothing.
+- missing-vs-invalid precedence: absent `loc` produces no invalid-URI/IRI diagnostic and absent/non-finite `lastmod`-less entries produce no fabricated date diagnostic.
+- `lastmod` target mapping: URL Sitemap entry → `sitemap_url` + `entryIndex`; Sitemap Index child → `sitemap_index_entry` + `entryIndex`; missing/null `lastmod` is a valid absence with no diagnostic.
+- UTF-8/XML/entity/URI escaping remains a serialization/output test (Stack 3), not a companion-diagnostic test: no `sitemap_xml_not_utf8` / `sitemap_xml_not_escaped` code exists and the candidate validation never re-checks XML serialized output.
 - invalid `lastmod` forms (year-only, year-month, hour/minute-only, zone-less, malformed) emit `sitemap_lastmod_invalid_lexical` (error, GDC-01 companion-only).
 - host/submission checks use explicit document context rather than unconditional same-host constructor rejection.
 - Sitemap location/scope protocol validation emits `sitemap_location_scope_violation` (error, origin `protocol`, profile `sitemaps`, GDC-01 companion-only) only when caller-supplied document/location context deterministically proves a page URL violates the applicable scope (`field = loc`), or a Sitemap Index child location violates the same-site restriction (`field = sitemap`); insufficient context emits no diagnostic and no fabricated pass/fail.
+- **Sitemap authority matrix (exact Common Profile, #27):** lexically **accepted** `loc` values (no `sitemap_loc_invalid_uri_iri`) — `https://example.com/path`, `https://example.com:443/path`, `https://user@example.com/path`, `https://user:pass@example.com/path`, `https://[::1]/path`, `https://[2001:db8::1]:8443/path`, `https://مثال.اختبار/مسار`, `custom+v1://example.com/path` (surface fragment policy still applies — any with a `#…` fragment is rejected). Lexically **rejected** `loc` values (each → `sitemap_loc_invalid_uri_iri`, field `loc`) — `https:///path` (empty authority), `https://` (empty authority), `https://@example.com/path` (empty userinfo with separator), `https://user@/path` (host missing), `https://a@b@example.com/path` (two raw `@`), `https://example.com:/path` (empty port), `https://example.com:abc/path` (non-decimal port), `https://example.com:65536/path` (port out of range), `https://[::1/path` (unclosed bracket host), `https://[]/path` (empty bracket host), `https://[::1]abc/path` (text after closing bracket), `https://example.com\path` (raw backslash).
+- **Port matrix (#28):** `:0`, `:80`, `:443`, `:0080`, `:65535` are lexically accepted (no invalid-URL diagnostic, no range exception for `:0`); `:`, `:-1`, `:+80`, `:abc`, `:65536` are lexically rejected → `sitemap_loc_invalid_uri_iri`. No network/port-liveness lookup is ever performed.
+- **Userinfo matrix (#29):** `https://user@example.com/` and `https://user:pass@example.com/` are accepted; `https://@example.com/`, `https://user@/`, `https://a@b@example.com/` are rejected → `sitemap_loc_invalid_uri_iri`. Purely lexical; no credential interpretation.
+- **Path/query matrix (#30):** accepted — `https://example.com/`, `https://example.com/a/b`, `https://example.com/%20`, `https://example.com/مسار`, `https://example.com/a?x=1`, `https://example.com/a?x=/foo?bar`; rejected — `https://example.com/a b` (raw space), `https://example.com/%ZZ`, `https://example.com/abc%`, `https://example.com\a` → `sitemap_loc_invalid_uri_iri`. Query allowed lexically; fragment rejected by the Sitemap surface (`fragment_allowed = false`).
+- **Sitemap scope-comparison matrix (#48):** document `http://example.com/sitemap.xml` + candidate `http://example.com:80/page` → same scheme/host/effective-port (`http` → 80 equals explicit `:80`) and path prefix match → **no** `sitemap_location_scope_violation`; document `https://example.com/catalog/sitemap.xml` + candidate `https://example.com/catalog/page` → in scope → no violation; candidate `https://example.com/other/page` against that document → outside the document-directory prefix → the applicable cross-submission/authority outcome is locked by evidence (`authorized` → no error, `unauthorized` → error, `unknown` → no error and no fabricated pass). `EXAMPLE.com` vs `example.com` → same host (ASCII letters case-insensitive). **No IDNA equivalence** is asserted: a Unicode host and its `xn--…` punycode form are different byte strings and must **not** be treated as equal; there is no trailing-dot normalization and no DNS. Dot-segments are compared as supplied (no removal/normalization): `https://example.com/catalog/../page` is **not** treated as `/page` only because that segment sequence appears; the expected outcome must be asserted from the raw byte string.
+- **Sitemap Index same-site matrix (#48):** document `https://example.com/sitemap.xml` with `type = sitemapindex` + child `https://example.com/sitemap-2.xml` → same scheme/host/effective-port → **no** violation (child path never considered); child `http://example.com/sitemap-2.xml` → different scheme → `sitemap_location_scope_violation` (`field = sitemap`, target `sitemap_index_entry` + child index); child `https://www.example.com/sitemap.xml` → different host → violation; child `https://example.com:8443/sitemap.xml` → different effective port → violation. No child path-prefix requirement and `sitemaps.cross_submission_authority` is never consumed for the Index rule.
 - Google verified-ownership/submission context stays a provider evidence diagnostic (`google_sitemap_host_context`) and is never used as a substitute for generic protocol location-scope validation.
-- `sitemap.document_type` conflicting with the supplied entry domain type is rejected as invalid invocation/context (library invalid-argument exception family), not reported as an SEO diagnostic.
-- document byte size drives `sitemap_document_size_exceeds_boundary`, sourced from `documentContext['sitemap.uncompressed_size_bytes']` and never estimated from entry count.
+- candidate `SitemapValidationDocumentDTO::$type` conflicting with the supplied entry element type is rejected as invalid invocation/context (library invalid-argument exception family), not reported as an SEO diagnostic.
+- document byte size drives `sitemap_document_size_exceeds_boundary`, sourced from `SitemapValidationDocumentDTO::$uncompressedSizeBytes` and never estimated from entry count.
 - UTF-8 serialization.
 - XML entity escaping and URI/IRI escaping behavior.
 - extended DTO parity: equivalent `SitemapUrlDTO` input produces identical `image:*`/`video:*`/`news:*`/`xhtml:link` output through `SitemapGeneratorService` and `SitemapXmlStringRenderer` after Stack 3, with namespaces declared conditionally.
@@ -2766,17 +3603,19 @@ Purpose: prove locally deterministic protocol behavior without silently importin
 
 ### RFC 9309 robots
 
-- valid `*` product-token.
-- valid identifier with only RFC identifier characters.
-- invalid identifier containing digits.
-- empty Allow/Disallow pattern.
-- ordinary `/` path cases.
-- existing leading-`*` path remains constructible/renderable for compatibility.
-- leading-`*` receives `robots_rfc9309_leading_wildcard_compatibility` as a warning with origin `protocol` / profile `rfc9309`, delivered via the GDC-01 companion surface (not the legacy result, not scoring), rather than being represented as published-ABNF conformance or converted into a constructor exception.
+- valid `*` product-token: no `robots_rfc9309_product_token_invalid`.
+- valid identifier with only RFC identifier characters: no `robots_rfc9309_product_token_invalid`.
+- identifier containing a digit (for example `User-agent: Googlebot-2`) emits `robots_rfc9309_product_token_invalid` (error, origin `protocol`, profile `rfc9309`, field `user_agent`, target `robots_rule` + exact 1-based source line); the raw candidate document remains valid validator input and no invocation exception is thrown.
+- empty Allow/Disallow pattern is valid and emits no `robots_rfc9309_path_pattern_invalid`.
+- ordinary non-empty `/`-started path is valid and emits no path-start diagnostic.
+- non-empty leading-`*` path remains constructible/renderable for compatibility.
+- leading-`*` receives `robots_rfc9309_leading_wildcard_compatibility` as a warning with origin `protocol` / profile `rfc9309`, delivered via the GDC-01 companion surface (not the legacy result, not scoring), rather than being represented as published-ABNF conformance or converted into a constructor exception; it does **not** additionally emit `robots_rfc9309_path_pattern_invalid`.
+- a non-empty path that satisfies neither the accepted `/`-started case nor the special leading-`*` compatibility case emits `robots_rfc9309_path_pattern_invalid` (error, field `path`, target `robots_rule` + exact 1-based source line).
 - non-empty leading-`*` additionally surfaces `robots_google_present_path_leading_slash` only under the Google profile (origin `provider`, profile `google`, GDC-01 companion-only); no silent rewrite is performed.
-- raw `#` comment behavior.
-- percent-encoded literal special-character cases such as `%23` where applicable.
-- CR/LF/control-character injection cases across values and comments.
+- raw `#` is parsed as comment semantics with **no** new diagnostic (`raw_hash_invalid` does not exist).
+- percent-encoded literal special-character cases such as `%23` survive as path data (matching/path semantics, not comment semantics).
+- a forbidden non-line control character inside a parsed semantic token/value emits `robots_rfc9309_control_character_invalid` (error, field `user_agent` or `path` per the parsed rule, target `robots_rule` + exact 1-based source line); normal CRLF/LF line separators are not diagnostics.
+- the diagnostic target line is exact and 1-based for every RFC rule diagnostic.
 
 ### Open Graph Protocol
 
@@ -2820,16 +3659,31 @@ Deterministic/provider-input cases:
 - description under the F-02 two-part contract: measured as UTF-8 bytes via `strlen()` on the value as supplied, before XML escaping. Assert 2,048 bytes are **conservatively below** the numeric character threshold under code-point/grapheme interpretations, and 2,049+ bytes emitting `google_video_description_length_exceeds_measure_boundary` as a `warning` GDC-01 companion diagnostic worded as a conservative library-policy boundary, **not** as a proven provider violation (failing the byte boundary is not proof that the character maximum is exceeded).
 - ASCII and Arabic/Unicode description inputs lock the byte-based 2,048 boundary so that `mb_strlen`/grapheme substitution cannot silently change it.
 - duration: 1 accepted; 28,800 accepted; 28,801 emits `google_video_duration_out_of_range` (warning, GDC-01 companion-only).
-- both `content_loc` and `player_loc` missing emit `google_video_content_or_player_loc_missing` (warning, GDC-01 companion-only).
+- missing thumbnail (`thumbnailLoc === null || trim(thumbnailLoc) === ''`) emits `google_video_thumbnail_loc_missing` **only**; never also `google_video_thumbnail_loc_invalid_url`.
+- malformed (non-empty, URL-shape-invalid) thumbnail emits `google_video_thumbnail_loc_invalid_url` (warning) and not the missing code.
+- malformed (non-empty, URL-shape-invalid) `content_loc` emits `google_video_content_loc_invalid_url`.
+- malformed (non-empty, URL-shape-invalid) `player_loc` emits `google_video_player_loc_invalid_url`.
+- both `content_loc` and `player_loc` missing (null/whitespace-only) emit `google_video_content_or_player_loc_missing` (warning, GDC-01 companion-only).
+- one valid media location is sufficient for the presence rule: when `content_loc` is present/valid and `player_loc` is missing, no `google_video_content_or_player_loc_missing` is emitted (and vice versa); a single present-but-malformed media location uses its URL-shape diagnostic instead.
 - `content_loc == parent <loc>` / `player_loc == parent <loc>` emit `google_video_media_loc_equals_parent_loc` (warning, GDC-01 companion-only).
 - both documented publication-date forms plus invalid input emitting `google_video_publication_date_invalid` (warning, GDC-01 companion-only).
-- Data URL rejection emits `google_video_data_url_unsupported` (warning, GDC-01 companion-only).
+- Data URL in `content_loc` emits `google_video_data_url_unsupported` with `field = content_loc` **only** (never also `google_video_content_loc_invalid_url`).
+- Data URL in `player_loc` emits `google_video_data_url_unsupported` with `field = player_loc` **only** (never also `google_video_player_loc_invalid_url`).
+- Data-URL value in `thumbnail_loc` emits **no** Data-URL diagnostic (the `google_video_data_url_unsupported` machine domain is locked to `content_loc`/`player_loc`) and emits `google_video_thumbnail_loc_invalid_url` **only**; do not widen the Data-URL code to `thumbnail_loc` without an audit amendment.
+- both `content_loc` and `player_loc` as Data URLs produce **two** `google_video_data_url_unsupported` diagnostics with the same code/target and `field = content_loc` and `field = player_loc` respectively.
+- **exact Video URL-shape lexically-accepted cases (fixed, Common Profile + Video surface policy):** `https://example.com/video.mp4`, `ftp://example.com/video.mp4`, `https://example.com/فيديو.mp4`, `https://user@example.com/video.mp4`, `https://[::1]/video.mp4`, `https://example.com:8443/video.mp4`, `https://example.com/video.mp4#fragment` (fragment allowed under the Video surface policy) each emit **no** `*_invalid_url` diagnostic for the populated field (HTTP/HTTPS only is not required; scheme must only satisfy the exact fixed profile).
+- **exact Video URL-shape lexically-rejected cases (fixed, Common Profile + Video surface policy):** `/video.mp4` (no scheme), `https:///video.mp4` (empty authority), `https://example.com/a b.mp4` (raw space), `https://example.com/%ZZ` (malformed percent escape), `https://example.com:abc/video.mp4` (malformed port), `https://example.com:65536/video.mp4` (out-of-range port), `https://example.com\video.mp4` (raw backslash) each emit the corresponding `*_invalid_url` (`google_video_thumbnail_loc_invalid_url` / `google_video_content_loc_invalid_url` / `google_video_player_loc_invalid_url`) for the populated field, **only** when that field's value is non-empty.
+- **Video authority/userinfo/port/backslash characterization through the exact profile:** the mandatory authority, userinfo, port, path/query, and bracket-host matrices of the Common Profile apply verbatim to `thumbnail_loc`/`content_loc`/`player_loc`; every rejected authority/port/userinfo shape is asserted to produce the corresponding `*_invalid_url`, and every accepted authority shape (including `[::1]`, `[2001:db8::1]:8443`, `user@example.com`, `user:pass@example.com`, `مثال.اختبار`) produces no `*_invalid_url` for the populated field. No inconsistent per-field expected behavior.
+- **Data URL anti-cascade lock (fixed, FIX 4):** a candidate value `data:video/mp4;base64,...` in `content_loc`/`player_loc` emits `google_video_data_url_unsupported` for the relevant locked field and **never** also the corresponding `*_invalid_url` solely because the value lacks `://`; the same `data:...` value in `thumbnail_loc` emits `google_video_thumbnail_loc_invalid_url` **only**. Test each field explicitly and separately.
+- **URL-semantic diagnostics require a lexically usable URL (fixed):** parent-`<loc>` equality (`google_video_media_loc_equals_parent_loc`) is computed only when the field passes the Common Profile; a malformed field emits its `*_invalid_url` and performs no parent-loc equality comparison; a `data:` field emits its Data-URL diagnostic only and performs no equality comparison (the explicit `data:` provider special case is the only exception that bypasses the profile), and no malformed `content_loc`/`player_loc` produces remote/provider assumptions.
+- **no `FILTER_VALIDATE_URL` behavior may be used as the expected contract** in any Video URL-shape test; the expected acceptance/rejection set must be asserted literally from the Common Profile + Google Video surface policy.
+- remote-fact silence: no runtime diagnostic is invented for actual remote video file type, actual thumbnail format/dimensions/stability/accessibility/transparency, actual Googlebot accessibility of referenced video resources, or watch-page/video indexing eligibility; no offline test claims a URL extension or local field proves any of those `DEFER PROVIDER EVIDENCE CONTRACT` facts.
 - HTTP, HTTPS, and FTP evidence cases must preserve the documented source nuance; do not create a test whose assertion falsely claims Google literally enumerates all three in one normative sentence.
 - title match (`google_video_title_host_page_match`) and `content_loc` preference (`google_video_content_loc_preference`) are recommendations/context diagnostics, not generic constructor validity failures.
 - description host-page consistency is `google_video_description_host_page_match`: `matches` → info, `differs` → warning, `unknown` → info; it is distinct from `google_video_relevance_context` (topical relevance of video to page).
 - missing required fields emit `google_video_title_missing`, `google_video_description_missing`, `google_video_thumbnail_loc_missing` (warning, GDC-01 companion-only).
 - two videos under one URL can carry different relevance/title/description states by `[urlIndex][videoIndex]` producing independent diagnostics per video.
-- video evidence targeting uses `$urls[$urlIndex]->videos[$videoIndex]`; the parent page `<loc>` for a video is `$urls[$urlIndex]->loc`, never a `documentContext` field.
+- video evidence targeting uses `SitemapValidationDocumentDTO::$entries[$urlIndex]->videos[$videoIndex]`; the parent page `<loc>` for a video is `$document->entries[$urlIndex]->loc`, never a context field.
 - evidence for a non-existent video index creates no diagnostic; a missing child index maps to `unknown` where `unknown` exists.
 
 Do **not** create offline tests that claim a URL extension proves the actual remote video file type, thumbnail format/dimensions/transparency, Googlebot accessibility, resource stability, or watch-page indexing eligibility. If a future context validator accepts caller-supplied evidence for those facts, test the evidence-processing contract, not the network fact itself.
@@ -2840,28 +3694,45 @@ Do **not** create offline tests that claim a URL extension proves the actual rem
 - multiple News entries under one URL emit `google_news_multiple_entries_per_url` (warning, GDC-01 companion-only) while legacy list behavior remains characterized.
 - 1,000 total News entries boundary valid.
 - 1,001 total News entries emit `google_news_document_count_exceeds_limit` (warning, GDC-01 companion-only).
+- each of the four required-field missing diagnostics is emitted for the corresponding missing value (`value === null || trim(value) === ''`): `google_news_publication_name_missing` (field `name`), `google_news_language_missing` (field `language`), `google_news_publication_date_missing` (field `publication_date`), `google_news_title_missing` (field `title`) — all warning, target `sitemap_news` + `[urlIndex][newsIndex]`.
+- missing-vs-invalid date precedence: `publicationDate` missing → `google_news_publication_date_missing` only; `publicationDate` present but lexically invalid → `google_news_publication_date_invalid` only; the two never co-emit for the same item.
+- missing-vs-invalid language precedence: `language` missing → `google_news_language_missing` only; `language` present but invalid → `google_news_language_invalid` only; the two never co-emit for the same item.
 - all four accepted publication-date forms.
 - invalid arbitrary date such as `as-provided` emits `google_news_publication_date_invalid` (warning, GDC-01 companion-only).
 - valid/invalid language cases including `zh-cn` and `zh-tw` according to the explicit Google News lexical contract recorded in F-05, emitting `google_news_language_invalid` (warning, GDC-01 companion-only); do not generalize this into the deferred hreflang ISO-membership capability.
 - publication-name parenthetical rule where locally decidable emits `google_news_publication_name_parenthetical` (warning, GDC-01 companion-only).
+- title-content evidence: caller evidence `conforming` → `google_news_title_content_evidence` with severity `info`; `nonconforming` → `warning`; `unknown`/missing evidence → `info` (gap); no local inference from the title string alone.
+- missing title → `google_news_title_missing` **only**; no title-content evidence diagnostic is emitted for that item even when evidence is supplied.
+- legacy optional fields (`access`, `genres`, `keywords`, `stockTickers`) produce **no** runtime diagnostic in any state.
 - freshness state `within_window` is processed as caller-supplied provider evidence (`google_news_freshness_evidence`, info) without local age arithmetic.
 - freshness state `outside_window` is processed deterministically as provider-out-of-window evidence (`google_news_freshness_evidence`, warning).
 - freshness state `unknown` remains an evidence gap/diagnostic (`google_news_freshness_evidence`, info) and is not fabricated into a pass or failure.
 - lexical `publicationDate` plus a reference clock must not trigger an invented `48 hours`, calendar-day, or timezone boundary calculation; no hidden `now()`.
 - original-publication-time/name/title truth remains content/context evidence (`google_news_original_publication_evidence`, `google_news_name_exact_match_evidence`), not fake lexical proof.
-- two News entries can carry different freshness/original/name evidence by `[urlIndex][newsIndex]` producing independent diagnostics per entry.
+- two News entries can carry different freshness/original/name/title-content evidence by `[urlIndex][newsIndex]` producing independent diagnostics per entry.
 - evidence for a non-existent News index creates no diagnostic; a missing child index maps to `unknown` where `unknown` exists.
 
 ### Google robots.txt
 
 - 500 KiB document boundary classification: a robots.txt of 512,000 bytes or fewer is within the parse limit; a robots.txt exceeding 512,000 bytes emits `robots_google_document_size_exceeds_parse_limit` (warning, GDC-01 companion-only).
+- raw document not valid UTF-8 emits `robots_google_document_invalid_utf8` (warning, provider, field `document`, target `robots_document`); the 500 KiB diagnostic remains independent and both may coexist for the same document.
+- a multi-row `Sitemap:` matrix asserts the **exact Common Profile + Google robots Sitemap surface policy** acceptance/rejection set; **`FILTER_VALIDATE_URL` behavior is never the expected contract**.
+- `Sitemap:` values lexically **accepted** with **no** diagnostic (each also asserting the `robots_rule` target and its exact 1-based source line): `https://example.com/sitemap.xml`; `https://example.com/خرائط/sitemap.xml` (raw Unicode path accepted, no `FILTER_VALIDATE_URL` Unicode rejection); `https://other.example.com/sitemap.xml` (cross-host accepted); `https://example.com:8443/sitemap.xml` (explicit port accepted); `https://example.com/sitemap.xml?v=2` (query allowed).
+- `Sitemap:` values lexically **rejected** ×10, each emitting `robots_google_sitemap_url_not_fully_qualified` (warning, provider, field `sitemap`, target `robots_rule` + exact 1-based source line): `/sitemap.xml` (relative, no scheme); `example.com/sitemap.xml` (no scheme); `https:///sitemap.xml` (empty authority); `https://` (empty authority); `https://example.com/%ZZ` (malformed percent escape); `https://example.com/a b.xml` (raw space); `https://example.com/sitemap.xml#fragment` (fragment rejected, `fragment_allowed = false`); `https://example.com:abc/sitemap.xml` (malformed port); `https://example.com:65536/sitemap.xml` (out-of-range port) — plus a **missing/whitespace-only** value (`Sitemap:` with no value) which **also** emits `robots_google_sitemap_url_not_fully_qualified` under the same code (no separate missing code; `trim()` detects the empty state only, the DTO-level missing state follows the same code).
+- accepted `Sitemap:` localhost/fictional-host/Unicode-host values assert no DNS/network resolution is performed; the profile is purely lexical.
+- a cross-host fully-qualified `Sitemap:` URL is accepted with no diagnostic.
+- multiple `Sitemap:` directives are accepted with no count-limit diagnostic.
 - Google Allow/Disallow present-path leading `/` cases.
 - non-empty leading-`*` remains generic-compatible but is distinguishable as the Google provider-path diagnostic `robots_google_present_path_leading_slash` (GDC-01 companion-only); no silent rewrite.
-- `Sitemap:` fully-qualified URL.
-- raw Unicode/non-URL-encoded Sitemap path accepted according to Google's documented contract.
-- multiple Sitemap fields.
-- cross-host Sitemap URL.
+- `Sitemap:` represents the exact Common Profile + Google robots Sitemap surface policy (fields above); **no** Sitemap-protocol/scope/host-verification/generic URL-exception diagnostic is added for its values (this code is the only URL diagnostic for that field).
 - Sitemap field independence from user-agent groups.
+- **no MIME/content-type diagnostic exists** (`DEFER TRANSPORT CONTEXT`, outside Stacks 0–8); no transport context/evidence key is invented.
+
+### Structured Robots Lane (hard input-safety contract)
+
+- embedded CR/LF/control-character injection through structured DTO fields — user-agent values, Allow/Disallow values, rule comments, top-level robots comments, and Sitemap directive values — **throws `Maatify\Seo\Exception\SeoInvalidArgumentException`**.
+- no silent sanitization (no trimming/escaping/rewriting of the injected content) and no silent truncation.
+- no companion diagnostic is emitted in place of the exception; the hard-safety guarantee is invocation/constructor behavior, not a diagnostic.
 
 ### Google robots meta
 
@@ -2882,16 +3753,32 @@ Do **not** create offline tests that claim a URL extension proves the actual rem
 - `en-US`.
 - `zh-Hant`.
 - `zh-Hans-US`.
-- `x-default`.
+- `x-default` is valid and emits no `hreflang_tag_invalid_syntax`.
 - equivalent conventional-casing normalization through Web and Sitemap entry points.
-- casing differences alone do not produce provider-invalidity.
-- no test claims that an unversioned local regex/list proves ISO 639-1 / ISO 3166-1 / ISO 15924 membership.
+- casing differences alone (for example `en-US` vs `en-us`) emit **no** diagnostic; no `hreflang_noncanonical_case` (or equivalent) code exists — tests may assert normalization equivalence only.
+- no test claims that an unversioned local regex/list proves ISO 639-1 / ISO 3166-1 / ISO 15924 membership; `hreflang_tag_invalid_syntax` asserts syntax only.
 - reciprocal cluster (no diagnostics).
 - missing self-reference emits `hreflang_self_reference_missing` (warning, GDC-01 companion-only).
 - missing return link emits `hreflang_reciprocal_link_missing` (warning, GDC-01 companion-only).
 - inconsistent alternate set across supplied localized URLs emits `hreflang_alternate_set_inconsistent` (warning, GDC-01 companion-only).
-- alternate URL not fully qualified emits `hreflang_url_not_fully_qualified` (warning, GDC-01 companion-only).
-- cluster tests supply the fixed input shape `array<string, list<Maatify\Seo\Web\Hreflang\HreflangLinkDTO>>` (fully-qualified localized page URL → complete alternate-link set); the cluster is the primary input and is never supplied through `documentContext`.
+- alternate URL `https://example.com/en/` and `https://example.com/العربية/` are fully qualified → **no** `hreflang_url_not_fully_qualified`.
+- alternate URL `/en/` (no scheme) → `hreflang_url_not_fully_qualified`.
+- alternate URL `example.com/en/` (no scheme) → `hreflang_url_not_fully_qualified`.
+- alternate URL `https:///en/` (empty authority) → `hreflang_url_not_fully_qualified`.
+- alternate URL `https://example.com/a b` (raw space) → `hreflang_url_not_fully_qualified`.
+- alternate URL `https://example.com/%ZZ` (malformed percent escape) → `hreflang_url_not_fully_qualified`.
+- alternate URL `null` → `hreflang_url_not_fully_qualified`.
+- alternate URL whitespace/empty → `hreflang_url_not_fully_qualified`.
+- alternate URLs accepted by the Common Profile + Hreflang surface policy → **no** `hreflang_url_not_fully_qualified`, including: `https://example.com/en/`, `https://example.com/العربية/`, `https://example.com/en/#section` (fragment allowed), `https://user@example.com/en/`, `https://[::1]/en/`, `https://[2001:db8::1]:8443/en/`, `https://example.com:443/en/`.
+- alternate URL `https://example.com:abc/en/` (malformed port), `https://example.com:65536/en/` (out-of-range port) → `hreflang_url_not_fully_qualified`.
+- every rejected/missing case (null, whitespace/empty, no-scheme/relative, empty authority, raw space, malformed percent escape, malformed/out-of-range port) emits **only** the single code `hreflang_url_not_fully_qualified` with exactly one diagnostic per link (no separate missing/invalid/relative codes).
+- **no `FILTER_VALIDATE_URL` behavior may be used as the expected contract** in any hreflang URL test; the expected acceptance/rejection set must be asserted literally from the Common Profile + Hreflang surface policy.
+- candidate `hreflang` lexically-valid shape (fixed grammar): `en`, `EN`, `en-US`, `EN-us`, `zh-Hant`, `zh-Hans-US`, `es-419`, `x-default`, `X-DEFAULT` each emit **no** `hreflang_tag_invalid_syntax`.
+- candidate `hreflang` lexically-invalid shape (fixed grammar): `''` (empty/whitespace-only), `e` (too short), `engl` (non-tag run), `en_US` (`_` separator), `en-` (empty subtag), `-en` (leading separator), `en-USA` (region too long), `zh-Hant-US-extra` (too many subtags) each emit `hreflang_tag_invalid_syntax`.
+- candidate `hreflang` `null` → `hreflang_tag_invalid_syntax`.
+- tests prove explicitly that casing alone produces no diagnostic (for example `EN-us`, `zh-hant` are lexically valid and emit nothing), and that lexical acceptance does **not** assert ISO 639/3166/15924 membership.
+- structurally invalid links (tag-syntax and/or URL code emitted through the Common Profile + Hreflang surface policy and the fixed tag-syntax grammar) are excluded from cluster-edge computation: no reciprocity/self-reference/alternate-set cluster diagnostic is derived from them, and no synthetic cascade cluster diagnostic is added solely because they were excluded; no exclusion condition beyond the two fixed contracts is tested or implemented.
+- cluster tests supply the fixed candidate input `Maatify\Seo\Web\Validation\Input\Hreflang\HreflangValidationClusterDTO` (list of `HreflangValidationPageDTO` pages with unique non-empty `pageUrl` and `HreflangValidationLinkDTO` links); the cluster is the primary input and is never supplied through any context field.
 
 ### Canonical
 
@@ -2915,13 +3802,79 @@ Tightest contract coverage across Stacks 2/4/5/6 — asserted for every new diag
 - each new diagnostic carries the fixed origin/profile/evidence-state metadata and a stable, non-colliding code.
 - **no new diagnostic reuses or shadows a legacy issue code.** A **legacy classification record** is the sole exception: it intentionally uses the same `code` and `related_legacy_code` as the legacy issue it classifies, per the GDC-01 Normative Legacy Classification Table, and produces no additional legacy/scoring effect.
 - every profile validator returns the unified `SeoCompanionValidationResultDTO`; no per-profile result type or alternative container exists.
-- the unified type's JSON shape matches the GDC-01 serialization contract: snake_case keys, the exact legacy `SeoValidationResultDTO` shape embedded under `legacy` when paired (with `null` for standalone runs), and the fixed entry keys `code`/`severity`/`message`/`field`/`origin`/`profile`/`evidence_state`/`related_legacy_code`.
+- the unified type's JSON shape matches the GDC-01 serialization contract: snake_case keys, the exact legacy `SeoValidationResultDTO` shape embedded under `legacy` when paired (with `null` for standalone runs except the OGP-paired profile, which always embeds it), and the fixed entry keys `code`/`severity`/`message`/`field`/`origin`/`profile`/`evidence_state`/`related_legacy_code`/`target`.
 - correlation assertions: a companion record's `related_legacy_code` references the legacy code for the same subject (for example `missing_og_description`), and the embedded `legacy` object is bit-for-bit equal to the standalone `SeoMetaValidator::validate()` result for the same input.
 - `SeoCompanionValidationResultDTO` exposes no `is_valid`/`has_warnings`/score/grade/health fields; derived aggregates never feed `SeoValidationScoreCalculator`.
 - construction guards: empty `code`/`message`, unknown `severity`/`origin`/`profile`, and an `evidence_state` not in the code's fixed state vocabulary each throw a construction error; a severity that does not match the fixed code severity (ordinary diagnostics) or the `(code, evidence_state)` mapping (evidence-state diagnostics) also throws.
-- the unified context DTO (`SeoValidationContextDTO` with `$evidence`/`$documentContext`) is the only accepted input surface for companion/profile validation; a validator reads only its authorized evidence keys, missing evidence maps to `unknown` only where the contract fixes an `unknown` state, arbitrary evidence states are rejected, and no diagnostic is produced from unauthorized/unknown keys.
-- `SeoValidationContextDTO` constructor guards: recognized `$evidence` keys enforce the fixed value shape and allowed states; negative/non-integer indices in indexed evidence and invalid recognized values are construction errors; recognized `$documentContext` keys enforce the fixed shape/value contract (`sitemap.document_location`, `sitemap.document_type`, `sitemap.uncompressed_size_bytes`); unknown top-level keys are ignored and produce no diagnostics; no extension registry exists.
+- the unified evidence-only context DTO (`SeoValidationContextDTO` with `$evidence` only) is the only accepted context surface for companion/profile validation; a validator reads only its authorized evidence keys, missing evidence maps to `unknown` only where the contract fixes an `unknown` state, arbitrary evidence states are rejected, and no diagnostic is produced from unauthorized/unknown keys.
+- `SeoValidationContextDTO` constructor guards: recognized `$evidence` keys enforce the fixed value shape and allowed states; negative/non-integer indices in indexed evidence and invalid recognized values are construction errors; there is no `$documentContext` field; unknown top-level keys are ignored and produce no diagnostics; no extension registry exists.
+- every companion entry serializer includes the required `SeoDiagnosticTargetDTO` (`scope`, `entry_index`, `item_index`, `line`) matching the fix `target` shapes; an invalid target shape is a construction error.
 - every code in the GDC-01 machine-contract tables and the fixed F-13 OGP contracts is asserted at least once on its fixed severity/origin/profile/field and (where applicable) evidence-state contract.
+
+### Validation candidate layer tests (FIX 28)
+
+The test strategy must prove the new architecture, not just its names.
+
+**Strict DTO preservation (characterization):** characterization tests prove the existing strict domain/render DTOs stay strict:
+- `SitemapVideoDTO` continues to reject the cases it rejects today (empty thumbnail, empty title, empty description, both media locations missing, non-positive duration, invalid publication date).
+- `SitemapUrlDTO` continues to reject malformed `loc` and currently-invalid `lastmod` per its current contract, until the explicit F-02 remediation corrects only what it adopted.
+- `HreflangLinkDTO` remains strict (non-empty hreflang, absolute URL, normalization).
+- `RobotsRuleDTO` remains strict (empty Allow/Disallow paths rejected).
+- Candidate DTOs must not change any of the above; constructing a candidate does not relax the strict DTO contract.
+
+**Candidate representability:** tests prove the candidate inputs can carry each of the following **without a constructor protocol/provider exception**:
+- malformed Sitemap `lastmod`;
+- empty/missing Video title;
+- empty/missing Video description;
+- missing thumbnail;
+- both content/player missing;
+- duration `0`;
+- negative duration;
+- over-range duration;
+- malformed `publicationDate`;
+- malformed/relative hreflang URL;
+- raw robots path states.
+
+**Validator reachability:** prove that a state that cannot be built through the strict DTO can be built through the candidate input and then produces the machine diagnostic locked in this audit. Mandatory examples:
+- Candidate Video `title = null` → `google_video_title_missing` (not a constructor exception).
+- Candidate Video `contentLoc = null` and `playerLoc = null` → `google_video_content_or_player_loc_missing` (not a constructor exception).
+
+**Diagnostic target:** tests cover the `SeoDiagnosticTargetDTO` JSON shape, and cases such as URL 0 / Video 0, URL 0 / Video 1, and URL 1 / Video 0. The same code may appear more than once with different targets; item identity is never derived from `message`.
+
+**Robots target:** a raw robots path diagnostic carries a 1-based source `line`; the document-size diagnostic carries `robots_document` with no line.
+
+**Sitemap target:**
+- document count/size → `sitemap_document`;
+- URL issue → `sitemap_url` + `entryIndex`;
+- Index child issue → `sitemap_index_entry` + `entryIndex`;
+- Image → parent URL + image index;
+- Video → parent URL + video index;
+- News → parent URL + news index.
+
+**Hreflang target:**
+- cluster/page issue → page index;
+- individual alternate issue → page index + link index.
+
+### Open Graph activation and pairing tests (FIX 10–12, 26)
+
+- No OGP presence signal → **no** OGP companion diagnostics and **no** OGP legacy classification records; fully absent OGP is not a protocol error.
+- OGP presence + missing title → legacy `missing_og_title` + one matching classification record.
+- OGP presence + missing image → legacy issue + one matching classification record.
+- Missing description stays a heuristic legacy classification record only.
+- Missing type/url → the new companion diagnostics `missing_og_type` / `missing_og_url`, and nothing duplicate such as `ogp_missing_title` / `ogp_missing_image`.
+- `OpenGraphProtocolValidator::validate()` embeds the exact legacy result (`legacy === SeoMetaValidator::validate($meta, $options)`).
+- `SeoMetaValidator::validateWithCompanion()` produces the same observable companion result as the OGP validator for the same inputs.
+- Custom `$options` are preserved into the embedded legacy validation.
+
+### Cross-submission authority tests (FIX 19–22)
+
+- URLset entry outside the normal scope inferred from `SitemapValidationDocumentDTO::$location`:
+  - `authorized` → no scope error;
+  - `unauthorized` → `sitemap_location_scope_violation` (error, protocol, `sitemaps`, field `loc`, target `sitemap_url` + URL index);
+  - `unknown` → no fabricated error;
+  - missing evidence → same `unknown` boundary behavior.
+- Sitemap Index: authority evidence is ignored; a deterministic same-site violation still emits the protocol error (field `sitemap`, target `sitemap_index_entry` + child index).
+- Google verification evidence must not affect any of the above.
 
 ### Structured Data boundary
 
@@ -3056,12 +4009,30 @@ This audit is the **baseline execution authority** for remediation Stacks 0 thro
 - **No automatic reopening:** a freshness check is not permission to reopen settled architecture or perform broad provider research. If an authoritative source has materially changed after the audit date, record the changed evidence and amend the relevant contract explicitly before implementing against it.
 - **Evidence boundaries:** remote/provider facts that the library cannot prove offline remain explicit caller/host/provider evidence boundaries.
 - **GDC-01 global diagnostics contract:** every new protocol/provider/context diagnostic introduced by Stacks 2/4/5/6 is delivered through the companion surface (`SeoCompanionDiagnosticDTO` entries in the unified `SeoCompanionValidationResultDTO`) and must not mutate the legacy result, `is_valid`, `errors`/`warnings`/`info`/`issues`, or `SeoValidationScoreCalculator`. The public access contract (unified result type, entry fields, legacy correlation, serialization shape, profile surface) and the fixed machine contracts (code/severity/origin/profile/field/evidence state) are part of the execution authority; an implementation may not add or rename codes, severities, origins, profiles, fields, evidence states, or result types. Pre-existing legacy issues keep their documented F-12 placement and score behavior. This is part of the execution authority, not an implementation preference.
-- **Fixed public signatures:** the legacy `SeoMetaValidator::validate(array|object $meta, array $options = []): SeoValidationResultDTO` signature is preserved letter-for-letter; the additive `SeoMetaValidator::validateWithCompanion(array|object $meta, array $options = [], ?SeoValidationContextDTO $context = null): SeoCompanionValidationResultDTO` and the fixed `final readonly` `SeoValidationContextDTO` (`$evidence`, `$documentContext`) are part of the execution authority. The 11 profile-validator public signatures fixed in GDC-01 may not be renamed, reordered, overloaded, or replaced by a generic placeholder (`<existing-domain-input>`).
-- **Evidence targeting:** Sitemap child-collection evidence is indexed by zero-based `$urlIndex` / `$childIndex` exactly as fixed in GDC-01; `documentContext` contains only the fixed keys `sitemap.document_location`, `sitemap.document_type`, and `sitemap.uncompressed_size_bytes`. The legacy classification records fixed in the GDC-01 Normative Legacy Classification Table are metadata records, **not** new diagnostics: they are the sole exception to the no-reuse rule (`code == related_legacy_code`) and produce no legacy, scoring, or validity effect.
-- **Protocol/provider separation:** Sitemaps.org protocol location/scope uses `sitemap_location_scope_violation` (consuming `documentContext['sitemap.document_location']`); Google verified-ownership/submission uses `google_sitemap_host_context` (consuming `evidence['google_sitemap.host_verification']`). The two never substitute for each other.
+- **Fixed public signatures:** the legacy `SeoMetaValidator::validate(array|object $meta, array $options = []): SeoValidationResultDTO` signature is preserved letter-for-letter; the additive `SeoMetaValidator::validateWithCompanion(array|object $meta, array $options = [], ?SeoValidationContextDTO $context = null): SeoCompanionValidationResultDTO` and the fixed `final readonly` evidence-only `SeoValidationContextDTO` (`$evidence`) are part of the execution authority. The 11 profile-validator public signatures fixed in GDC-01 (Sitemap/Robots/Hreflang using the validation candidate types) may not be renamed, reordered, overloaded, or replaced by a generic placeholder (`<existing-domain-input>`).
+- **Layered input model:** strict domain/rendering DTOs remain strict and unchanged; validation candidate DTOs are a separate, additive validation-only layer; Sitemap/Robots/Hreflang profile signatures use the candidate types fixed here; no implementation may substitute existing strict DTO inputs when doing so makes a required diagnostic unreachable; candidate constructors perform representation/shape only, never protocol/provider validation; no public candidate-to-domain conversion contract is added; Stack 3 (rendering) never consumes candidate inputs and Stack 4 never relaxes strict constructors.
+- **Evidence targeting:** Sitemap child-collection evidence is indexed by zero-based `$urlIndex` / `$childIndex` over `SitemapValidationDocumentDTO::$entries` exactly as fixed in GDC-01 and must match `SeoDiagnosticTargetDTO`; there is **no** `documentContext`; document location/type/byte-size live on `SitemapValidationDocumentDTO`. The legacy classification records fixed in the GDC-01 Normative Legacy Classification Table are metadata records, **not** new diagnostics: they are the sole exception to the no-reuse rule (`code == related_legacy_code`), always target `scope = meta`, and produce no legacy, scoring, or validity effect.
+- **Machine targets:** every companion diagnostic carries the required machine-readable `SeoDiagnosticTargetDTO`; the human-readable `message` or `field` is never used as target identity.
+- **Cross-submission authority:** protocol cross-submission (`sitemaps.cross_submission_authority`, consumed only by `SitemapProtocolValidator`) and Google Search Console verification (`google_sitemap.host_verification`, consumed only by `GoogleSitemapValidator`) are separate evidence domains that never substitute for each other; Sitemap Index never consumes cross-submission authority evidence.
+- **OGP exception:** `OpenGraphProtocolValidator` is the explicit legacy-paired profile exception (always embeds `SeoMetaValidator::validate($meta, $options)`), is presence-triggered, and `validateWithCompanion()` shares the single OGP rule implementation.
 - **Measurement policy:** the source-backed rules for Sitemap `<loc>` (< 2,048 characters) and Google Video `description` (<= 2,048 characters) are unit-undefined; the audit converts them under F-02 to an explicit EVIDENCE BOUNDARY with a conservative library policy of UTF-8 bytes via `strlen()` on the value as supplied. A value below the byte boundary is conservative proof that it is also below the same numeric threshold under Unicode code-point or grapheme counting, because the UTF-8 byte count is never smaller than those counts for valid UTF-8 text; a value at/above the byte boundary emits the fixed warning codes and must never be labeled a proven protocol/provider violation, because a multi-byte value may exceed the byte threshold while remaining below the same character-count threshold. Stack 4 must not substitute another unit and must not restate the diagnostic as source-proven.
 - **Unknown-decision gate:** a material `unknown / needs decision` discovered by characterization blocks the affected production change until an approved contract amendment resolves it.
 - **Future-contract boundaries:** hreflang ISO membership registries, complete Google structured-data capability/eligibility profiles, Twitter/X provider conformance, and the F-18 lexical/enumeration expansion are not implementation discretion under this audit. They are separate future contracts.
+- **Complete runtime registry is the scope (AP-16):** the complete normative machine-contract registry for this remediation (all Stack 2/4/6 media codes, Video/News codes, robots RFC/Google codes, hreflang codes, OGP codes, plus the Normative Legacy Classification records) is the **exhaustive** runtime diagnostic scope. No validator, evidence consumer, or profile may emit a code outside this registry, and no strict validator/settings flag may substitute a non-companion validity-exception path for a registry diagnostic. A strict robots DTO is never a reason to drop a registry code into a "settings" channel, and no comparable hard-invalidation code exists where the registry fixes a missing/invalid diagnostic. No new evidence key may be introduced beyond `google_news.title_content_conformance`; all other keys remain exactly as fixed.
+- **Common Profile is the sole lexical authority (closure round):** the Common Absolute-Authority URL Lexical Profile closed in GDC-01 is the sole lexical authority for Sitemap `loc`, Sitemap Index child `loc`, Google Video URL-shaped fields (`thumbnail_loc`, `content_loc`, `player_loc`), Google hreflang alternate URLs, and Google robots.txt `Sitemap:` directive values. Surface-specific fragment, missing, Data-URL, and diagnostic rules are the only permitted differences: Sitemap/Index/robots forbid fragments; Video and hreflang allow them; the `data:` special case exists for Video `content_loc`/`player_loc` only (never `thumbnail_loc`); robots missing/whitespace-only `Sitemap:` values use the same code.
+- **Authority parsing is fixed:** authority parsing is fixed as `[userinfo@]host[:port]` with the exact userinfo, bracket-host, reg-name-host, and port rules recorded by this Audit. A PHP parser, regex library, `parse_url()`, `FILTER_VALIDATE_URL`, or any future internal helper may be used only when its observable result is adapted to match this contract exactly.
+- **Sitemap scope comparison is not delegated to parser behavior:** scheme comparison, host comparison, effective-port rules, document-directory path scope, URL-Sitemap cross-submission evidence, and Sitemap-Index same-site comparison are fixed by this Audit under `sitemap_location_scope_violation` and are independent of any URL parser's own semantics.
+- **Lexically unusable Sitemap locations do not enter scope validation:** missing and malformed `loc` diagnostics therefore cannot cascade into `sitemap_location_scope_violation`.
+- **No invented URL code:** no diagnostic, evidence key, target scope, or public DTO may be invented to handle an unlisted URL case. If the exact profile does not authorize a diagnostic beyond those already fixed, the implementation stays within the existing machine registry.
+- **`FILTER_VALIDATE_URL` is not an authoritative lexical contract** for the Sitemap, Google Video candidate, Google robots Sitemap, or hreflang validation surfaces defined by this Audit.
+- **Representability ≠ authorization (AP-16):** candidate DTO representability does not by itself authorize a diagnostic. Every remediation rule required by a Stack has **exactly one** observable disposition — companion diagnostic, legacy classification, strict invocation/constructor rule, parser/serialization guarantee, or deferred/no-runtime-diagnostic — as classified in GDC-01, the Stack dispositions, AP-16, and ADR-18. Implementers and maintainers must not infer a new diagnostic from prose alone.
+- **Anti-cascade precedence (ADR-18):** missing-vs-invalid precedence is mandatory: a field with a dedicated missing diagnostic that is missing emits the missing diagnostic and never also a malformed/lexical/URL diagnostic for the same absence. General Sitemap-vs-specific diagnostics remain independent and non-cascading.
+- **Hreflang invalid-link exclusion (ADR-18):** a candidate link carrying `hreflang_tag_invalid_syntax` or `hreflang_url_not_fully_qualified` may produce its own link-level diagnostic but is excluded from cluster-edge computation (reciprocity, self-reference matching, alternate-set equality); cluster diagnostics come from structurally usable links only, and no cascade diagnostic is added because an invalid link was excluded.
+- **Video remote facts deferred (`DEFER PROVIDER EVIDENCE CONTRACT`):** no runtime diagnostic for actual remote video file type, thumbnail format/dimensions/stability/accessibility/transparency, Googlebot accessibility, or indexing eligibility; those facts may only be processed under a separately approved evidence contract.
+- **Robots MIME/transport deferred (`DEFER TRANSPORT CONTEXT`):** no robotstxt MIME/content-type diagnostic exists and no transport context/evidence key is invented; this is outside Stacks 0–8.
+- **Structured Robots Lane hard-safety (strict invocation/constructor rule):** CR/LF/control-character injection through structured robots DTO values (user agents, paths, rule comments, top-level comments, Sitemap values) throws `Maatify\Seo\Exception\SeoInvalidArgumentException`; no silent sanitize/truncate and no companion diagnostic in place of the exception.
+- **Google Image scope freeze:** no Google Image missing/URL-shape diagnostic is added by this remediation; the F-03 approved Image machine scope remains the count diagnostic, the two evidence diagnostics, and the legacy-field compatibility classification. Candidate representability does not expand it.
+- **News title evidence key (fixed):** `google_news.title_content_conformance` is the only new evidence key and is consumed only by `GoogleNewsSitemapValidator`, emitted as `google_news_title_content_evidence` (`conforming` → info, `nonconforming` → warning, `unknown` → info); a missing `title` emits `google_news_title_missing` only, with no title-content evidence for that item.
 
 No production behavior should be changed merely because it "looks more strict."
 
