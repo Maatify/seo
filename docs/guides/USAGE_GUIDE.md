@@ -801,6 +801,8 @@ The core `SitemapGeneratorService` remains available. It is responsible for orch
 
 The core service outputs objects intended for further processing or structured output handling, while the `SitemapXmlStringRenderer` (demonstrated above) is specifically a presentation-layer helper designed to quickly output standard XML strings for web consumption.
 
+`generateUrlSitemap()` accepts strict `SitemapUrlDTO` entries and preserves their alternates, images, videos, and news children. For the same DTO URL entries, its `result->xml` uses the same canonical serialization and matches `SitemapXmlStringRenderer` output; the generator remains typed-DTO-only while the Web renderer also supports raw associative URL entries. `generateSitemapIndex()` likewise remains limited to shared sitemap-index DTOs.
+
 ```php
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapUrlDTO;
 use Maatify\Seo\Shared\Service\SitemapGeneratorService;
@@ -1104,7 +1106,7 @@ $batch->averageScore;
 $batch->reports[0]->summary['message'];
 ```
 
-> **Note:** The `SeoValidationBatchReportBuilder` uses `SeoValidationReportBuilder::build(...)` internally for each item. It does not mutate the input data. It is completely framework-neutral and emits no HTTP headers, routes, controllers, or responses. Furthermore, existing validation, score, report builder, exporter, preset, sitemap, and robots behaviors remain unchanged.
+> **Note:** The `SeoValidationBatchReportBuilder` uses `SeoValidationReportBuilder::build(...)` internally for each item. It does not mutate the input data. It is completely framework-neutral and emits no HTTP headers, routes, controllers, or responses. Existing validation, score, report builder, exporter, preset, and robots behaviors remain unchanged; sitemap DTO URL generation now preserves the supported extended child collections through the canonical XML path.
 
 You can easily export the report into various formats using the `SeoValidationReportExporter`:
 
