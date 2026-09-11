@@ -8,7 +8,7 @@ use Maatify\Seo\Exception\SeoInvalidArgumentException;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapGenerationResultDTO;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapIndexEntryDTO;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapUrlDTO;
-use Maatify\Seo\Web\Sitemap\Internal\SitemapCanonicalXmlWriter;
+use Maatify\Seo\Shared\Service\Internal\SitemapCanonicalXmlWriter;
 
 final readonly class SitemapGeneratorService
 {

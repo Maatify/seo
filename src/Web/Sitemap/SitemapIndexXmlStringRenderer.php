@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Seo\Web\Sitemap;
 
-use Maatify\Seo\Web\Sitemap\Internal\SitemapCanonicalXmlWriter;
+use Maatify\Seo\Shared\Service\Internal\SitemapCanonicalXmlWriter;
+use Maatify\Seo\Web\Sitemap\DTO\SitemapIndexEntryDTO;
 
 final readonly class SitemapIndexXmlStringRenderer
 {
@@ -13,11 +14,29 @@ final readonly class SitemapIndexXmlStringRenderer
      */
     public function renderIndex(array $sitemaps): string
     {
-        return (new SitemapCanonicalXmlWriter())->renderWebIndex($sitemaps);
+        $canonicalEntries = [];
+        foreach ($sitemaps as $sitemap) {
+            $canonicalEntries[] = $this->toCanonicalEntry($sitemap);
+        }
+
+        return (new SitemapCanonicalXmlWriter())->renderIndex($canonicalEntries);
     }
 
     public function renderEntry(mixed $sitemap): string
     {
-        return (new SitemapCanonicalXmlWriter())->renderWebIndexEntry($sitemap);
+        return (new SitemapCanonicalXmlWriter())->renderIndexEntry($this->toCanonicalEntry($sitemap));
+    }
+
+    /** @return mixed */
+    private function toCanonicalEntry(mixed $sitemap): mixed
+    {
+        if (!$sitemap instanceof SitemapIndexEntryDTO) {
+            return $sitemap;
+        }
+
+        return [
+            'loc' => $sitemap->loc,
+            'lastmod' => $sitemap->lastmod,
+        ];
     }
 }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Maatify\Seo\Web\Sitemap\Internal;
+namespace Maatify\Seo\Shared\Service\Internal;
 
 use Maatify\Seo\Exception\SeoInvalidArgumentException;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapAlternateUrlDTO;
@@ -11,7 +11,6 @@ use Maatify\Seo\Shared\DTO\Sitemap\SitemapIndexEntryDTO as SharedSitemapIndexEnt
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapNewsDTO;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapUrlDTO;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapVideoDTO;
-use Maatify\Seo\Web\Sitemap\DTO\SitemapIndexEntryDTO as WebSitemapIndexEntryDTO;
 use XMLWriter;
 
 final class SitemapCanonicalXmlWriter
@@ -79,21 +78,21 @@ final class SitemapCanonicalXmlWriter
     }
 
     /**
-     * @param array<mixed> $sitemaps
+     * @param array<mixed> $entries
      */
-    public function renderWebIndex(array $sitemaps): string
+    public function renderIndex(array $entries): string
     {
         $normalized = [];
-        foreach ($sitemaps as $sitemap) {
-            $normalized[] = $this->normalizeWebIndexEntry($sitemap);
+        foreach ($entries as $entry) {
+            $normalized[] = $this->normalizeIndexEntry($entry);
         }
 
-        return $this->renderIndex($normalized);
+        return $this->renderNormalizedIndex($normalized);
     }
 
-    public function renderWebIndexEntry(mixed $sitemap): string
+    public function renderIndexEntry(mixed $entry): string
     {
-        return $this->renderIndexEntry($this->normalizeWebIndexEntry($sitemap));
+        return $this->renderNormalizedIndexEntry($this->normalizeIndexEntry($entry));
     }
 
     /**
@@ -106,13 +105,13 @@ final class SitemapCanonicalXmlWriter
             $normalized[] = $this->normalizeSharedIndexEntry($entry);
         }
 
-        return $this->renderIndex($normalized);
+        return $this->renderNormalizedIndex($normalized);
     }
 
     /**
      * @param list<array{loc: string, lastmod: ?string}> $entries
      */
-    public function renderIndex(array $entries): string
+    private function renderNormalizedIndex(array $entries): string
     {
         $writer = $this->createWriter();
         $writer->startElement('sitemapindex');
@@ -131,7 +130,7 @@ final class SitemapCanonicalXmlWriter
     /**
      * @param array{loc: string, lastmod: ?string} $entry
      */
-    public function renderIndexEntry(array $entry): string
+    private function renderNormalizedIndexEntry(array $entry): string
     {
         $writer = $this->createWriter();
         $this->writeIndexEntry($writer, $entry);
@@ -143,15 +142,8 @@ final class SitemapCanonicalXmlWriter
     /**
      * @return array{loc: string, lastmod: ?string}
      */
-    private function normalizeWebIndexEntry(mixed $sitemap): array
+    private function normalizeIndexEntry(mixed $sitemap): array
     {
-        if ($sitemap instanceof WebSitemapIndexEntryDTO) {
-            return $this->normalizeIndexValues(
-                $sitemap->loc,
-                $sitemap->lastmod,
-            );
-        }
-
         if (!is_array($sitemap)) {
             throw SeoInvalidArgumentException::emptyField('sitemap');
         }

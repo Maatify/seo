@@ -97,8 +97,28 @@ foreach ($publicFacadePaths as $path) {
     stack3AssertTrue('public facade source is readable: ' . basename($path), is_string($source));
     stack3AssertTrue('public facade has no XMLWriter implementation: ' . basename($path), !str_contains((string) $source, 'XMLWriter'));
 }
-$canonicalWriterSource = file_get_contents(__DIR__ . '/../src/Web/Sitemap/Internal/SitemapCanonicalXmlWriter.php');
-stack3AssertTrue('canonical internal writer contains the sole XMLWriter implementation', is_string($canonicalWriterSource) && str_contains($canonicalWriterSource, 'XMLWriter'));
+$generatorSource = file_get_contents(__DIR__ . '/../src/Shared/Service/SitemapGeneratorService.php');
+stack3AssertTrue('SitemapGeneratorService has no Shared to Web dependency', is_string($generatorSource) && !str_contains($generatorSource, 'Maatify\\Seo\\Web\\'));
+$canonicalWriterSource = file_get_contents(__DIR__ . '/../src/Shared/Service/Internal/SitemapCanonicalXmlWriter.php');
+stack3AssertTrue('canonical writer uses the Shared internal namespace', is_string($canonicalWriterSource) && str_contains($canonicalWriterSource, 'namespace Maatify\\Seo\\Shared\\Service\\Internal;'));
+stack3AssertTrue('Shared canonical writer has no Web dependency', is_string($canonicalWriterSource) && !str_contains($canonicalWriterSource, 'Maatify\\Seo\\Web\\'));
+$xmlWriterImplementationFiles = [];
+$sourceIterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(__DIR__ . '/../src'));
+foreach ($sourceIterator as $sourceFile) {
+    if (!$sourceFile->isFile() || $sourceFile->getExtension() !== 'php') {
+        continue;
+    }
+
+    $source = file_get_contents($sourceFile->getPathname());
+    if (is_string($source) && str_contains($source, 'use XMLWriter;')) {
+        $xmlWriterImplementationFiles[] = $sourceFile->getPathname();
+    }
+}
+stack3AssertSame(
+    'canonical internal writer is the sole XMLWriter implementation file',
+    [__DIR__ . '/../src/Shared/Service/Internal/SitemapCanonicalXmlWriter.php'],
+    $xmlWriterImplementationFiles,
+);
 
 $extendedUrl = new SitemapUrlDTO(
     loc: 'https://example.com/articles/extended',

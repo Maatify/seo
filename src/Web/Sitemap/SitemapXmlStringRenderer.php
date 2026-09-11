@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Maatify\Seo\Web\Sitemap;
 
-use Maatify\Seo\Web\Sitemap\Internal\SitemapCanonicalXmlWriter;
+use Maatify\Seo\Shared\Service\Internal\SitemapCanonicalXmlWriter;
 
 final readonly class SitemapXmlStringRenderer
 {
