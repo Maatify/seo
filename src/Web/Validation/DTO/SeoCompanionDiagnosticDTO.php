@@ -90,7 +90,11 @@ final readonly class SeoCompanionDiagnosticDTO implements \JsonSerializable
 
         self::assertConditionalTarget($code, $field, $target);
 
-        if ($contract['legacy'] && $relatedLegacyCode !== $code) {
+        if ($contract['relatedLegacyCode'] === null && $relatedLegacyCode !== null) {
+            throw SeoInvalidArgumentException::invalidValue('relatedLegacyCode', 'New diagnostics do not authorize legacy correlation metadata.');
+        }
+
+        if ($contract['relatedLegacyCode'] === 'same_as_code' && $relatedLegacyCode !== $code) {
             throw SeoInvalidArgumentException::invalidValue('relatedLegacyCode', 'A legacy classification must reference its own legacy code.');
         }
 
@@ -130,7 +134,7 @@ final readonly class SeoCompanionDiagnosticDTO implements \JsonSerializable
     /**
      * @param list<string>|null $fields
      * @param list<string> $targetScopes
-     * @return array{severity: string|null, origin: string, profile: string, fields: list<string>|null, states: array<string, string>|null, targetScopes: list<string>, legacy: bool}
+     * @return array{severity: string|null, origin: string, profile: string, fields: list<string>|null, states: array<string, string>|null, targetScopes: list<string>, relatedLegacyCode: string|null}
      */
     private static function ordinary(
         string $severity,
@@ -138,7 +142,7 @@ final readonly class SeoCompanionDiagnosticDTO implements \JsonSerializable
         string $profile,
         ?array $fields,
         array $targetScopes,
-        bool $legacy = false,
+        ?string $relatedLegacyCode = null,
     ): array {
         return [
             'severity' => $severity,
@@ -147,7 +151,7 @@ final readonly class SeoCompanionDiagnosticDTO implements \JsonSerializable
             'fields' => $fields,
             'states' => null,
             'targetScopes' => $targetScopes,
-            'legacy' => $legacy,
+            'relatedLegacyCode' => $relatedLegacyCode,
         ];
     }
 
@@ -155,7 +159,7 @@ final readonly class SeoCompanionDiagnosticDTO implements \JsonSerializable
      * @param array<string, string> $states
      * @param list<string>|null $fields
      * @param list<string> $targetScopes
-     * @return array{severity: string|null, origin: string, profile: string, fields: list<string>|null, states: array<string, string>|null, targetScopes: list<string>, legacy: bool}
+     * @return array{severity: string|null, origin: string, profile: string, fields: list<string>|null, states: array<string, string>|null, targetScopes: list<string>, relatedLegacyCode: string|null}
      */
     private static function evidence(
         string $origin,
@@ -171,7 +175,7 @@ final readonly class SeoCompanionDiagnosticDTO implements \JsonSerializable
             'fields' => $fields,
             'states' => $states,
             'targetScopes' => $targetScopes,
-            'legacy' => false,
+            'relatedLegacyCode' => null,
         ];
     }
 
@@ -179,7 +183,7 @@ final readonly class SeoCompanionDiagnosticDTO implements \JsonSerializable
      * This private registry mirrors the Audit's complete machine-contract table.
      * It is deliberately not exposed as a public extension or lookup API.
      *
-     * @return array<string, array{severity: string|null, origin: string, profile: string, fields: list<string>|null, states: array<string, string>|null, targetScopes: list<string>, legacy: bool}>
+     * @return array<string, array{severity: string|null, origin: string, profile: string, fields: list<string>|null, states: array<string, string>|null, targetScopes: list<string>, relatedLegacyCode: string|null}>
      */
     private static function contracts(): array
     {
@@ -271,13 +275,13 @@ final readonly class SeoCompanionDiagnosticDTO implements \JsonSerializable
 
             'missing_og_type' => self::ordinary('warning', 'protocol', 'ogp', ['og:type'], $meta),
             'missing_og_url' => self::ordinary('warning', 'protocol', 'ogp', ['og:url'], $meta),
-            'title_too_short' => self::ordinary('warning', 'heuristic', 'seo-default', ['title'], $meta, true),
-            'title_too_long' => self::ordinary('warning', 'heuristic', 'seo-default', ['title'], $meta, true),
-            'description_too_short' => self::ordinary('warning', 'heuristic', 'seo-default', ['description'], $meta, true),
-            'description_too_long' => self::ordinary('warning', 'heuristic', 'seo-default', ['description'], $meta, true),
-            'missing_og_title' => self::ordinary('warning', 'protocol', 'ogp', ['og:title'], $meta, true),
-            'missing_og_description' => self::ordinary('warning', 'heuristic', 'seo-default', ['og:description'], $meta, true),
-            'missing_og_image' => self::ordinary('warning', 'protocol', 'ogp', ['og:image'], $meta, true),
+            'title_too_short' => self::ordinary('warning', 'heuristic', 'seo-default', ['title'], $meta, 'same_as_code'),
+            'title_too_long' => self::ordinary('warning', 'heuristic', 'seo-default', ['title'], $meta, 'same_as_code'),
+            'description_too_short' => self::ordinary('warning', 'heuristic', 'seo-default', ['description'], $meta, 'same_as_code'),
+            'description_too_long' => self::ordinary('warning', 'heuristic', 'seo-default', ['description'], $meta, 'same_as_code'),
+            'missing_og_title' => self::ordinary('warning', 'protocol', 'ogp', ['og:title'], $meta, 'same_as_code'),
+            'missing_og_description' => self::ordinary('warning', 'heuristic', 'seo-default', ['og:description'], $meta, 'same_as_code'),
+            'missing_og_image' => self::ordinary('warning', 'protocol', 'ogp', ['og:image'], $meta, 'same_as_code'),
         ];
     }
 
