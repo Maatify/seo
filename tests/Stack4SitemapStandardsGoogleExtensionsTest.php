@@ -842,6 +842,11 @@ $videoAcceptedFieldValues = [
     'https://user:pass@example.com/path',
     'https://[::1]/path',
     'https://example.com:8080/path',
+    'https://example.com:0/path',
+    'https://example.com:80/path',
+    'https://example.com:443/path',
+    'https://example.com:0080/path',
+    'https://example.com:65535/path',
     'https://example.com/video#fragment',
     'https://[2001:db8::1]:8443/path#fragment',
 ];
