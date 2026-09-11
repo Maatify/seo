@@ -8,7 +8,10 @@ use Maatify\Seo\Exception\SeoInvalidArgumentException;
 
 final readonly class RobotsMetaValidationInputDTO
 {
-    /** @param array<mixed> $directives */
+    /**
+     * @param list<string> $directives
+     * @phpstan-param array<int|string, mixed> $directives
+     */
     public function __construct(
         public array $directives,
     ) {

@@ -8,7 +8,10 @@ use Maatify\Seo\Exception\SeoInvalidArgumentException;
 
 final readonly class HreflangValidationPageDTO
 {
-    /** @param array<mixed> $links */
+    /**
+     * @param list<HreflangValidationLinkDTO> $links
+     * @phpstan-param array<int|string, mixed> $links
+     */
     public function __construct(
         public string $pageUrl,
         public array $links,

@@ -9,9 +9,12 @@ use Maatify\Seo\Exception\SeoInvalidArgumentException;
 final readonly class SitemapUrlValidationInputDTO
 {
     /**
-     * @param array<mixed> $images
-     * @param array<mixed> $videos
-     * @param array<mixed> $news
+     * @param list<SitemapImageValidationInputDTO> $images
+     * @param list<SitemapVideoValidationInputDTO> $videos
+     * @param list<SitemapNewsValidationInputDTO> $news
+     * @phpstan-param array<int|string, mixed> $images
+     * @phpstan-param array<int|string, mixed> $videos
+     * @phpstan-param array<int|string, mixed> $news
      */
     public function __construct(
         public ?string $loc = null,

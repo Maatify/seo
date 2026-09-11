@@ -63,6 +63,22 @@ function stack1AssertThrows(string $label, callable $callback): void
     throw new RuntimeException("Assertion failed: {$label}\nExpected SeoInvalidArgumentException.");
 }
 
+function stack1AssertConstructorDoc(string $label, string $class, string $expected): void
+{
+    $docComment = (new ReflectionMethod($class, '__construct'))->getDocComment();
+    if ($docComment === false || !str_contains($docComment, $expected)) {
+        throw new RuntimeException("Assertion failed: {$label}\nExpected constructor PHPDoc fragment:\n{$expected}\nActual:\n" . ($docComment === false ? 'false' : $docComment));
+    }
+}
+
+stack1AssertConstructorDoc('Robots meta list PHPDoc contract', RobotsMetaValidationInputDTO::class, '@param list<string> $directives');
+stack1AssertConstructorDoc('Sitemap document entry PHPDoc contract', SitemapValidationDocumentDTO::class, '@param list<SitemapUrlValidationInputDTO>|list<SitemapIndexEntryValidationInputDTO> $entries');
+stack1AssertConstructorDoc('Sitemap image list PHPDoc contract', SitemapUrlValidationInputDTO::class, '@param list<SitemapImageValidationInputDTO> $images');
+stack1AssertConstructorDoc('Sitemap video list PHPDoc contract', SitemapUrlValidationInputDTO::class, '@param list<SitemapVideoValidationInputDTO> $videos');
+stack1AssertConstructorDoc('Sitemap news list PHPDoc contract', SitemapUrlValidationInputDTO::class, '@param list<SitemapNewsValidationInputDTO> $news');
+stack1AssertConstructorDoc('Hreflang page list PHPDoc contract', HreflangValidationPageDTO::class, '@param list<HreflangValidationLinkDTO> $links');
+stack1AssertConstructorDoc('Hreflang cluster list PHPDoc contract', HreflangValidationClusterDTO::class, '@param list<HreflangValidationPageDTO> $pages');
+
 $videoTarget = new SeoDiagnosticTargetDTO('sitemap_video', 0, 1);
 $diagnostic = new SeoCompanionDiagnosticDTO(
     code: 'google_video_title_missing',
