@@ -23,12 +23,15 @@ final class GoogleHreflangClusterValidator
         $diagnostics = [];
         /** @var array<int, list<array{tag: string, url: string}>> $usableLinksByPage */
         $usableLinksByPage = [];
+        /** @var array<int, list<array{tag: ?string, url: ?string}>> $invalidLinksByPage */
+        $invalidLinksByPage = [];
         /** @var array<string, int> $pageIndexesByUrl */
         $pageIndexesByUrl = [];
 
         foreach ($cluster->pages as $pageIndex => $page) {
             $pageIndexesByUrl[$page->pageUrl] = $pageIndex;
             $usableLinksByPage[$pageIndex] = [];
+            $invalidLinksByPage[$pageIndex] = [];
 
             foreach ($page->links as $linkIndex => $link) {
                 $tagValid = HreflangTagNormalizer::isValidSyntax($link->hreflang);
@@ -56,6 +59,13 @@ final class GoogleHreflangClusterValidator
                     );
                 }
 
+                if (!$tagValid || !$urlValid) {
+                    $invalidLinksByPage[$pageIndex][] = [
+                        'tag' => $link->hreflang,
+                        'url' => $link->url,
+                    ];
+                }
+
                 if ($tagValid && $urlValid) {
                     /** @var string $hreflang */
                     $hreflang = $link->hreflang;
@@ -70,7 +80,10 @@ final class GoogleHreflangClusterValidator
         }
 
         foreach ($cluster->pages as $pageIndex => $page) {
-            if (!$this->hasLinkTo($usableLinksByPage[$pageIndex], $page->pageUrl)) {
+            if (
+                !$this->hasLinkTo($usableLinksByPage[$pageIndex], $page->pageUrl)
+                && !$this->hasInvalidLinkTo($invalidLinksByPage[$pageIndex], $page->pageUrl)
+            ) {
                 $diagnostics[] = $this->diagnostic(
                     'hreflang_self_reference_missing',
                     'Each supplied hreflang page should include a usable alternate link to itself.',
@@ -86,7 +99,11 @@ final class GoogleHreflangClusterValidator
         foreach ($cluster->pages as $pageIndex => $page) {
             foreach ($usableLinksByPage[$pageIndex] as $link) {
                 $targetPageIndex = $pageIndexesByUrl[$link['url']] ?? null;
-                if ($targetPageIndex === null || $this->hasLinkTo($usableLinksByPage[$targetPageIndex], $page->pageUrl)) {
+                if (
+                    $targetPageIndex === null
+                    || $this->hasLinkTo($usableLinksByPage[$targetPageIndex], $page->pageUrl)
+                    || $this->hasInvalidLinkTo($invalidLinksByPage[$targetPageIndex], $page->pageUrl)
+                ) {
                     continue;
                 }
 
@@ -108,7 +125,17 @@ final class GoogleHreflangClusterValidator
 
         $baseline = $this->alternateSet($usableLinksByPage[0] ?? []);
         foreach ($cluster->pages as $pageIndex => $_page) {
-            if ($this->alternateSet($usableLinksByPage[$pageIndex]) === $baseline) {
+            $current = $this->alternateSet($usableLinksByPage[$pageIndex]);
+            if ($current === $baseline) {
+                continue;
+            }
+
+            if ($this->alternateSetMismatchIsExplainedByInvalidLinks(
+                $baseline,
+                $current,
+                $invalidLinksByPage[0] ?? [],
+                $invalidLinksByPage[$pageIndex],
+            )) {
                 continue;
             }
 
@@ -136,20 +163,78 @@ final class GoogleHreflangClusterValidator
         return false;
     }
 
+    /** @param list<array{tag: ?string, url: ?string}> $links */
+    private function hasInvalidLinkTo(array $links, string $url): bool
+    {
+        foreach ($links as $link) {
+            if ($link['url'] === $url) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * @param list<array{tag: string, url: string}> $links
-     * @return list<string>
+     * @return array<string, array{tag: string, url: string}>
      */
     private function alternateSet(array $links): array
     {
         $set = [];
         foreach ($links as $link) {
             $key = strlen($link['tag']) . ':' . $link['tag'] . '|' . strlen($link['url']) . ':' . $link['url'];
-            $set[$key] = true;
+            $set[$key] = $link;
         }
         ksort($set);
 
-        return array_keys($set);
+        return $set;
+    }
+
+    /**
+     * @param array<string, array{tag: string, url: string}> $baseline
+     * @param array<string, array{tag: string, url: string}> $current
+     * @param list<array{tag: ?string, url: ?string}> $invalidBaseline
+     * @param list<array{tag: ?string, url: ?string}> $invalidCurrent
+     */
+    private function alternateSetMismatchIsExplainedByInvalidLinks(
+        array $baseline,
+        array $current,
+        array $invalidBaseline,
+        array $invalidCurrent,
+    ): bool {
+        $missingFromCurrent = array_diff_key($baseline, $current);
+        $missingFromBaseline = array_diff_key($current, $baseline);
+
+        return $this->invalidLinksCoverExpectedSet($invalidCurrent, $missingFromCurrent)
+            && $this->invalidLinksCoverExpectedSet($invalidBaseline, $missingFromBaseline);
+    }
+
+    /**
+     * @param list<array{tag: ?string, url: ?string}> $invalidLinks
+     * @param array<string, array{tag: string, url: string}> $expectedLinks
+     */
+    private function invalidLinksCoverExpectedSet(array $invalidLinks, array $expectedLinks): bool
+    {
+        foreach ($expectedLinks as $expectedLink) {
+            $covered = false;
+            foreach ($invalidLinks as $invalidLink) {
+                if (
+                    $invalidLink['tag'] !== null
+                    && $invalidLink['url'] === $expectedLink['url']
+                    && HreflangTagNormalizer::normalize($invalidLink['tag']) === $expectedLink['tag']
+                ) {
+                    $covered = true;
+                    break;
+                }
+            }
+
+            if (!$covered) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function diagnostic(

@@ -398,7 +398,81 @@ foreach ($invalidLinkCases as $caseIndex => [$invalidLink, $expectedCodes]) {
     }
 }
 
-// 9. Page identity remains exact structural input and duplicate identity remains an invocation failure.
+// 9. Invalid self/return candidates remain link-level only and cannot cause cluster cascades.
+$invalidSelfTagResult = $hreflangValidator->validate(stack6Cluster([
+    stack6Page($page0, [stack6Link('en_US', $page0)]),
+]));
+stack6AssertLinkCodeTarget($invalidSelfTagResult, 'hreflang_tag_invalid_syntax', 0, 0);
+foreach (['hreflang_self_reference_missing', 'hreflang_reciprocal_link_missing', 'hreflang_alternate_set_inconsistent'] as $clusterCode) {
+    stack6AssertSame('invalid self tag no cascade ' . $clusterCode, 0, stack6CountCode($invalidSelfTagResult, $clusterCode));
+}
+
+$relativePage = '/relative-page';
+$invalidSelfUrlResult = $hreflangValidator->validate(stack6Cluster([
+    stack6Page($relativePage, [stack6Link('en', $relativePage)]),
+]));
+stack6AssertLinkCodeTarget($invalidSelfUrlResult, 'hreflang_url_not_fully_qualified', 0, 0);
+foreach (['hreflang_self_reference_missing', 'hreflang_reciprocal_link_missing', 'hreflang_alternate_set_inconsistent'] as $clusterCode) {
+    stack6AssertSame('invalid self URL no cascade ' . $clusterCode, 0, stack6CountCode($invalidSelfUrlResult, $clusterCode));
+}
+
+$invalidReturnResult = $hreflangValidator->validate(stack6Cluster([
+    stack6Page($page0, [stack6Link('en-US', $page0), stack6Link('fr', $page1)]),
+    stack6Page($page1, [stack6Link('fr', $page1), stack6Link('en_US', $page0)]),
+]));
+stack6AssertLinkCodeTarget($invalidReturnResult, 'hreflang_tag_invalid_syntax', 1, 1);
+stack6AssertSame('invalid return edge does not cascade reciprocity', 0, stack6CountCode($invalidReturnResult, 'hreflang_reciprocal_link_missing'));
+stack6AssertSame('invalid return edge does not cascade alternate set', 0, stack6CountCode($invalidReturnResult, 'hreflang_alternate_set_inconsistent'));
+
+// 10. Invalid outgoing candidates do not make an otherwise absent usable edge reciprocal.
+$invalidOutgoingResult = $hreflangValidator->validate(stack6Cluster([
+    stack6Page($page0, [stack6Link('en', $page0), stack6Link('fr_US', $page1)]),
+    stack6Page($page1, [stack6Link('fr-US', $page1), stack6Link('en', $page0)]),
+]));
+stack6AssertLinkCodeTarget($invalidOutgoingResult, 'hreflang_tag_invalid_syntax', 0, 1);
+stack6AssertSame('invalid outgoing edge does not cascade reciprocity', 0, stack6CountCode($invalidOutgoingResult, 'hreflang_reciprocal_link_missing'));
+stack6AssertSame('invalid outgoing edge does not cascade alternate set', 0, stack6CountCode($invalidOutgoingResult, 'hreflang_alternate_set_inconsistent'));
+
+// 11. Alternate-set equality stays unknown when its only difference is an excluded invalid candidate.
+$invalidAlternateSetResult = $hreflangValidator->validate(stack6Cluster([
+    stack6Page($page0, [
+        stack6Link('en-US', $page0),
+        stack6Link('fr', $page1),
+        stack6Link('x-default', $defaultUrl),
+    ]),
+    stack6Page($page1, [
+        stack6Link('fr', $page1),
+        stack6Link('x-default', $defaultUrl),
+        stack6Link('en_US', $page0),
+    ]),
+]));
+stack6AssertLinkCodeTarget($invalidAlternateSetResult, 'hreflang_tag_invalid_syntax', 1, 2);
+stack6AssertSame('invalid alternate candidate does not cascade set equality', 0, stack6CountCode($invalidAlternateSetResult, 'hreflang_alternate_set_inconsistent'));
+
+// 12. A real usable-link violation remains visible beside an unrelated invalid link.
+$usableViolationWithUnrelatedInvalidResult = $hreflangValidator->validate(stack6Cluster([
+    stack6Page($page0, [
+        stack6Link('en', $page0),
+        stack6Link('fr', $page1),
+        stack6Link('en_US', 'https://example.com/unrelated'),
+    ]),
+    stack6Page($page1, [stack6Link('fr', $page1)]),
+]));
+stack6AssertLinkCodeTarget($usableViolationWithUnrelatedInvalidResult, 'hreflang_tag_invalid_syntax', 0, 2);
+stack6AssertDiagnostic(
+    $usableViolationWithUnrelatedInvalidResult,
+    'hreflang_reciprocal_link_missing',
+    'href',
+    ['scope' => 'hreflang_page', 'entry_index' => 0, 'item_index' => null, 'line' => null],
+);
+stack6AssertDiagnostic(
+    $usableViolationWithUnrelatedInvalidResult,
+    'hreflang_alternate_set_inconsistent',
+    'href',
+    ['scope' => 'hreflang_page', 'entry_index' => 1, 'item_index' => null, 'line' => null],
+);
+
+// 13. Page identity remains exact structural input and duplicate identity remains an invocation failure.
 $exactPageIdentity = '  page identity  ';
 $identityResult = $hreflangValidator->validate(stack6Cluster([
     stack6Page($exactPageIdentity, []),
