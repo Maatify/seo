@@ -20,7 +20,7 @@ $noIndexBuilder = new MetaRobotsBuilder();
 $noIndexHtml = $noIndexBuilder
     ->noIndex()
     ->noFollow()
-    ->noArchive()
+    ->noArchive() // Generic compatibility directive; Google cached-link results are no longer current.
     ->maxSnippet(50)
     ->toHtml();
 echo "Restricted Non-Indexable: \n" . $noIndexHtml . "\n\n";

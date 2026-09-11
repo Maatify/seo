@@ -100,7 +100,7 @@ To see how the library functions in real-world scenarios, you can run the follow
 - `php examples/phase13o-product-advanced.php`: Demonstrates advanced product structured data using typed composition (Product, Offer, AggregateOffer, ProductGroup).
 - `php examples/phase7-output-showcase.php`: Showcases rendered SEO head output helpers and DTO output sections.
 - `php examples/phase13-jsonld-builders.php`: Demonstrates the JSON-LD builder suite across supported schema types.
-- `php examples/robots-output.php`: Renders a representative `robots.txt` with user-agent rules, allow/disallow paths, crawl delay, comments, and a sitemap URL.
+- `php examples/robots-output.php`: Renders a representative `robots.txt` with user-agent rules, allow/disallow paths, a non-standard crawler `crawl-delay` extension, comments, and a sitemap URL.
 - `php examples/seo-validation.php`: Runs page SEO validation and scoring, then exports a terminal-readable report with status, score, grade, and findings.
 - `php examples/product-seo-audit.php`: Audits representative Product metadata and Product JSON-LD through the existing validation pipeline, including structured-data findings.
 - `php examples/redirect-slug-history.php`: Demonstrates an in-memory slug-history change, optional redirect creation, legacy-slug resolution, and the final redirect decision with target URL.

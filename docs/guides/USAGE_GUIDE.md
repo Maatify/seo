@@ -565,7 +565,7 @@ $txt = new RobotsTxtDTO(
             userAgent: '*',
             allow: ['/'],
             disallow: ['/admin/', '/private/'],
-            crawlDelay: 10,
+            crawlDelay: 10, // Non-standard crawler extension; not RFC core or Google-supported.
             comments: ['Global rule for all bots']
         ),
         new RobotsRuleDTO(
@@ -588,6 +588,22 @@ $txt = new RobotsTxtDTO(
 // header in your host application controller.
 echo $renderer->render($txt);
 ```
+
+### Robots validation profiles
+
+Robots validation uses raw candidate input, so malformed or provider-specific values can be diagnosed without weakening the strict generation DTOs:
+
+```php
+use Maatify\Seo\Web\Validation\Input\RobotsTxtValidationInputDTO;
+use Maatify\Seo\Web\Validation\Profile\GoogleRobotsTxtValidator;
+use Maatify\Seo\Web\Validation\Profile\Rfc9309RobotsValidator;
+
+$candidate = new RobotsTxtValidationInputDTO($robotsTxtContent);
+$rfc = (new Rfc9309RobotsValidator())->validate($candidate);
+$google = (new GoogleRobotsTxtValidator())->validate($candidate);
+```
+
+Both validators return `SeoCompanionValidationResultDTO`. RFC 9309 protocol outcomes and Google provider outcomes remain separate, and companion diagnostics do not enter the legacy validation result or score. The Google profile accepts valid raw Unicode absolute `Sitemap:` URLs and rejects relative, malformed, fragmented, or `data:` values; the strict `RobotsTxtDTO` contract remains unchanged. `crawl-delay` remains a non-standard compatibility extension rather than RFC or Google behavior.
 
 ---
 

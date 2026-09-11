@@ -13,6 +13,7 @@ final class MetaRobotsBuilder
 {
     private const DIRECTIVE_INDEX = 'index';
     private const DIRECTIVE_NOINDEX = 'noindex';
+    private const DIRECTIVE_INDEXIFEMBEDDED = 'indexifembedded';
     private const DIRECTIVE_FOLLOW = 'follow';
     private const DIRECTIVE_NOFOLLOW = 'nofollow';
     private const DIRECTIVE_NOARCHIVE = 'noarchive';
@@ -64,11 +65,21 @@ final class MetaRobotsBuilder
     }
 
     /**
-     * Prevent search engines from showing a cached copy of the page.
+     * Preserve the generic noarchive compatibility directive.
+     *
+     * Google no longer offers the cached-link feature this directive historically controlled.
      */
     public function noArchive(): static
     {
         return $this->add(self::DIRECTIVE_NOARCHIVE);
+    }
+
+    /**
+     * Allow indexing of embedded content when the page itself is noindexed.
+     */
+    public function indexifembedded(): static
+    {
+        return $this->add(self::DIRECTIVE_INDEXIFEMBEDDED);
     }
 
     /**
@@ -98,11 +109,11 @@ final class MetaRobotsBuilder
     /**
      * Set the maximum snippet length in characters.
      *
-     * @throws SeoInvalidArgumentException When $value is negative.
+     * @throws SeoInvalidArgumentException When $value is less than -1.
      */
     public function maxSnippet(int $value): static
     {
-        $this->assertNonNegative($value, 'max-snippet');
+        $this->assertAtLeastMinusOne($value, 'max-snippet');
 
         return $this->replacePrefixed(self::PREFIX_MAX_SNIPPET, self::PREFIX_MAX_SNIPPET . $value);
     }
@@ -124,11 +135,11 @@ final class MetaRobotsBuilder
     /**
      * Set the maximum video preview length in seconds.
      *
-     * @throws SeoInvalidArgumentException When $value is negative.
+     * @throws SeoInvalidArgumentException When $value is less than -1.
      */
     public function maxVideoPreview(int $value): static
     {
-        $this->assertNonNegative($value, 'max-video-preview');
+        $this->assertAtLeastMinusOne($value, 'max-video-preview');
 
         return $this->replacePrefixed(self::PREFIX_MAX_VIDEO_PREVIEW, self::PREFIX_MAX_VIDEO_PREVIEW . $value);
     }
@@ -262,10 +273,10 @@ final class MetaRobotsBuilder
         return $this;
     }
 
-    private function assertNonNegative(int $value, string $field): void
+    private function assertAtLeastMinusOne(int $value, string $field): void
     {
-        if ($value < 0) {
-            throw SeoInvalidArgumentException::invalidValue($field, 'Value must be greater than or equal to 0.');
+        if ($value < -1) {
+            throw SeoInvalidArgumentException::invalidValue($field, 'Value must be greater than or equal to -1.');
         }
     }
 }
