@@ -27,7 +27,7 @@ $rule = new RobotsRuleDTO(
     userAgent: '*',
     allow: ['/public/'],
     disallow: ['/admin/', '/private/'],
-    crawlDelay: 2,
+    crawlDelay: 2, // Non-standard crawler extension; not RFC core or Google-supported.
     comments: ['Crawler access rules for the public site'],
 );
 

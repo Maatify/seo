@@ -175,6 +175,8 @@ The Web layer includes framework-neutral helpers for generating `robots.txt` str
 - **`Web/Robots/RobotsTxtRenderer.php`**: Renders a full `robots.txt` plain string from a provided `RobotsTxtDTO`.
 - **`Web/Robots/DTO/RobotsTxtDTO.php`**: A DTO representing the complete file, containing global comments, a list of sitemaps, and user-agent rule blocks.
 - **`Web/Robots/DTO/RobotsRuleDTO.php`**: A DTO representing a single user-agent block, with fields for `userAgent`, `allow`, `disallow`, `crawlDelay`, and comments.
+- **Robots validation profiles**: `Web/Validation/Profile/Rfc9309RobotsValidator` and `Web/Validation/Profile/GoogleRobotsTxtValidator` consume the raw `Web/Validation/Input/RobotsTxtValidationInputDTO` and return the unified `SeoCompanionValidationResultDTO`. RFC protocol diagnostics and Google provider diagnostics are separate companion-only outcomes; neither changes the legacy result or score. `Sitemap:` values in the Google profile use the wider raw Unicode absolute-URL lexical contract, while strict `RobotsTxtDTO` keeps its existing ASCII-only `FILTER_VALIDATE_URL` behavior.
+- **Robots meta validation**: `Web/Validation/Profile/GoogleRobotsMetaValidator` consumes `RobotsMetaValidationInputDTO` and reports only the fixed Google companion diagnostics. `MetaRobotsBuilder` remains the generation lane: `-1` is valid for `maxSnippet()` and `maxVideoPreview()`, `indexifembedded()` is available, and `unavailableAfter()` remains raw-compatible. `crawlDelay` is preserved as a non-standard crawler extension and is not RFC-core or Google-supported behavior.
 
 ### Validation Helpers
 The Web layer includes framework-neutral helpers for auditing and validating generated SEO metadata arrays or objects.
