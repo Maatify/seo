@@ -946,8 +946,14 @@ unofficial endpoints remain out of scope.
 * WU1–WU3: complete
 * Verification Gate: PASS
 * Documentation Sweep: complete
-* Final Review: pending
-* Phase 23: Draft
+* Final Review: PASS
+* Phase 23: Complete
+* Reviewed Draft baseline: `c3175e35c9e7d97439e8aff2cf5ce7d7bb20be0a`
+* Reviewed latest `main`: `1e2cca61fa4259da3cf20c8908b08f413b93c51b`
+
+The Phase is recorded as Complete after the Final Review passed against the latest
+`main`. Ready and merge remain separate maintainer integration actions and are not
+part of this completion record.
 
 ## Scope and provider boundary
 
