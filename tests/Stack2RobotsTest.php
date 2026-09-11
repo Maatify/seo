@@ -158,7 +158,7 @@ stack2AssertDiagnostics('RFC path/product diagnostics', $rfcResult, [
 $validRfcResult = $rfcValidator->validate(new RobotsTxtValidationInputDTO("User-agent: *\r\nAllow: /\r\nDisallow:\n"));
 stack2AssertDiagnostics('RFC valid empty/root/line-ending cases', $validRfcResult, []);
 
-$controlRfcResult = $rfcValidator->validate(new RobotsTxtValidationInputDTO("User-agent: bot\x01\r\nUser-agent: tab\t\r\nDisallow: /private\x02\r\n# comment\x03\nAllow: /ok\n"));
+$controlRfcResult = $rfcValidator->validate(new RobotsTxtValidationInputDTO("User-agent: bot\x01\r\nDisallow: /private\x02\r\n# comment\x03\nAllow: /ok\n"));
 stack2AssertDiagnostics('RFC control-character diagnostics', $controlRfcResult, [
     [
         'code' => 'robots_rfc9309_control_character_invalid',
@@ -172,11 +172,35 @@ stack2AssertDiagnostics('RFC control-character diagnostics', $controlRfcResult, 
     [
         'code' => 'robots_rfc9309_control_character_invalid',
         'severity' => 'error',
-        'field' => 'user_agent',
+        'field' => 'path',
         'origin' => 'protocol',
         'profile' => 'rfc9309',
         'evidence_state' => null,
         'target' => ['scope' => 'robots_rule', 'entry_index' => null, 'item_index' => null, 'line' => 2],
+    ],
+]);
+
+$syntacticWhitespaceRfcResult = $rfcValidator->validate(new RobotsTxtValidationInputDTO(
+    "User-agent:\tBot\t\n"
+    . "Allow:\t/path\n"
+    . "Disallow:\t\n"
+    . "Allow: /path\t# comment\n"
+));
+stack2AssertDiagnostics('RFC SP/HTAB syntactic whitespace', $syntacticWhitespaceRfcResult, []);
+
+$internalTabRfcResult = $rfcValidator->validate(new RobotsTxtValidationInputDTO(
+    "User-agent: ta\tb\n"
+    . "Disallow: /pa\tth\n"
+));
+stack2AssertDiagnostics('RFC internal HTAB control diagnostics', $internalTabRfcResult, [
+    [
+        'code' => 'robots_rfc9309_control_character_invalid',
+        'severity' => 'error',
+        'field' => 'user_agent',
+        'origin' => 'protocol',
+        'profile' => 'rfc9309',
+        'evidence_state' => null,
+        'target' => ['scope' => 'robots_rule', 'entry_index' => null, 'item_index' => null, 'line' => 1],
     ],
     [
         'code' => 'robots_rfc9309_control_character_invalid',
@@ -185,11 +209,18 @@ stack2AssertDiagnostics('RFC control-character diagnostics', $controlRfcResult, 
         'origin' => 'protocol',
         'profile' => 'rfc9309',
         'evidence_state' => null,
-        'target' => ['scope' => 'robots_rule', 'entry_index' => null, 'item_index' => null, 'line' => 3],
+        'target' => ['scope' => 'robots_rule', 'entry_index' => null, 'item_index' => null, 'line' => 2],
     ],
 ]);
 
 $googleValidator = new GoogleRobotsTxtValidator();
+$googleSyntacticWhitespace = $googleValidator->validate(new RobotsTxtValidationInputDTO(
+    "User-agent:\tBot\t\n"
+    . "Allow:\t/path\n"
+    . "Disallow:\t\n"
+));
+stack2AssertDiagnostics('Google ignores RFC syntactic HTAB around values', $googleSyntacticWhitespace, []);
+
 $googleBoundary = $googleValidator->validate(new RobotsTxtValidationInputDTO(str_repeat('a', 512000)));
 stack2AssertDiagnostics('Google 512000-byte boundary', $googleBoundary, []);
 $googleOverBoundary = $googleValidator->validate(new RobotsTxtValidationInputDTO(str_repeat('a', 512001)));
@@ -307,6 +338,11 @@ stack2AssertDiagnostics('Google path and Sitemap contracts', $googleRulesAndSite
         'target' => ['scope' => 'robots_rule', 'entry_index' => null, 'item_index' => null, 'line' => 11],
     ],
 ]);
+
+$googleLocalhostSitemap = $googleValidator->validate(new RobotsTxtValidationInputDTO(
+    "Sitemap: https://localhost/sitemap.xml\n"
+));
+stack2AssertDiagnostics('Google localhost Sitemap is lexical-only', $googleLocalhostSitemap, []);
 
 $googleSitemapMatrix = $googleValidator->validate(new RobotsTxtValidationInputDTO(
     "Sitemap: https://example.com/sitemap.xml\n"

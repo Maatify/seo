@@ -29,16 +29,21 @@ final class RobotsTxtParser
             }
 
             $value = substr($line, $separator + 1);
-            if ($name !== 'sitemap') {
+            if (in_array($name, ['user-agent', 'allow', 'disallow'], true)) {
                 $commentStart = strpos($value, '#');
                 if ($commentStart !== false) {
                     $value = substr($value, 0, $commentStart);
                 }
+
+                $value = trim($value, " \t");
+            } else {
+                // Preserve the existing Sitemap whitespace policy; RFC WS handling is scoped above.
+                $value = trim($value, ' ');
             }
 
             $records[] = [
                 'name' => $name,
-                'value' => trim($value, ' '),
+                'value' => $value,
                 'line' => $lineIndex + 1,
             ];
         }

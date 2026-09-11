@@ -603,7 +603,7 @@ $rfc = (new Rfc9309RobotsValidator())->validate($candidate);
 $google = (new GoogleRobotsTxtValidator())->validate($candidate);
 ```
 
-Both validators return `SeoCompanionValidationResultDTO`. RFC 9309 protocol outcomes and Google provider outcomes remain separate, and companion diagnostics do not enter the legacy validation result or score. The Google profile accepts valid raw Unicode absolute `Sitemap:` URLs and rejects relative, malformed, fragmented, or `data:` values; the strict `RobotsTxtDTO` contract remains unchanged. `crawl-delay` remains a non-standard compatibility extension rather than RFC or Google behavior.
+Both validators return `SeoCompanionValidationResultDTO`. RFC 9309 protocol outcomes and Google provider outcomes remain separate, and companion diagnostics do not enter the legacy validation result or score. The existing strict `RobotsTxtDTO` `FILTER_VALIDATE_URL` behavior for Sitemap URLs is preserved, as are its generation/render compatibility behaviors; Stack 2 intentionally adds hard structured-input rejection for control-character injection. The Google profile accepts valid raw Unicode absolute `Sitemap:` URLs and rejects relative, malformed, fragmented, or `data:` values. `crawl-delay` remains a non-standard compatibility extension rather than RFC or Google behavior.
 
 ---
 
