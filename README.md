@@ -73,7 +73,7 @@ echo $renderer->render($metaTags);
 - **JSON-LD schemas:** Framework-agnostic structured data generation for SEO (e.g., Breadcrumbs, Products, ProductGroup, AggregateOffer) via fluent builders.
 - **Social metadata:** Generate Open Graph and Twitter Card tags seamlessly.
 - **Sitemap XML:** In-memory URL-set and sitemap-index XML strings from typed DTOs and supported raw URL arrays, with strict URL/date/frequency/priority validation.
-- **Extended sitemap data:** Hreflang alternates including `x-default`, plus image, video, and news child elements are supported by the Web string renderers.
+- **Extended sitemap data:** Hreflang alternates including `x-default`, plus image, video, and news child elements are supported by the strict-DTO generator and Web string renderers. DTO URL output is serialized through the same canonical XML path.
 - **Host-owned output:** Renderers return XML strings; the host application owns routes, headers, HTTP responses, and any persistence or delivery strategy.
 - **Redirects and slug history:** Logic to manage URL migrations and legacy paths cleanly.
 - **SEO validation and scoring:** Audit generated SEO metadata arrays or objects to warn about missing fields, conflicts, and compute actionable SEO scores.

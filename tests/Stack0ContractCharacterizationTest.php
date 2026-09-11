@@ -166,9 +166,8 @@ $expectedRendererExtendedXml = $xmlHeader
 stack0AssertSame('renderer exact extended sitemap XML', $expectedRendererExtendedXml, $rendererExtendedXml);
 
 $generatorResult = (new SitemapGeneratorService())->generateUrlSitemap([$extendedUrl]);
-$expectedGeneratorXml = $xmlHeader
-    . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml"><url><loc>https://example.com/extended</loc><lastmod>2026-07-01T10:00:00+00:00</lastmod><changefreq>daily</changefreq><priority>0.7</priority><xhtml:link rel="alternate" hreflang="en" href="https://example.com/extended"/></url></urlset>' . "\n";
-stack0AssertSame('generator exact extended sitemap XML currently drops image video news', $expectedGeneratorXml, $generatorResult->xml);
+$expectedGeneratorXml = $expectedRendererExtendedXml;
+stack0AssertSame('generator exact extended sitemap XML preserves all extended children', $expectedGeneratorXml, $generatorResult->xml);
 stack0AssertSame('sitemap generation result serialized shape', ['xml' => $expectedGeneratorXml, 'entry_count' => 1, 'type' => 'urlset'], $generatorResult->jsonSerialize());
 
 $sharedIndexEntry = new SharedSitemapIndexEntryDTO('https://example.com/shared.xml', '2026-07-01');
