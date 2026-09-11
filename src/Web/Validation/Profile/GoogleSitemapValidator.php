@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maatify\Seo\Web\Validation\Profile;
 
+use Maatify\Seo\Exception\SeoInvalidArgumentException;
 use Maatify\Seo\Web\Validation\DTO\SeoCompanionValidationResultDTO;
 use Maatify\Seo\Web\Validation\DTO\SeoValidationContextDTO;
 use Maatify\Seo\Web\Validation\Input\Sitemap\SitemapUrlValidationInputDTO;
@@ -16,6 +17,10 @@ final class GoogleSitemapValidator
         SitemapValidationDocumentDTO $document,
         ?SeoValidationContextDTO $context = null,
     ): SeoCompanionValidationResultDTO {
+        if ($document->type !== 'urlset') {
+            throw SeoInvalidArgumentException::invalidValue('type', 'Google Sitemap validation requires a urlset document.');
+        }
+
         $diagnostics = [];
 
         $hostState = SitemapValidationSupport::scalarEvidence($context, 'google_sitemap.host_verification');
@@ -27,10 +32,6 @@ final class GoogleSitemapValidator
             'sitemap_document',
             evidenceState: $hostState,
         );
-
-        if ($document->type !== 'urlset') {
-            return SitemapValidationSupport::result($diagnostics);
-        }
 
         foreach ($document->entries as $entryIndex => $entry) {
             if (!$entry instanceof SitemapUrlValidationInputDTO) {
@@ -59,16 +60,18 @@ final class GoogleSitemapValidator
                 );
             }
 
-            $lastmodState = SitemapValidationSupport::indexedEvidence($context, 'google_sitemap.lastmod_accuracy', $entryIndex);
-            $diagnostics[] = SitemapValidationSupport::diagnostic(
-                'google_sitemap_lastmod_accuracy',
-                $lastmodState === 'inaccurate' ? 'warning' : 'info',
-                'Google lastmod accuracy is represented only by caller-supplied evidence.',
-                'lastmod',
-                'sitemap_url',
-                $entryIndex,
-                evidenceState: $lastmodState,
-            );
+            if ($entry->lastmod !== null && trim($entry->lastmod) !== '') {
+                $lastmodState = SitemapValidationSupport::indexedEvidence($context, 'google_sitemap.lastmod_accuracy', $entryIndex);
+                $diagnostics[] = SitemapValidationSupport::diagnostic(
+                    'google_sitemap_lastmod_accuracy',
+                    $lastmodState === 'inaccurate' ? 'warning' : 'info',
+                    'Google lastmod accuracy is represented only by caller-supplied evidence.',
+                    'lastmod',
+                    'sitemap_url',
+                    $entryIndex,
+                    evidenceState: $lastmodState,
+                );
+            }
         }
 
         return SitemapValidationSupport::result($diagnostics);

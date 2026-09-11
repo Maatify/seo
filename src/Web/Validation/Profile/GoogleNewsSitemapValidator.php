@@ -168,39 +168,43 @@ final class GoogleNewsSitemapValidator
             );
         }
 
-        $originalState = SitemapValidationSupport::indexedEvidence(
-            $context,
-            'google_news.original_publication',
-            $entryIndex,
-            $newsIndex,
-        );
-        $diagnostics[] = SitemapValidationSupport::diagnostic(
-            'google_news_original_publication_evidence',
-            $originalState === 'not_original' ? 'warning' : 'info',
-            'Google News original-publication status is represented only by caller-supplied evidence.',
-            'publication_date',
-            'sitemap_news',
-            $entryIndex,
-            $newsIndex,
-            $originalState,
-        );
+        if (!SitemapValidationSupport::isMissing($publicationDate)) {
+            $originalState = SitemapValidationSupport::indexedEvidence(
+                $context,
+                'google_news.original_publication',
+                $entryIndex,
+                $newsIndex,
+            );
+            $diagnostics[] = SitemapValidationSupport::diagnostic(
+                'google_news_original_publication_evidence',
+                $originalState === 'not_original' ? 'warning' : 'info',
+                'Google News original-publication status is represented only by caller-supplied evidence.',
+                'publication_date',
+                'sitemap_news',
+                $entryIndex,
+                $newsIndex,
+                $originalState,
+            );
+        }
 
-        $nameState = SitemapValidationSupport::indexedEvidence(
-            $context,
-            'google_news.publication_name_match',
-            $entryIndex,
-            $newsIndex,
-        );
-        $diagnostics[] = SitemapValidationSupport::diagnostic(
-            'google_news_name_exact_match_evidence',
-            $nameState === 'mismatched' ? 'warning' : 'info',
-            'Google News publication-name matching is represented only by caller-supplied evidence.',
-            'name',
-            'sitemap_news',
-            $entryIndex,
-            $newsIndex,
-            $nameState,
-        );
+        if (!SitemapValidationSupport::isMissing($publicationName)) {
+            $nameState = SitemapValidationSupport::indexedEvidence(
+                $context,
+                'google_news.publication_name_match',
+                $entryIndex,
+                $newsIndex,
+            );
+            $diagnostics[] = SitemapValidationSupport::diagnostic(
+                'google_news_name_exact_match_evidence',
+                $nameState === 'mismatched' ? 'warning' : 'info',
+                'Google News publication-name matching is represented only by caller-supplied evidence.',
+                'name',
+                'sitemap_news',
+                $entryIndex,
+                $newsIndex,
+                $nameState,
+            );
+        }
 
         $freshnessState = SitemapValidationSupport::indexedEvidence(
             $context,

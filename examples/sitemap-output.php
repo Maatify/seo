@@ -62,8 +62,6 @@ $extendedDto = new SitemapUrlDTO(
     images: [
         new SitemapImageDTO(
             loc: 'https://cdn.example.com/article.jpg',
-            title: 'Article image',
-            caption: 'A representative article image',
         ),
     ],
     videos: [

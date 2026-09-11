@@ -233,29 +233,33 @@ final class GoogleVideoSitemapValidator
             $relevanceState,
         );
 
-        $titleState = SitemapValidationSupport::indexedEvidence($context, 'google_video.title_host_page_match', $entryIndex, $videoIndex);
-        $diagnostics[] = SitemapValidationSupport::diagnostic(
-            'google_video_title_host_page_match',
-            $titleState === 'differs' ? 'warning' : 'info',
-            'Video title host-page consistency is represented only by caller-supplied evidence.',
-            'title',
-            'sitemap_video',
-            $entryIndex,
-            $videoIndex,
-            $titleState,
-        );
+        if (!SitemapValidationSupport::isMissing($video->title)) {
+            $titleState = SitemapValidationSupport::indexedEvidence($context, 'google_video.title_host_page_match', $entryIndex, $videoIndex);
+            $diagnostics[] = SitemapValidationSupport::diagnostic(
+                'google_video_title_host_page_match',
+                $titleState === 'differs' ? 'warning' : 'info',
+                'Video title host-page consistency is represented only by caller-supplied evidence.',
+                'title',
+                'sitemap_video',
+                $entryIndex,
+                $videoIndex,
+                $titleState,
+            );
+        }
 
-        $descriptionState = SitemapValidationSupport::indexedEvidence($context, 'google_video.description_host_page_match', $entryIndex, $videoIndex);
-        $diagnostics[] = SitemapValidationSupport::diagnostic(
-            'google_video_description_host_page_match',
-            $descriptionState === 'differs' ? 'warning' : 'info',
-            'Video description host-page consistency is represented only by caller-supplied evidence.',
-            'description',
-            'sitemap_video',
-            $entryIndex,
-            $videoIndex,
-            $descriptionState,
-        );
+        if (!SitemapValidationSupport::isMissing($video->description)) {
+            $descriptionState = SitemapValidationSupport::indexedEvidence($context, 'google_video.description_host_page_match', $entryIndex, $videoIndex);
+            $diagnostics[] = SitemapValidationSupport::diagnostic(
+                'google_video_description_host_page_match',
+                $descriptionState === 'differs' ? 'warning' : 'info',
+                'Video description host-page consistency is represented only by caller-supplied evidence.',
+                'description',
+                'sitemap_video',
+                $entryIndex,
+                $videoIndex,
+                $descriptionState,
+            );
+        }
     }
 
     /** @param list<\Maatify\Seo\Web\Validation\DTO\SeoCompanionDiagnosticDTO> $diagnostics */

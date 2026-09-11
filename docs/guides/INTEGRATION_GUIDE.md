@@ -229,7 +229,7 @@ $sitemapUrls = [
             new SitemapAlternateUrlDTO('es', 'https://example.com/es')
         ],
         images: [
-            new SitemapImageDTO('https://example.com/image.jpg', 'Hero Image')
+            new SitemapImageDTO('https://example.com/image.jpg')
         ],
         videos: [
             new SitemapVideoDTO('https://example.com/thumbnail.jpg', 'Hero Video', 'A great video', 'https://example.com/video.mp4')
@@ -260,6 +260,11 @@ frequency values are enforced, and priority remains within `0.0..1.0`.
 `SitemapNewsDTO::publicationDate` is intentionally only required to be
 non-empty and is emitted as provided; it is not subject to the shared strict
 date parser.
+
+`SitemapImageDTO` continues to accept `title`, `caption`, `geoLocation`, and
+`license` for public/output compatibility. Google-deprecates these fields, so
+current integrations should prefer `loc` only; they are not current indexing
+or search enhancements.
 
 If you need to output a `sitemapindex`:
 
