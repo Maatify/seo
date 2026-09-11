@@ -80,7 +80,7 @@ $extendedDto = new SitemapUrlDTO(
         new SitemapNewsDTO(
             publicationName: 'Example Daily',
             publicationLanguage: 'en',
-            publicationDate: 'as-provided',
+            publicationDate: '2026-07-01',
             title: 'Example article',
         ),
     ],

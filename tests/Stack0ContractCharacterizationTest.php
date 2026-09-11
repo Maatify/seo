@@ -197,11 +197,14 @@ stack0AssertThrows(
 );
 
 $fractionalLastmod = '2026-07-01T10:00:00.123+00:00';
-stack0AssertTrue('fractional-second lastmod is currently rejected by shared helper', !SitemapUrlDTO::isValidLastmod($fractionalLastmod));
-stack0AssertThrows('URL DTO rejects fractional-second lastmod', static fn() => new SitemapUrlDTO('https://example.com/fractional', $fractionalLastmod));
-stack0AssertThrows('shared index DTO rejects fractional-second lastmod', static fn() => new SharedSitemapIndexEntryDTO('https://example.com/fractional.xml', $fractionalLastmod));
-stack0AssertThrows('web index DTO rejects fractional-second lastmod', static fn() => new WebSitemapIndexEntryDTO('https://example.com/fractional.xml', $fractionalLastmod));
-stack0AssertThrows('raw index renderer rejects fractional-second lastmod', static fn() => (new SitemapIndexXmlStringRenderer())->renderEntry(['loc' => 'https://example.com/fractional.xml', 'lastmod' => $fractionalLastmod]));
+stack0AssertTrue('fractional-second lastmod is accepted by shared helper', SitemapUrlDTO::isValidLastmod($fractionalLastmod));
+stack0AssertTrue('URL DTO accepts fractional-second lastmod', new SitemapUrlDTO('https://example.com/fractional', $fractionalLastmod) instanceof SitemapUrlDTO);
+stack0AssertTrue('shared index DTO accepts fractional-second lastmod', new SharedSitemapIndexEntryDTO('https://example.com/fractional.xml', $fractionalLastmod) instanceof SharedSitemapIndexEntryDTO);
+stack0AssertTrue('web index DTO accepts fractional-second lastmod', new WebSitemapIndexEntryDTO('https://example.com/fractional.xml', $fractionalLastmod) instanceof WebSitemapIndexEntryDTO);
+stack0AssertTrue('raw index renderer accepts fractional-second lastmod', str_contains(
+    (new SitemapIndexXmlStringRenderer())->renderEntry(['loc' => 'https://example.com/fractional.xml', 'lastmod' => $fractionalLastmod]),
+    '<lastmod>' . $fractionalLastmod . '</lastmod>',
+));
 
 $leadingWildcardRule = new RobotsRuleDTO('*', allow: ['*'], disallow: ['*/private']);
 stack0AssertSame('robots rule preserves leading-wildcard allow path', ['*'], $leadingWildcardRule->allow);

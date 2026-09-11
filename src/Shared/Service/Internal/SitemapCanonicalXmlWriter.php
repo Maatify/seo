@@ -628,7 +628,7 @@ final class SitemapCanonicalXmlWriter
         }
 
         $publicationDate = $this->nullableNonEmptyString($publicationDate);
-        if ($publicationDate !== null && !SitemapUrlDTO::isValidLastmod($publicationDate)) {
+        if ($publicationDate !== null && !self::isValidVideoPublicationDate($publicationDate)) {
             throw SeoInvalidArgumentException::emptyField('publicationDate');
         }
 
@@ -763,6 +763,12 @@ final class SitemapCanonicalXmlWriter
         }
 
         return trim($value);
+    }
+
+    private static function isValidVideoPublicationDate(string $value): bool
+    {
+        return preg_match('/\.\d+(?:Z|[+-]\d{2}:\d{2})\z/', $value) !== 1
+            && SitemapUrlDTO::isValidLastmod($value);
     }
 
     /**
