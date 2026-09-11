@@ -478,7 +478,7 @@ stack2AssertThrows('strict Disallow control injection', static fn() => new Robot
 stack2AssertThrows('strict rule comment control injection', static fn() => new RobotsRuleDTO('*', comments: ["comment\x7F"]));
 stack2AssertThrows('strict top-level comment control injection', static fn() => new RobotsTxtDTO(comments: ["comment\nInjected"]));
 stack2AssertThrows('strict Sitemap control injection', static fn() => new RobotsTxtDTO(sitemaps: ["https://example.com/sitemap.xml\nInjected"]));
-stack2AssertTrue('strict leading wildcard compatibility remains accepted', new RobotsRuleDTO('*', disallow: ['*/private'])->disallow === ['*/private']);
+stack2AssertTrue('strict leading wildcard compatibility remains accepted', (new RobotsRuleDTO('*', disallow: ['*/private']))->disallow === ['*/private']);
 stack2AssertThrows('strict empty Allow behavior remains rejected', static fn() => new RobotsRuleDTO('*', allow: ['']));
 stack2AssertThrows('strict empty Disallow behavior remains rejected', static fn() => new RobotsRuleDTO('*', disallow: [' ']));
 stack2AssertThrows('strict Unicode Sitemap behavior remains rejected', static fn() => new RobotsTxtDTO(sitemaps: ['https://مثال.com/sitemap.xml']));
