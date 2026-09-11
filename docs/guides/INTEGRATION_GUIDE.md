@@ -254,9 +254,11 @@ exit;
 
 The Web URL renderer accepts either typed `SitemapUrlDTO` values or raw
 associative URL entries. Both forms use the same top-level contract for `loc`,
-`lastmod`, `changefreq`, and `priority`: valid date-only/ATOM values are
-accepted, invalid calendar dates and parser warnings are rejected, allowed
-frequency values are enforced, and priority remains within `0.0..1.0`.
+`lastmod`, `changefreq`, and `priority`: `lastmod` accepts `YYYY-MM-DD`,
+full-seconds date-times with `Z` or a numeric offset, and fractional-seconds
+date-times with one or more digits plus `Z` or a numeric offset. Invalid
+calendar dates and parser warnings are rejected, allowed frequency values are
+enforced, and priority remains within `0.0..1.0`.
 `SitemapNewsDTO::publicationDate` is intentionally only required to be
 non-empty and is emitted as provided; it is not subject to the shared strict
 date parser.

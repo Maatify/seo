@@ -108,6 +108,7 @@ function stack4AssertDiagnostic(
 ): void {
     foreach (stack4Diagnostics($result) as $diagnostic) {
         if ($diagnostic['code'] !== $code
+            || $diagnostic['field'] !== $field
             || $diagnostic['target']['scope'] !== $scope
             || $diagnostic['target']['entry_index'] !== $entryIndex
             || $diagnostic['target']['item_index'] !== $itemIndex
@@ -139,6 +140,24 @@ function stack4AssertNoLegacy(SeoCompanionValidationResultDTO $result): void
     foreach (stack4Diagnostics($result) as $diagnostic) {
         stack4AssertSame('all Stack 4 diagnostics have no legacy correlation', null, $diagnostic['related_legacy_code']);
     }
+}
+
+/**
+ * @param array{label: string, result: SeoCompanionValidationResultDTO, code: string, severity: string, field: string|null, evidenceState: string|null, scope: string, entryIndex: int|null, itemIndex: int|null} $case
+ */
+function stack4AssertContractCase(array $case): void
+{
+    stack4AssertDiagnostic(
+        $case['label'],
+        $case['result'],
+        $case['code'],
+        $case['severity'],
+        $case['field'],
+        $case['evidenceState'],
+        $case['scope'],
+        $case['entryIndex'],
+        $case['itemIndex'],
+    );
 }
 
 function stack4Url(?string $loc = 'https://example.com/page', array $options = []): SitemapUrlValidationInputDTO
@@ -220,17 +239,20 @@ stack4AssertSame('common profile exposes scope components without parse_url sema
 
 $acceptedCommonUrls = [
     'https://example.com/path',
-    'HTTP+X://example.com/path',
-    'custom-scheme://example.com/path',
+    'http://example.com/',
+    'https://example.com/مسار',
+    'custom+scheme://example.com/path',
+    'custom+v1://example.com/path',
+    'https://example.com:443/path',
+    'https://user@example.com/path',
     'https://user:pass@example.com/path',
-    'https://[2001:db8::1]/path',
+    'https://[::1]/path',
+    'https://[2001:db8::1]:8443/path',
     'https://example.com:0/path',
     'https://example.com:80/path',
-    'https://example.com:443/path',
     'https://example.com:0080/path',
     'https://example.com:65535/path',
-    'https://example.com/a%2Fb?x=1%20two',
-    'https://مثال.إختبار/مسار?بحث=قيمة',
+    'https://مثال.إختبار/path',
 ];
 foreach ($acceptedCommonUrls as $candidate) {
     stack4AssertTrue('common URL lexical matrix accepts ' . $candidate, AbsoluteAuthorityUrlLexicalProfile::accepts($candidate, false));
@@ -239,12 +261,21 @@ foreach ($acceptedCommonUrls as $candidate) {
 }
 
 $rejectedCommonUrls = [
+    'example.com/path',
+    '/path',
     'https:///path',
+    'https://',
+    'https://@example.com/path',
+    'https://user@/path',
+    'https://a@b@example.com/path',
     'https://:443/path',
     'https://example.com:/path',
+    'https://example.com:-1/path',
+    'https://example.com:+80/path',
     'https://example.com:abc/path',
     'https://example.com:65536/path',
     'https://[2001:db8::1/path',
+    'https://[]/path',
     'https://[2001:db8::1]x/path',
     'https://example.com/a b',
     'https://example.com/a\\b',
@@ -260,6 +291,51 @@ foreach ($rejectedCommonUrls as $candidate) {
     stack4AssertDiagnostic('Index invalid lexical target ' . $candidate, $indexResult, 'sitemap_loc_invalid_uri_iri', 'error', 'sitemap', null, 'sitemap_index_entry', 0, null);
 }
 
+$acceptedPathAndQueryUrls = [
+    'https://example.com/',
+    'https://example.com/a/b',
+    'https://example.com/%20',
+    'https://example.com/مسار',
+    'https://example.com/?x=1',
+    'https://example.com/path?x=/a?b',
+];
+foreach ($acceptedPathAndQueryUrls as $candidate) {
+    stack4AssertSame('accepted path/query URL has no protocol diagnostics: ' . $candidate, [], stack4Codes($protocol->validate(stack4UrlDocument([stack4Url($candidate)]))));
+    stack4AssertSame('accepted path/query Index child has no protocol diagnostics: ' . $candidate, [], stack4Codes($protocol->validate(stack4IndexDocument([new SitemapIndexEntryValidationInputDTO($candidate)]))));
+}
+$rejectedPathAndQueryUrls = [
+    'https://example.com/raw space',
+    'https://example.com/%ZZ',
+    'https://example.com/abc%',
+    'https://example.com/raw\\backslash',
+];
+foreach ($rejectedPathAndQueryUrls as $candidate) {
+    $urlResult = $protocol->validate(stack4UrlDocument([stack4Url($candidate)]));
+    $indexResult = $protocol->validate(stack4IndexDocument([new SitemapIndexEntryValidationInputDTO($candidate)]));
+    stack4AssertDiagnostic('rejected path/query URL target: ' . $candidate, $urlResult, 'sitemap_loc_invalid_uri_iri', 'error', 'loc', null, 'sitemap_url', 0, null);
+    stack4AssertDiagnostic('rejected path/query Index target: ' . $candidate, $indexResult, 'sitemap_loc_invalid_uri_iri', 'error', 'sitemap', null, 'sitemap_index_entry', 0, null);
+}
+$acceptedPortUrls = [
+    'https://example.com:0/path',
+    'https://example.com:80/path',
+    'https://example.com:443/path',
+    'https://example.com:0080/path',
+    'https://example.com:65535/path',
+];
+foreach ($acceptedPortUrls as $candidate) {
+    stack4AssertTrue('accepted explicit port: ' . $candidate, AbsoluteAuthorityUrlLexicalProfile::accepts($candidate, false));
+}
+$rejectedPortUrls = [
+    'https://example.com:/path',
+    'https://example.com:-1/path',
+    'https://example.com:+80/path',
+    'https://example.com:abc/path',
+    'https://example.com:65536/path',
+];
+foreach ($rejectedPortUrls as $candidate) {
+    stack4AssertTrue('rejected explicit port: ' . $candidate, !AbsoluteAuthorityUrlLexicalProfile::accepts($candidate, false));
+}
+
 $validUrl = stack4Url();
 stack4AssertSame('50,000 URL entries are accepted at the limit', [], stack4Codes($protocol->validate(stack4UrlDocument(array_fill(0, 50000, $validUrl)))));
 stack4AssertHasCode('50,001 URL entries exceed the limit', $protocol->validate(stack4UrlDocument(array_fill(0, 50001, $validUrl))), 'sitemap_url_count_exceeds_limit');
@@ -273,6 +349,12 @@ stack4AssertDiagnostic('missing URL loc target', $missingLoc, 'sitemap_loc_missi
 $invalidLoc = $protocol->validate(stack4UrlDocument([stack4Url('not-an-absolute-url')]));
 stack4AssertSame('malformed non-empty loc emits only invalid loc', ['sitemap_loc_invalid_uri_iri'], stack4Codes($invalidLoc));
 stack4AssertDiagnostic('invalid URL loc target', $invalidLoc, 'sitemap_loc_invalid_uri_iri', 'error', 'loc', null, 'sitemap_url', 0, null);
+$missingIndexLoc = $protocol->validate(stack4IndexDocument([new SitemapIndexEntryValidationInputDTO(null)]));
+stack4AssertSame('missing Index loc emits only missing loc', ['sitemap_loc_missing'], stack4Codes($missingIndexLoc));
+stack4AssertDiagnostic('missing Index loc target', $missingIndexLoc, 'sitemap_loc_missing', 'error', 'sitemap', null, 'sitemap_index_entry', 0, null);
+$invalidIndexLoc = $protocol->validate(stack4IndexDocument([new SitemapIndexEntryValidationInputDTO('not-an-absolute-url')]));
+stack4AssertSame('malformed non-empty Index loc emits only invalid loc', ['sitemap_loc_invalid_uri_iri'], stack4Codes($invalidIndexLoc));
+stack4AssertDiagnostic('invalid Index loc target', $invalidIndexLoc, 'sitemap_loc_invalid_uri_iri', 'error', 'sitemap', null, 'sitemap_index_entry', 0, null);
 $loc2047 = 'https://example.com/' . str_repeat('a', 2047 - strlen('https://example.com/'));
 $loc2048 = 'https://example.com/' . str_repeat('a', 2048 - strlen('https://example.com/'));
 stack4AssertNotHasCode('2,047-byte loc is below the conservative boundary', $protocol->validate(stack4UrlDocument([stack4Url($loc2047)])), 'sitemap_loc_length_exceeds_measure_boundary');
@@ -363,6 +445,13 @@ stack4AssertNotHasCode('blank changefreq is not diagnosed', $protocol->validate(
 $location = new SitemapValidationLocationDTO('https', 'example.com', null, '/folder/index.xml');
 $withinScope = $protocol->validate(stack4UrlDocument([stack4Url('HTTPS://EXAMPLE.com/folder/page')], $location));
 stack4AssertNotHasCode('same authority and path prefix are in scope', $withinScope, 'sitemap_location_scope_violation');
+$httpsExplicitDefaultScope = $protocol->validate(stack4UrlDocument([stack4Url('https://example.com:443/folder/page')], $location));
+stack4AssertNotHasCode('HTTPS implicit 443 equals explicit 443', $httpsExplicitDefaultScope, 'sitemap_location_scope_violation');
+$schemeMismatchScope = $protocol->validate(
+    stack4UrlDocument([stack4Url('http://example.com/folder/page')], $location),
+    stack4Evidence(['sitemaps.cross_submission_authority' => [0 => 'unauthorized']]),
+);
+stack4AssertDiagnostic('scheme mismatch emits URL scope violation', $schemeMismatchScope, 'sitemap_location_scope_violation', 'error', 'loc', null, 'sitemap_url', 0, null);
 $unauthorizedScope = $protocol->validate(
     stack4UrlDocument([stack4Url('https://other.example.com/other')], $location),
     stack4Evidence(['sitemaps.cross_submission_authority' => [0 => 'unauthorized']]),
@@ -402,6 +491,11 @@ stack4AssertDiagnostic(
     0,
     null,
 );
+$explicitNonEquivalentPortScope = $protocol->validate(
+    stack4UrlDocument([stack4Url('https://example.com:8443/folder/page')], $location),
+    stack4Evidence(['sitemaps.cross_submission_authority' => [0 => 'unauthorized']]),
+);
+stack4AssertDiagnostic('explicit non-equivalent HTTPS port emits scope violation', $explicitNonEquivalentPortScope, 'sitemap_location_scope_violation', 'error', 'loc', null, 'sitemap_url', 0, null);
 $unicodeLocation = new SitemapValidationLocationDTO('https', '例子.com', null, '/folder/index.xml');
 stack4AssertNotHasCode(
     'Unicode authority matches exactly',
@@ -453,6 +547,28 @@ stack4AssertNotHasCode(
     'Sitemap Index scope ignores child path and query',
     $protocol->validate(stack4IndexDocument([new SitemapIndexEntryValidationInputDTO('https://example.com/any/deep/path?x=1')], $location)),
     'sitemap_location_scope_violation',
+);
+stack4AssertDiagnostic(
+    'Sitemap Index scheme mismatch is a violation',
+    $protocol->validate(stack4IndexDocument([new SitemapIndexEntryValidationInputDTO('http://example.com/child.xml')], $location)),
+    'sitemap_location_scope_violation',
+    'error',
+    'sitemap',
+    null,
+    'sitemap_index_entry',
+    0,
+    null,
+);
+stack4AssertDiagnostic(
+    'Sitemap Index explicit non-equivalent port is a violation',
+    $protocol->validate(stack4IndexDocument([new SitemapIndexEntryValidationInputDTO('https://example.com:8443/child.xml')], $location)),
+    'sitemap_location_scope_violation',
+    'error',
+    'sitemap',
+    null,
+    'sitemap_index_entry',
+    0,
+    null,
 );
 stack4AssertDiagnostic(
     'Sitemap Index scope ignores cross-submission evidence',
@@ -530,15 +646,17 @@ $oneImage = new SitemapImageValidationInputDTO('https://cdn.example.com/image.jp
 $imageEvidenceResult = $images->validate(
     stack4UrlDocument([stack4Url(options: ['images' => [$oneImage, $oneImage]])]),
     stack4Evidence([
-        'google_image.cross_domain_verification' => [0 => [0 => 'verified']],
-        'google_image.crawlability' => [0 => [0 => 'accessible']],
+        'google_image.cross_domain_verification' => [0 => [0 => 'verified', 1 => 'unverified', 9 => 'verified']],
+        'google_image.crawlability' => [0 => [0 => 'accessible', 1 => 'inaccessible', 9 => 'inaccessible']],
     ]),
 );
 stack4AssertDiagnostic('verified image evidence', $imageEvidenceResult, 'google_image_cross_domain_verification', 'info', 'image', 'verified', 'sitemap_image', 0, 0);
-stack4AssertDiagnostic('missing second image evidence maps to unknown', $imageEvidenceResult, 'google_image_cross_domain_verification', 'info', 'image', 'unknown', 'sitemap_image', 0, 1);
+stack4AssertDiagnostic('unverified second image evidence', $imageEvidenceResult, 'google_image_cross_domain_verification', 'warning', 'image', 'unverified', 'sitemap_image', 0, 1);
 stack4AssertDiagnostic('accessible image evidence', $imageEvidenceResult, 'google_image_crawlability_context', 'info', 'image', 'accessible', 'sitemap_image', 0, 0);
-stack4AssertDiagnostic('missing second crawlability evidence maps to unknown', $imageEvidenceResult, 'google_image_crawlability_context', 'info', 'image', 'unknown', 'sitemap_image', 0, 1);
-stack4AssertTrue('evidence for a non-existent child index creates no diagnostic', !array_filter(stack4Diagnostics($imageEvidenceResult), static fn (array $diagnostic): bool => $diagnostic['target']['item_index'] === 9));
+stack4AssertDiagnostic('inaccessible second image evidence', $imageEvidenceResult, 'google_image_crawlability_context', 'warning', 'image', 'inaccessible', 'sitemap_image', 0, 1);
+stack4AssertTrue('evidence for a non-existent Image child index creates no diagnostic', !array_filter(stack4Diagnostics($imageEvidenceResult), static fn (array $diagnostic): bool => $diagnostic['target']['item_index'] === 9));
+stack4AssertDiagnostic('missing image evidence maps to unknown', $images->validate(stack4UrlDocument([stack4Url(options: ['images' => [$oneImage]])])), 'google_image_cross_domain_verification', 'info', 'image', 'unknown', 'sitemap_image', 0, 0);
+stack4AssertDiagnostic('missing image crawlability evidence maps to unknown', $images->validate(stack4UrlDocument([stack4Url(options: ['images' => [$oneImage]])])), 'google_image_crawlability_context', 'info', 'image', 'unknown', 'sitemap_image', 0, 0);
 stack4AssertHasCode('1,001 images exceed the per-URL limit', $images->validate(stack4UrlDocument([stack4Url(options: ['images' => array_fill(0, 1001, $oneImage)])])), 'google_image_count_exceeds_limit');
 stack4AssertNotHasCode('1,000 images remain at the per-URL limit', $images->validate(stack4UrlDocument([stack4Url(options: ['images' => array_fill(0, 1000, $oneImage)])])), 'google_image_count_exceeds_limit');
 $deprecatedImage = new SitemapImageValidationInputDTO(
@@ -639,6 +757,50 @@ foreach (['google_video_thumbnail_loc_invalid_url', 'google_video_content_loc_in
 }
 stack4AssertNotHasCode('malformed content location does not create data URL diagnostic', $malformedVideoResult, 'google_video_data_url_unsupported');
 stack4AssertNotHasCode('malformed media does not create parent equality evidence', $malformedVideoResult, 'google_video_media_loc_equals_parent_loc');
+foreach ([1, 28800] as $validDuration) {
+    stack4AssertNotHasCode(
+        'valid Video duration: ' . $validDuration,
+        $videos->validate(stack4UrlDocument([stack4Url(options: ['videos' => [new SitemapVideoValidationInputDTO(
+            thumbnailLoc: 'https://cdn.example.com/thumb.jpg',
+            title: 'Title',
+            description: 'Description',
+            contentLoc: 'https://cdn.example.com/video.mp4',
+            duration: $validDuration,
+        )]])])),
+        'google_video_duration_out_of_range',
+    );
+}
+foreach ([0, -1, 28801] as $invalidDuration) {
+    $durationResult = $videos->validate(stack4UrlDocument([stack4Url(options: ['videos' => [new SitemapVideoValidationInputDTO(
+        thumbnailLoc: 'https://cdn.example.com/thumb.jpg',
+        title: 'Title',
+        description: 'Description',
+        contentLoc: 'https://cdn.example.com/video.mp4',
+        duration: $invalidDuration,
+    )]])]));
+    stack4AssertDiagnostic('invalid Video duration: ' . $invalidDuration, $durationResult, 'google_video_duration_out_of_range', 'warning', 'duration', null, 'sitemap_video', 0, 0);
+}
+foreach (['2026-07-01', '2026-07-01T10:00:00Z'] as $validVideoPublicationDate) {
+    stack4AssertNotHasCode(
+        'valid Video publication date: ' . $validVideoPublicationDate,
+        $videos->validate(stack4UrlDocument([stack4Url(options: ['videos' => [new SitemapVideoValidationInputDTO(
+            thumbnailLoc: 'https://cdn.example.com/thumb.jpg',
+            title: 'Title',
+            description: 'Description',
+            contentLoc: 'https://cdn.example.com/video.mp4',
+            publicationDate: $validVideoPublicationDate,
+        )]])])),
+        'google_video_publication_date_invalid',
+    );
+}
+$malformedVideoDateResult = $videos->validate(stack4UrlDocument([stack4Url(options: ['videos' => [new SitemapVideoValidationInputDTO(
+    thumbnailLoc: 'https://cdn.example.com/thumb.jpg',
+    title: 'Title',
+    description: 'Description',
+    contentLoc: 'https://cdn.example.com/video.mp4',
+    publicationDate: 'not-a-date',
+)]])]));
+stack4AssertDiagnostic('malformed Video publication date', $malformedVideoDateResult, 'google_video_publication_date_invalid', 'warning', 'publication_date', null, 'sitemap_video', 0, 0);
 foreach ([
     'thumbnailLoc' => 'google_video_thumbnail_loc_invalid_url',
     'contentLoc' => 'google_video_content_loc_invalid_url',
@@ -670,6 +832,67 @@ foreach (['thumbnailLoc', 'contentLoc', 'playerLoc'] as $field) {
         default => 'google_video_player_loc_invalid_url',
     });
 }
+$videoAcceptedFieldValues = [
+    'https://example.com/path',
+    'http://example.com/',
+    'ftp://example.com/path',
+    'https://example.com/مسار',
+    'https://user@example.com/path',
+    'https://user:pass@example.com/path',
+    'https://[::1]/path',
+    'https://example.com:8080/path',
+    'https://example.com/video#fragment',
+    'https://[2001:db8::1]:8443/path#fragment',
+];
+$videoInvalidCodes = [
+    'thumbnailLoc' => 'google_video_thumbnail_loc_invalid_url',
+    'contentLoc' => 'google_video_content_loc_invalid_url',
+    'playerLoc' => 'google_video_player_loc_invalid_url',
+];
+foreach ($videoInvalidCodes as $field => $invalidCode) {
+    foreach ($videoAcceptedFieldValues as $candidate) {
+        $acceptedMedia = [
+            'thumbnailLoc' => 'https://cdn.example.com/thumb.jpg',
+            'title' => 'Title',
+            'description' => 'Description',
+            'contentLoc' => 'https://cdn.example.com/content.mp4',
+            'playerLoc' => 'https://cdn.example.com/player',
+        ];
+        $acceptedMedia[$field] = $candidate;
+        $acceptedMediaResult = $videos->validate(stack4UrlDocument([stack4Url(options: ['videos' => [new SitemapVideoValidationInputDTO(...$acceptedMedia)]])]));
+        stack4AssertNotHasCode('accepted Video ' . $field . ' URL: ' . $candidate, $acceptedMediaResult, $invalidCode);
+    }
+}
+$videoRejectedFieldValues = [
+    'relative/path',
+    'https://',
+    'https://example.com/a b',
+    'https://example.com/%ZZ',
+    'https://example.com:abc/path',
+    'https://example.com:65536/path',
+    'https://example.com/a\\b',
+];
+foreach ($videoInvalidCodes as $field => $invalidCode) {
+    foreach ($videoRejectedFieldValues as $candidate) {
+        $rejectedMedia = [
+            'thumbnailLoc' => 'https://cdn.example.com/thumb.jpg',
+            'title' => 'Title',
+            'description' => 'Description',
+            'contentLoc' => 'https://cdn.example.com/content.mp4',
+            'playerLoc' => 'https://cdn.example.com/player',
+        ];
+        $rejectedMedia[$field] = $candidate;
+        $rejectedMediaResult = $videos->validate(stack4UrlDocument([stack4Url(options: ['videos' => [new SitemapVideoValidationInputDTO(...$rejectedMedia)]])]));
+        stack4AssertHasCode('rejected Video ' . $field . ' URL: ' . $candidate, $rejectedMediaResult, $invalidCode);
+    }
+}
+$contentOnlyVideo = new SitemapVideoValidationInputDTO(
+    thumbnailLoc: 'https://cdn.example.com/thumb.jpg',
+    title: 'Title',
+    description: 'Description',
+    contentLoc: 'https://cdn.example.com/video.mp4',
+);
+stack4AssertNotHasCode('one valid content location satisfies Video presence', $videos->validate(stack4UrlDocument([stack4Url(options: ['videos' => [$contentOnlyVideo]])])), 'google_video_content_or_player_loc_missing');
 foreach ([str_repeat('a', 2048), str_repeat('a', 2049), str_repeat('é', 1024), str_repeat('é', 1025)] as $descriptionValue) {
     $descriptionBoundary = $videos->validate(stack4UrlDocument([stack4Url(options: ['videos' => [new SitemapVideoValidationInputDTO(
         thumbnailLoc: 'https://cdn.example.com/thumb.jpg',
@@ -754,6 +977,28 @@ $videoEvidence = $videos->validate(
 stack4AssertDiagnostic('video relevance warning evidence', $videoEvidence, 'google_video_relevance_context', 'warning', null, 'irrelevant', 'sitemap_video', 0, 0);
 stack4AssertDiagnostic('video title warning evidence', $videoEvidence, 'google_video_title_host_page_match', 'warning', 'title', 'differs', 'sitemap_video', 0, 0);
 stack4AssertDiagnostic('video description info evidence', $videoEvidence, 'google_video_description_host_page_match', 'info', 'description', 'matches', 'sitemap_video', 0, 0);
+$independentVideoEvidence = $videos->validate(
+    stack4UrlDocument([
+        stack4Url(options: ['videos' => [$baseVideo, $baseVideo]]),
+        stack4Url(options: ['videos' => [$baseVideo]]),
+    ]),
+    stack4Evidence([
+        'google_video.relevance' => [0 => [0 => 'relevant', 1 => 'irrelevant', 9 => 'irrelevant'], 1 => [0 => 'irrelevant']],
+        'google_video.title_host_page_match' => [0 => [0 => 'matches', 1 => 'differs', 9 => 'differs'], 1 => [0 => 'matches']],
+        'google_video.description_host_page_match' => [0 => [0 => 'matches', 1 => 'differs', 9 => 'differs'], 1 => [0 => 'matches']],
+    ]),
+);
+stack4AssertDiagnostic('independent Video relevance at URL 0/video 0', $independentVideoEvidence, 'google_video_relevance_context', 'info', null, 'relevant', 'sitemap_video', 0, 0);
+stack4AssertDiagnostic('independent Video relevance at URL 0/video 1', $independentVideoEvidence, 'google_video_relevance_context', 'warning', null, 'irrelevant', 'sitemap_video', 0, 1);
+stack4AssertDiagnostic('independent Video title evidence at URL 0/video 1', $independentVideoEvidence, 'google_video_title_host_page_match', 'warning', 'title', 'differs', 'sitemap_video', 0, 1);
+stack4AssertDiagnostic('independent Video description evidence at URL 0/video 1', $independentVideoEvidence, 'google_video_description_host_page_match', 'warning', 'description', 'differs', 'sitemap_video', 0, 1);
+stack4AssertDiagnostic('independent Video relevance at URL 1/video 0', $independentVideoEvidence, 'google_video_relevance_context', 'warning', null, 'irrelevant', 'sitemap_video', 1, 0);
+stack4AssertDiagnostic('independent Video title evidence at URL 1/video 0', $independentVideoEvidence, 'google_video_title_host_page_match', 'info', 'title', 'matches', 'sitemap_video', 1, 0);
+stack4AssertDiagnostic('independent Video description evidence at URL 1/video 0', $independentVideoEvidence, 'google_video_description_host_page_match', 'info', 'description', 'matches', 'sitemap_video', 1, 0);
+stack4AssertTrue('evidence for a non-existent Video index creates no diagnostic', !array_filter(
+    stack4Diagnostics($independentVideoEvidence),
+    static fn (array $diagnostic): bool => $diagnostic['target']['item_index'] === 9,
+));
 $targetMatrix = $videos->validate(stack4UrlDocument([
     stack4Url(options: ['videos' => [$baseVideo, $missingTitleVideo]]),
     stack4Url(options: ['videos' => [$missingDescriptionVideo]]),
@@ -823,22 +1068,46 @@ stack4AssertHasCode('invalid News language is diagnosed', $invalidNews, 'google_
 stack4AssertHasCode('invalid News date is diagnosed', $invalidNews, 'google_news_publication_date_invalid');
 stack4AssertNotHasCode('invalid News language does not cascade to missing', $invalidNews, 'google_news_language_missing');
 stack4AssertNotHasCode('invalid News date does not cascade to missing', $invalidNews, 'google_news_publication_date_missing');
+$asProvidedNews = $newsValidator->validate(stack4UrlDocument([stack4Url(options: ['news' => [new SitemapNewsValidationInputDTO('Example Daily', 'en', 'as-provided', 'A story')]])]));
+stack4AssertDiagnostic('as-provided News date is explicitly invalid', $asProvidedNews, 'google_news_publication_date_invalid', 'warning', 'publication_date', null, 'sitemap_news', 0, 0);
 $multipleNews = $newsValidator->validate(stack4UrlDocument([stack4Url(options: ['news' => [$validNews, $validNews]])]));
 stack4AssertHasCode('multiple News entries per URL are diagnosed', $multipleNews, 'google_news_multiple_entries_per_url');
 stack4AssertHasCode('1,001 total News entries exceed the document limit', $newsValidator->validate(stack4UrlDocument([stack4Url(options: ['news' => array_fill(0, 1001, $validNews)])])), 'google_news_document_count_exceeds_limit');
 $newsEvidence = $newsValidator->validate(
     stack4UrlDocument([stack4Url(options: ['news' => [$validNews]])]),
     stack4Evidence([
-        'google_news.original_publication' => [0 => [0 => 'not_original']],
-        'google_news.publication_name_match' => [0 => [0 => 'mismatched']],
-        'google_news.freshness' => [0 => [0 => 'outside_window']],
-        'google_news.title_content_conformance' => [0 => [0 => 'nonconforming']],
+        'google_news.original_publication' => [0 => [0 => 'not_original', 9 => 'not_original']],
+        'google_news.publication_name_match' => [0 => [0 => 'mismatched', 9 => 'mismatched']],
+        'google_news.freshness' => [0 => [0 => 'outside_window', 9 => 'outside_window']],
+        'google_news.title_content_conformance' => [0 => [0 => 'nonconforming', 9 => 'nonconforming']],
     ]),
 );
 stack4AssertDiagnostic('News original-publication warning evidence', $newsEvidence, 'google_news_original_publication_evidence', 'warning', 'publication_date', 'not_original', 'sitemap_news', 0, 0);
 stack4AssertDiagnostic('News publication-name warning evidence', $newsEvidence, 'google_news_name_exact_match_evidence', 'warning', 'name', 'mismatched', 'sitemap_news', 0, 0);
 stack4AssertDiagnostic('News freshness warning evidence', $newsEvidence, 'google_news_freshness_evidence', 'warning', null, 'outside_window', 'sitemap_news', 0, 0);
 stack4AssertDiagnostic('News title conformance warning evidence', $newsEvidence, 'google_news_title_content_evidence', 'warning', 'title', 'nonconforming', 'sitemap_news', 0, 0);
+stack4AssertTrue('evidence for a non-existent News index creates no diagnostic', !array_filter(
+    stack4Diagnostics($newsEvidence),
+    static fn (array $diagnostic): bool => $diagnostic['target']['item_index'] === 9,
+));
+$positiveNewsEvidence = $newsValidator->validate(
+    stack4UrlDocument([stack4Url(options: ['news' => [$validNews]])]),
+    stack4Evidence([
+        'google_news.original_publication' => [0 => [0 => 'original']],
+        'google_news.publication_name_match' => [0 => [0 => 'matched']],
+        'google_news.freshness' => [0 => [0 => 'within_window']],
+        'google_news.title_content_conformance' => [0 => [0 => 'conforming']],
+    ]),
+);
+stack4AssertDiagnostic('News original positive evidence', $positiveNewsEvidence, 'google_news_original_publication_evidence', 'info', 'publication_date', 'original', 'sitemap_news', 0, 0);
+stack4AssertDiagnostic('News name positive evidence', $positiveNewsEvidence, 'google_news_name_exact_match_evidence', 'info', 'name', 'matched', 'sitemap_news', 0, 0);
+stack4AssertDiagnostic('News freshness positive evidence', $positiveNewsEvidence, 'google_news_freshness_evidence', 'info', null, 'within_window', 'sitemap_news', 0, 0);
+stack4AssertDiagnostic('News title positive evidence', $positiveNewsEvidence, 'google_news_title_content_evidence', 'info', 'title', 'conforming', 'sitemap_news', 0, 0);
+$unknownNewsEvidence = $newsValidator->validate(stack4UrlDocument([stack4Url(options: ['news' => [$validNews]])]));
+stack4AssertDiagnostic('News original unknown evidence', $unknownNewsEvidence, 'google_news_original_publication_evidence', 'info', 'publication_date', 'unknown', 'sitemap_news', 0, 0);
+stack4AssertDiagnostic('News name unknown evidence', $unknownNewsEvidence, 'google_news_name_exact_match_evidence', 'info', 'name', 'unknown', 'sitemap_news', 0, 0);
+stack4AssertDiagnostic('News freshness unknown evidence', $unknownNewsEvidence, 'google_news_freshness_evidence', 'info', null, 'unknown', 'sitemap_news', 0, 0);
+stack4AssertDiagnostic('News title unknown evidence', $unknownNewsEvidence, 'google_news_title_content_evidence', 'info', 'title', 'unknown', 'sitemap_news', 0, 0);
 $newsTargetMatrix = $newsValidator->validate(
     stack4UrlDocument([stack4Url(options: ['news' => [$validNews, new SitemapNewsValidationInputDTO('Example Daily', 'en', null, 'A story')]])]),
     stack4Evidence([
@@ -869,6 +1138,61 @@ stack4AssertSame('optional News fields have no runtime diagnostics of their own'
 ], stack4Codes($optionalNewsResult));
 $newsSource = (string) file_get_contents(__DIR__ . '/../src/Web/Validation/Profile/GoogleNewsSitemapValidator.php');
 stack4AssertTrue('Google News validator performs no clock arithmetic', !str_contains($newsSource, 'time(') && !str_contains($newsSource, 'now(') && !str_contains($newsSource, 'DateTime'));
+
+/** @var list<array{label: string, result: SeoCompanionValidationResultDTO, code: string, severity: string, field: string|null, evidenceState: string|null, scope: string, entryIndex: int|null, itemIndex: int|null}> $contractCases */
+$contractCases = [
+    ['label' => 'contract URL count boundary', 'result' => $protocol->validate(stack4UrlDocument(array_fill(0, 50001, $validUrl))), 'code' => 'sitemap_url_count_exceeds_limit', 'severity' => 'error', 'field' => 'urlset', 'evidenceState' => null, 'scope' => 'sitemap_document', 'entryIndex' => null, 'itemIndex' => null],
+    ['label' => 'contract Index count boundary', 'result' => $protocol->validate(stack4IndexDocument(array_fill(0, 50001, new SitemapIndexEntryValidationInputDTO('https://example.com/child.xml')))), 'code' => 'sitemap_index_count_exceeds_limit', 'severity' => 'error', 'field' => 'sitemapindex', 'evidenceState' => null, 'scope' => 'sitemap_document', 'entryIndex' => null, 'itemIndex' => null],
+    ['label' => 'contract document size boundary', 'result' => $protocol->validate(stack4UrlDocument([], size: 52428801)), 'code' => 'sitemap_document_size_exceeds_boundary', 'severity' => 'error', 'field' => null, 'evidenceState' => null, 'scope' => 'sitemap_document', 'entryIndex' => null, 'itemIndex' => null],
+    ['label' => 'contract missing URL loc', 'result' => $missingLoc, 'code' => 'sitemap_loc_missing', 'severity' => 'error', 'field' => 'loc', 'evidenceState' => null, 'scope' => 'sitemap_url', 'entryIndex' => 0, 'itemIndex' => null],
+    ['label' => 'contract invalid URL loc', 'result' => $invalidLoc, 'code' => 'sitemap_loc_invalid_uri_iri', 'severity' => 'error', 'field' => 'loc', 'evidenceState' => null, 'scope' => 'sitemap_url', 'entryIndex' => 0, 'itemIndex' => null],
+    ['label' => 'contract invalid URL lastmod', 'result' => $protocol->validate(stack4UrlDocument([stack4Url(options: ['lastmod' => '2026-02-30T10:00:00Z'])])), 'code' => 'sitemap_lastmod_invalid_lexical', 'severity' => 'error', 'field' => 'lastmod', 'evidenceState' => null, 'scope' => 'sitemap_url', 'entryIndex' => 0, 'itemIndex' => null],
+    ['label' => 'contract invalid changefreq', 'result' => $entryRules, 'code' => 'sitemap_changefreq_invalid', 'severity' => 'error', 'field' => 'changefreq', 'evidenceState' => null, 'scope' => 'sitemap_url', 'entryIndex' => 0, 'itemIndex' => null],
+    ['label' => 'contract invalid priority', 'result' => $entryRules, 'code' => 'sitemap_priority_out_of_range', 'severity' => 'error', 'field' => 'priority', 'evidenceState' => null, 'scope' => 'sitemap_url', 'entryIndex' => 0, 'itemIndex' => null],
+    ['label' => 'contract URL length boundary', 'result' => $protocol->validate(stack4UrlDocument([stack4Url($loc2048)])), 'code' => 'sitemap_loc_length_exceeds_measure_boundary', 'severity' => 'warning', 'field' => 'loc', 'evidenceState' => null, 'scope' => 'sitemap_url', 'entryIndex' => 0, 'itemIndex' => null],
+    ['label' => 'contract URL scope violation', 'result' => $unauthorizedScope, 'code' => 'sitemap_location_scope_violation', 'severity' => 'error', 'field' => 'loc', 'evidenceState' => null, 'scope' => 'sitemap_url', 'entryIndex' => 0, 'itemIndex' => null],
+    ['label' => 'contract Google priority ignored', 'result' => $googleResult, 'code' => 'google_sitemap_priority_ignored', 'severity' => 'info', 'field' => 'priority', 'evidenceState' => null, 'scope' => 'sitemap_url', 'entryIndex' => 0, 'itemIndex' => null],
+    ['label' => 'contract Google changefreq ignored', 'result' => $googleResult, 'code' => 'google_sitemap_changefreq_ignored', 'severity' => 'info', 'field' => 'changefreq', 'evidenceState' => null, 'scope' => 'sitemap_url', 'entryIndex' => 0, 'itemIndex' => null],
+    ['label' => 'contract Google lastmod evidence', 'result' => $googleResult, 'code' => 'google_sitemap_lastmod_accuracy', 'severity' => 'warning', 'field' => 'lastmod', 'evidenceState' => 'inaccurate', 'scope' => 'sitemap_url', 'entryIndex' => 0, 'itemIndex' => null],
+    ['label' => 'contract Google host evidence', 'result' => $googleResult, 'code' => 'google_sitemap_host_context', 'severity' => 'warning', 'field' => null, 'evidenceState' => 'unverified_host', 'scope' => 'sitemap_document', 'entryIndex' => null, 'itemIndex' => null],
+    ['label' => 'contract Image count boundary', 'result' => $images->validate(stack4UrlDocument([stack4Url(options: ['images' => array_fill(0, 1001, $oneImage)])])), 'code' => 'google_image_count_exceeds_limit', 'severity' => 'warning', 'field' => 'image', 'evidenceState' => null, 'scope' => 'sitemap_url', 'entryIndex' => 0, 'itemIndex' => null],
+    ['label' => 'contract Image verification evidence', 'result' => $imageEvidenceResult, 'code' => 'google_image_cross_domain_verification', 'severity' => 'info', 'field' => 'image', 'evidenceState' => 'verified', 'scope' => 'sitemap_image', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Image crawlability evidence', 'result' => $imageEvidenceResult, 'code' => 'google_image_crawlability_context', 'severity' => 'info', 'field' => 'image', 'evidenceState' => 'accessible', 'scope' => 'sitemap_image', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Video title missing', 'result' => $missingVideo, 'code' => 'google_video_title_missing', 'severity' => 'warning', 'field' => 'title', 'evidenceState' => null, 'scope' => 'sitemap_video', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Video description missing', 'result' => $missingVideo, 'code' => 'google_video_description_missing', 'severity' => 'warning', 'field' => 'description', 'evidenceState' => null, 'scope' => 'sitemap_video', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Video thumbnail missing', 'result' => $missingVideo, 'code' => 'google_video_thumbnail_loc_missing', 'severity' => 'warning', 'field' => 'thumbnail_loc', 'evidenceState' => null, 'scope' => 'sitemap_video', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Video thumbnail invalid URL', 'result' => $dataVideo, 'code' => 'google_video_thumbnail_loc_invalid_url', 'severity' => 'warning', 'field' => 'thumbnail_loc', 'evidenceState' => null, 'scope' => 'sitemap_video', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Video content invalid URL', 'result' => $malformedVideoResult, 'code' => 'google_video_content_loc_invalid_url', 'severity' => 'warning', 'field' => 'content_loc', 'evidenceState' => null, 'scope' => 'sitemap_video', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Video player invalid URL', 'result' => $rejectedMediaResult, 'code' => 'google_video_player_loc_invalid_url', 'severity' => 'warning', 'field' => 'player_loc', 'evidenceState' => null, 'scope' => 'sitemap_video', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Video content/player missing', 'result' => $missingMediaResult, 'code' => 'google_video_content_or_player_loc_missing', 'severity' => 'warning', 'field' => 'content_loc', 'evidenceState' => null, 'scope' => 'sitemap_video', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Video description length', 'result' => $malformedVideoResult, 'code' => 'google_video_description_length_exceeds_measure_boundary', 'severity' => 'warning', 'field' => 'description', 'evidenceState' => null, 'scope' => 'sitemap_video', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Video duration range', 'result' => $durationResult, 'code' => 'google_video_duration_out_of_range', 'severity' => 'warning', 'field' => 'duration', 'evidenceState' => null, 'scope' => 'sitemap_video', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Video publication date', 'result' => $malformedVideoResult, 'code' => 'google_video_publication_date_invalid', 'severity' => 'warning', 'field' => 'publication_date', 'evidenceState' => null, 'scope' => 'sitemap_video', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Video content equals parent', 'result' => $equalMediaVideo, 'code' => 'google_video_media_loc_equals_parent_loc', 'severity' => 'warning', 'field' => 'content_loc', 'evidenceState' => null, 'scope' => 'sitemap_video', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Video player equals parent', 'result' => $equalMediaVideo, 'code' => 'google_video_media_loc_equals_parent_loc', 'severity' => 'warning', 'field' => 'player_loc', 'evidenceState' => null, 'scope' => 'sitemap_video', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Video content data URL', 'result' => $dataBoth, 'code' => 'google_video_data_url_unsupported', 'severity' => 'warning', 'field' => 'content_loc', 'evidenceState' => null, 'scope' => 'sitemap_video', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Video player data URL', 'result' => $dataBoth, 'code' => 'google_video_data_url_unsupported', 'severity' => 'warning', 'field' => 'player_loc', 'evidenceState' => null, 'scope' => 'sitemap_video', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Video relevance evidence', 'result' => $videoEvidence, 'code' => 'google_video_relevance_context', 'severity' => 'warning', 'field' => null, 'evidenceState' => 'irrelevant', 'scope' => 'sitemap_video', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Video title evidence', 'result' => $videoEvidence, 'code' => 'google_video_title_host_page_match', 'severity' => 'warning', 'field' => 'title', 'evidenceState' => 'differs', 'scope' => 'sitemap_video', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Video description evidence', 'result' => $videoEvidence, 'code' => 'google_video_description_host_page_match', 'severity' => 'info', 'field' => 'description', 'evidenceState' => 'matches', 'scope' => 'sitemap_video', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract Video content preference', 'result' => $preferenceVideo, 'code' => 'google_video_content_loc_preference', 'severity' => 'info', 'field' => 'content_loc', 'evidenceState' => null, 'scope' => 'sitemap_video', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract News multiple entries', 'result' => $multipleNews, 'code' => 'google_news_multiple_entries_per_url', 'severity' => 'warning', 'field' => 'news', 'evidenceState' => null, 'scope' => 'sitemap_url', 'entryIndex' => 0, 'itemIndex' => null],
+    ['label' => 'contract News count boundary', 'result' => $newsValidator->validate(stack4UrlDocument([stack4Url(options: ['news' => array_fill(0, 1001, $validNews)])])), 'code' => 'google_news_document_count_exceeds_limit', 'severity' => 'warning', 'field' => 'news', 'evidenceState' => null, 'scope' => 'sitemap_document', 'entryIndex' => null, 'itemIndex' => null],
+    ['label' => 'contract News publication name missing', 'result' => $missingNews, 'code' => 'google_news_publication_name_missing', 'severity' => 'warning', 'field' => 'name', 'evidenceState' => null, 'scope' => 'sitemap_news', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract News language missing', 'result' => $missingNews, 'code' => 'google_news_language_missing', 'severity' => 'warning', 'field' => 'language', 'evidenceState' => null, 'scope' => 'sitemap_news', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract News publication date missing', 'result' => $missingNews, 'code' => 'google_news_publication_date_missing', 'severity' => 'warning', 'field' => 'publication_date', 'evidenceState' => null, 'scope' => 'sitemap_news', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract News title missing', 'result' => $missingNews, 'code' => 'google_news_title_missing', 'severity' => 'warning', 'field' => 'title', 'evidenceState' => null, 'scope' => 'sitemap_news', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract News publication date invalid', 'result' => $invalidNews, 'code' => 'google_news_publication_date_invalid', 'severity' => 'warning', 'field' => 'publication_date', 'evidenceState' => null, 'scope' => 'sitemap_news', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract News language invalid', 'result' => $invalidNews, 'code' => 'google_news_language_invalid', 'severity' => 'warning', 'field' => 'language', 'evidenceState' => null, 'scope' => 'sitemap_news', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract News parenthetical name', 'result' => $invalidNews, 'code' => 'google_news_publication_name_parenthetical', 'severity' => 'warning', 'field' => 'name', 'evidenceState' => null, 'scope' => 'sitemap_news', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract News title evidence', 'result' => $newsEvidence, 'code' => 'google_news_title_content_evidence', 'severity' => 'warning', 'field' => 'title', 'evidenceState' => 'nonconforming', 'scope' => 'sitemap_news', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract News original evidence', 'result' => $newsEvidence, 'code' => 'google_news_original_publication_evidence', 'severity' => 'warning', 'field' => 'publication_date', 'evidenceState' => 'not_original', 'scope' => 'sitemap_news', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract News name evidence', 'result' => $newsEvidence, 'code' => 'google_news_name_exact_match_evidence', 'severity' => 'warning', 'field' => 'name', 'evidenceState' => 'mismatched', 'scope' => 'sitemap_news', 'entryIndex' => 0, 'itemIndex' => 0],
+    ['label' => 'contract News freshness evidence', 'result' => $newsEvidence, 'code' => 'google_news_freshness_evidence', 'severity' => 'warning', 'field' => null, 'evidenceState' => 'outside_window', 'scope' => 'sitemap_news', 'entryIndex' => 0, 'itemIndex' => 0],
+];
+foreach ($contractCases as $contractCase) {
+    stack4AssertContractCase($contractCase);
+}
 
 $facadeFiles = [
     __DIR__ . '/../src/Web/Sitemap/SitemapXmlStringRenderer.php',
