@@ -837,6 +837,7 @@ $videoAcceptedFieldValues = [
     'http://example.com/',
     'ftp://example.com/path',
     'https://example.com/مسار',
+    'https://مثال.إختبار/path',
     'https://user@example.com/path',
     'https://user:pass@example.com/path',
     'https://[::1]/path',
@@ -848,6 +849,11 @@ $videoInvalidCodes = [
     'thumbnailLoc' => 'google_video_thumbnail_loc_invalid_url',
     'contentLoc' => 'google_video_content_loc_invalid_url',
     'playerLoc' => 'google_video_player_loc_invalid_url',
+];
+$videoDiagnosticFields = [
+    'thumbnailLoc' => 'thumbnail_loc',
+    'contentLoc' => 'content_loc',
+    'playerLoc' => 'player_loc',
 ];
 foreach ($videoInvalidCodes as $field => $invalidCode) {
     foreach ($videoAcceptedFieldValues as $candidate) {
@@ -866,6 +872,17 @@ foreach ($videoInvalidCodes as $field => $invalidCode) {
 $videoRejectedFieldValues = [
     'relative/path',
     'https://',
+    'https://@example.com/path',
+    'https://user@/path',
+    'https://a@b@example.com/path',
+    'https://example.com:/path',
+    'https://example.com:-1/path',
+    'https://example.com:+80/path',
+    'https://example.com:abc/path',
+    'https://example.com:65536/path',
+    'https://[2001:db8::1/path',
+    'https://[]/path',
+    'https://[::1]x/path',
     'https://example.com/a b',
     'https://example.com/%ZZ',
     'https://example.com:abc/path',
@@ -883,7 +900,17 @@ foreach ($videoInvalidCodes as $field => $invalidCode) {
         ];
         $rejectedMedia[$field] = $candidate;
         $rejectedMediaResult = $videos->validate(stack4UrlDocument([stack4Url(options: ['videos' => [new SitemapVideoValidationInputDTO(...$rejectedMedia)]])]));
-        stack4AssertHasCode('rejected Video ' . $field . ' URL: ' . $candidate, $rejectedMediaResult, $invalidCode);
+        stack4AssertDiagnostic(
+            'rejected Video ' . $field . ' URL: ' . $candidate,
+            $rejectedMediaResult,
+            $invalidCode,
+            'warning',
+            $videoDiagnosticFields[$field],
+            null,
+            'sitemap_video',
+            0,
+            0,
+        );
     }
 }
 $contentOnlyVideo = new SitemapVideoValidationInputDTO(
@@ -893,6 +920,16 @@ $contentOnlyVideo = new SitemapVideoValidationInputDTO(
     contentLoc: 'https://cdn.example.com/video.mp4',
 );
 stack4AssertNotHasCode('one valid content location satisfies Video presence', $videos->validate(stack4UrlDocument([stack4Url(options: ['videos' => [$contentOnlyVideo]])])), 'google_video_content_or_player_loc_missing');
+$playerOnlyVideo = new SitemapVideoValidationInputDTO(
+    thumbnailLoc: 'https://cdn.example.com/thumb.jpg',
+    title: 'Title',
+    description: 'Description',
+    playerLoc: 'https://cdn.example.com/player',
+);
+$playerOnlyResult = $videos->validate(stack4UrlDocument([stack4Url(options: ['videos' => [$playerOnlyVideo]])]));
+stack4AssertNotHasCode('one valid player location satisfies Video presence', $playerOnlyResult, 'google_video_content_or_player_loc_missing');
+stack4AssertDiagnostic('player-only Video emits content preference', $playerOnlyResult, 'google_video_content_loc_preference', 'info', 'content_loc', null, 'sitemap_video', 0, 0);
+stack4AssertNotHasCode('valid player-only location has no player URL diagnostic', $playerOnlyResult, 'google_video_player_loc_invalid_url');
 foreach ([str_repeat('a', 2048), str_repeat('a', 2049), str_repeat('é', 1024), str_repeat('é', 1025)] as $descriptionValue) {
     $descriptionBoundary = $videos->validate(stack4UrlDocument([stack4Url(options: ['videos' => [new SitemapVideoValidationInputDTO(
         thumbnailLoc: 'https://cdn.example.com/thumb.jpg',
@@ -1072,7 +1109,10 @@ $asProvidedNews = $newsValidator->validate(stack4UrlDocument([stack4Url(options:
 stack4AssertDiagnostic('as-provided News date is explicitly invalid', $asProvidedNews, 'google_news_publication_date_invalid', 'warning', 'publication_date', null, 'sitemap_news', 0, 0);
 $multipleNews = $newsValidator->validate(stack4UrlDocument([stack4Url(options: ['news' => [$validNews, $validNews]])]));
 stack4AssertHasCode('multiple News entries per URL are diagnosed', $multipleNews, 'google_news_multiple_entries_per_url');
-stack4AssertHasCode('1,001 total News entries exceed the document limit', $newsValidator->validate(stack4UrlDocument([stack4Url(options: ['news' => array_fill(0, 1001, $validNews)])])), 'google_news_document_count_exceeds_limit');
+$newsAtLimit = $newsValidator->validate(stack4UrlDocument([stack4Url(options: ['news' => array_fill(0, 1000, $validNews)])]));
+stack4AssertNotHasCode('1,000 total News entries remain within the document limit', $newsAtLimit, 'google_news_document_count_exceeds_limit');
+$newsOverLimit = $newsValidator->validate(stack4UrlDocument([stack4Url(options: ['news' => array_fill(0, 1001, $validNews)])]));
+stack4AssertDiagnostic('1,001 total News entries exceed the document limit', $newsOverLimit, 'google_news_document_count_exceeds_limit', 'warning', 'news', null, 'sitemap_document', null, null);
 $newsEvidence = $newsValidator->validate(
     stack4UrlDocument([stack4Url(options: ['news' => [$validNews]])]),
     stack4Evidence([
@@ -1119,6 +1159,23 @@ $newsTargetMatrix = $newsValidator->validate(
 stack4AssertDiagnostic('News URL 0/news 0 name evidence target', $newsTargetMatrix, 'google_news_name_exact_match_evidence', 'info', 'name', 'matched', 'sitemap_news', 0, 0);
 stack4AssertDiagnostic('News URL 0/news 1 missing date target', $newsTargetMatrix, 'google_news_publication_date_missing', 'warning', 'publication_date', null, 'sitemap_news', 0, 1);
 stack4AssertDiagnostic('News URL 0/news 1 freshness target', $newsTargetMatrix, 'google_news_freshness_evidence', 'warning', null, 'outside_window', 'sitemap_news', 0, 1);
+$newsIndependentEvidence = $newsValidator->validate(
+    stack4UrlDocument([stack4Url(options: ['news' => [$validNews, $validNews]])]),
+    stack4Evidence([
+        'google_news.original_publication' => [0 => [0 => 'original', 1 => 'not_original']],
+        'google_news.publication_name_match' => [0 => [0 => 'matched', 1 => 'mismatched']],
+        'google_news.freshness' => [0 => [0 => 'within_window', 1 => 'outside_window']],
+        'google_news.title_content_conformance' => [0 => [0 => 'conforming', 1 => 'nonconforming']],
+    ]),
+);
+stack4AssertDiagnostic('News child 0 original evidence', $newsIndependentEvidence, 'google_news_original_publication_evidence', 'info', 'publication_date', 'original', 'sitemap_news', 0, 0);
+stack4AssertDiagnostic('News child 0 name evidence', $newsIndependentEvidence, 'google_news_name_exact_match_evidence', 'info', 'name', 'matched', 'sitemap_news', 0, 0);
+stack4AssertDiagnostic('News child 0 freshness evidence', $newsIndependentEvidence, 'google_news_freshness_evidence', 'info', null, 'within_window', 'sitemap_news', 0, 0);
+stack4AssertDiagnostic('News child 0 title evidence', $newsIndependentEvidence, 'google_news_title_content_evidence', 'info', 'title', 'conforming', 'sitemap_news', 0, 0);
+stack4AssertDiagnostic('News child 1 original evidence', $newsIndependentEvidence, 'google_news_original_publication_evidence', 'warning', 'publication_date', 'not_original', 'sitemap_news', 0, 1);
+stack4AssertDiagnostic('News child 1 name evidence', $newsIndependentEvidence, 'google_news_name_exact_match_evidence', 'warning', 'name', 'mismatched', 'sitemap_news', 0, 1);
+stack4AssertDiagnostic('News child 1 freshness evidence', $newsIndependentEvidence, 'google_news_freshness_evidence', 'warning', null, 'outside_window', 'sitemap_news', 0, 1);
+stack4AssertDiagnostic('News child 1 title evidence', $newsIndependentEvidence, 'google_news_title_content_evidence', 'warning', 'title', 'nonconforming', 'sitemap_news', 0, 1);
 $optionalNews = new SitemapNewsValidationInputDTO(
     'Example Daily',
     'en',
