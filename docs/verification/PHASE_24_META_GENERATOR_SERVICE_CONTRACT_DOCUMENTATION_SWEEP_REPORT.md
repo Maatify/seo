@@ -9,10 +9,17 @@
 - Verification rerun: `PASS` (see the
   [Phase 24 Verification Report](PHASE_24_META_GENERATOR_SERVICE_CONTRACT_VERIFICATION_REPORT.md))
 
-This sweep is documentation-only. It changes no production, test, Composer, CI,
-or public API file. The normative Phase 24 contract remains the authority for the
-service behavior; the Stack 0 inventory and architecture audit remain historical
-evidence.
+This sweep is documentation-focused and includes one narrow documentation-truth
+synchronization in `tests/Stack8DocumentationTruthSynchronizationTest.php`. That
+test removes assertions for the old unresolved MetaGeneratorService state and now
+requires the `META_GENERATOR_SERVICE_CONTRACT.md` reference while rejecting the
+literal `unknown / needs decision` in the current Reference. This test update adds
+no runtime contract and does not repeat the 22 Phase 24 runtime contract cases.
+
+There are no changes to `src/`, Composer, CI, the public API, the Stack 0 inventory,
+or the architecture audit. The normative Phase 24 contract remains the authority
+for service behavior; the Stack 0 inventory and architecture audit remain
+historical evidence.
 
 ## Documentation Impact Review
 
@@ -30,6 +37,7 @@ evidence.
 | `docs/roadmap/SEO_LIBRARY_ROADMAP.md` | `reviewed-no-change` | Its Phase 3A implementation history remains factual and is not the current output contract. |
 | `examples/seo-override-meta-generation.php` | `reviewed-no-change` | Already demonstrates override, fallback, and host canonical fallback; no contract gap found. |
 | `docs/blueprints/PHASE_24_META_GENERATOR_SERVICE_CONTRACT_FINALIZATION_BLUEPRINT.md` | `updated` | Replaced the pending impact-review placeholders with this sweep's classifications. |
+| `tests/Stack8DocumentationTruthSynchronizationTest.php` | `updated` | Narrow documentation-truth synchronization: require the normative contract link and reject the superseded unresolved wording; no runtime cases duplicated. |
 | `docs/phases/PHASE_7_USABILITY_RENDERING_PLAN.md` | `reviewed-no-change` | Historical rendering/builder plan; its MetaGeneratorService reference describes a dependency option, not the output contract. |
 | `docs/phases/PHASE_22_SEARCH_CONSOLE_EXTERNAL_VERIFICATION.md` | `reviewed-no-change` | Historical record for an unrelated provider boundary. |
 | `docs/phases/PHASE_23_MERCHANT_CENTER_ELIGIBILITY_DIAGNOSTICS.md` | `reviewed-no-change` | Historical record for an unrelated provider boundary. |
