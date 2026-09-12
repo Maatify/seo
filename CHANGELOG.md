@@ -3,7 +3,21 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.0.0] - Unreleased
-- **Added:** Implementation of Phase 23 Merchant Center Eligibility Diagnostics boundary under `Maatify\Seo\Web\MerchantCenter`.
+- **Added:** Advanced Product structured-data composition, including `ProductGroup`, `AggregateOffer`, and typed nested builder composition.
+- **Added:** scoped structural and property-range semantic validation for selected JSON-LD types: `Product`, `Offer`, `AggregateOffer`, and `ProductGroup`, while preserving the legacy validation/report/score contracts.
+- **Added:** Phase 20 standalone CLI-friendly examples for SEO validation, Product audits, redirects, overrides, page rendering, and robots output; no CLI package or runtime dependency was introduced.
+- **Added:** Phase 21 explicit PHP syntax gate, focused structured-data validation CI gate, and release/package-readiness checklist/procedures; the pre-existing PHP 8.2/8.3/8.4 matrix was preserved.
+- **Added:** Optional Search Console URL Inspection evidence boundary under `Maatify\Seo\Web\Indexing\SearchConsole`; provider transport and credentials remain host-owned and separate from core validation.
+- **Added:** Optional Merchant Center Eligibility Diagnostics boundary under `Maatify\Seo\Web\MerchantCenter`; provider results remain separate from core validation and scoring.
+- **Changed:** Expanded the pre-existing Usage Guide in Phase 8 with an end-to-end homepage example and the then-current validation boundary; later Stack 8 documentation records the completed scoped contract.
+- **Added:** Architecture remediation Stack 0 contract characterization and Stack 1 additive validation/diagnostic foundation.
+- **Added:** Architecture remediation Stack 2 RFC 9309 and Google robots validation profiles, separate from the pre-existing robots.txt output helpers.
+- **Changed:** Architecture remediation Stack 3 unified canonical in-memory sitemap serialization across existing public entry points.
+- **Added:** Architecture remediation Stack 4 companion Sitemaps.org, Google Sitemap, Image, Video, and News validation profiles; existing sitemap element support remains compatible.
+- **Added:** Architecture remediation Stack 5 Open Graph companion protocol diagnostics while preserving legacy results and scores.
+- **Added:** Architecture remediation Stack 6 canonical and hreflang companion profiles and normalization; ISO registry membership remains deferred.
+- **Added:** Architecture remediation Stack 7 contract characterization of generic Schema.org generation, scoped validation, and deferred provider eligibility.
+- **Changed:** Architecture remediation Stack 8 synchronized current documentation, lifecycle records, and the normative-versus-historical documentation hierarchy.
 - **Fixed:** Strict sitemap date validation now rejects malformed calendar ATOM dates. Valid YYYY-MM-DD and ATOM timestamps remain accepted.
 - **Fixed:** Raw top-level sitemap URL validation is now aligned with the typed DTO contract.
 - **Fixed:** Sitemap priority validation correctly enforces a finite number within `0.0..1.0` (rejecting `NAN`, `+INF`, and `-INF`).
@@ -37,7 +51,7 @@ All notable changes to this project will be documented in this file.
 - **Added:** Phase 6B (Web Layer) implementation including `Web/SeoRender/Service/SeoPageRenderService`, `Web/SeoRender/Command/RenderSeoPageCommand`, and `Web/SeoRender/DTO/SeoPagePayloadDTO` (see `docs/verification/PHASE_6B_WEB_LAYER_VERIFICATION_REPORT.md`).
 - **Added:** Phase 6A (Admin Layer) implementation including `AdminSeoOverride`, `AdminRedirect`, and `AdminSlugHistory` services, DTOs, and commands (see `docs/verification/PHASE_6A_ADMIN_LAYER_VERIFICATION_REPORT.md`).
 - **Added:** Phase 5 (Documentation & Polish) implementation including final validations and verification reports.
-- **Added:** Phase 4 (Sitemap Generation) implementation including `SitemapGeneratorService` and heavily-validated DTOs (`SitemapUrlDTO`, `SitemapIndexEntryDTO`, etc.) to stream valid XML (see `docs/verification/PHASE_4_SITEMAP_GENERATION_VERIFICATION_REPORT.md`).
+- **Added:** Phase 4 (Sitemap Generation) implementation including `SitemapGeneratorService` and heavily-validated DTOs (`SitemapUrlDTO`, `SitemapIndexEntryDTO`, etc.) to generate/render valid in-memory XML strings (see `docs/verification/PHASE_4_SITEMAP_GENERATION_VERIFICATION_REPORT.md`).
 - **Added:** Phase 3C (Redirect & Slug Services) implementation including `RedirectManagerService`, `SlugHistoryService`, and corresponding DTOs (see `docs/verification/PHASE_3C_REDIRECT_AND_SLUG_SERVICES_VERIFICATION_REPORT.md`).
 - **Added:** Phase 3B (JSON-LD Schema Generator) implementation including `SchemaGeneratorService` and various strictly typed schema DTOs (see `docs/verification/PHASE_3B_JSON_LD_SCHEMA_GENERATOR_VERIFICATION_REPORT.md`).
 - **Added:** Phase 3A (Meta Generator) implementation including `GenerateMetaTagsCommand`, `MetaTagsDTO`, and `MetaGeneratorService` (see `docs/verification/PHASE_3A_META_GENERATOR_VERIFICATION_REPORT.md`).

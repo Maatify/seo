@@ -70,10 +70,10 @@ echo $renderer->render($metaTags);
 ## Features
 
 - **Metadata generation:** Easily construct standard HTML meta tags and canonical URLs.
-- **JSON-LD schemas:** Framework-agnostic structured data generation for SEO (e.g., Breadcrumbs, Products, ProductGroup, AggregateOffer) via fluent builders.
-- **Social metadata:** Generate Open Graph and Twitter Card tags seamlessly.
-- **Sitemap XML:** In-memory URL-set and sitemap-index XML strings from typed DTOs and supported raw URL arrays, with strict URL/date/frequency/priority validation.
-- **Extended sitemap data:** Hreflang alternates including `x-default`, plus image, video, and news child elements are supported by the strict-DTO generator and Web string renderers. DTO URL output is serialized through the same canonical XML path.
+- **JSON-LD schemas:** Generic Schema.org structured-data generation for SEO (e.g., Breadcrumbs, Products, ProductGroup, AggregateOffer) via fluent builders. Current validation is scoped structural and property-range semantic validation for selected types; generation does not establish Google Rich Results or Merchant eligibility.
+- **Social metadata:** Generate Open Graph and Twitter Card compatibility output. Open Graph behavior is covered by the current protocol documentation; Twitter/X provider conformance was not source-verified by the architecture audit and remains a separate future review boundary.
+- **Sitemap XML:** In-memory URL-set and sitemap-index XML strings from typed DTOs and supported raw URL arrays, with strict URL/date/frequency/priority validation for the applicable base/strict DTO fields.
+- **Extended sitemap data:** Hreflang alternates including `x-default`, plus image, video, and news child elements are supported by the strict-DTO generator and Web string renderers. Their provider/profile validation boundaries are separate from generic generation; DTO URL output is serialized through the same canonical XML path.
 - **Host-owned output:** Renderers return XML strings; the host application owns routes, headers, HTTP responses, and any persistence or delivery strategy.
 - **Redirects and slug history:** Logic to manage URL migrations and legacy paths cleanly.
 - **SEO validation and scoring:** Audit generated SEO metadata arrays or objects to warn about missing fields, conflicts, and compute actionable SEO scores.
@@ -124,17 +124,15 @@ The library follows a strict layered architecture to ensure clean separation of 
 
 ## Documentation
 
-Full documentation, including internal compliance checks, library references, and guides:
+Use the [official documentation index](docs/README.md) to navigate the repository
+and understand which documents are current normative guidance, historical evidence,
+audit authority, or future planning material.
 
-- [docs/SEO/library/README.md](docs/SEO/library/README.md) - Current Engineering Handbook
-- [docs/guides/USAGE_GUIDE.md](docs/guides/USAGE_GUIDE.md) - Usage Guide
-- [docs/guides/INTEGRATION_GUIDE.md](docs/guides/INTEGRATION_GUIDE.md) - Integration Guide
-- [docs/](docs/) - Central repository for library documentation.
-- [Roadmap](docs/roadmap/) - Development and feature roadmap.
-- [Proposals](docs/proposals/) - Architectural design proposals.
-- [Verification Reports](docs/verification/) - Detailed audit trails and release readiness reports.
-- [Phase 22 Search Console verification](docs/phases/PHASE_22_SEARCH_CONSOLE_EXTERNAL_VERIFICATION.md) - Optional indexed-result verification boundaries and limitations.
-- [Phase 23 Merchant Center Eligibility Diagnostics](docs/phases/PHASE_23_MERCHANT_CENTER_ELIGIBILITY_DIAGNOSTICS.md) - Optional external boundary for Google Merchant API v1 product eligibility diagnostics.
+The current normative entry points are the [engineering handbook](docs/SEO/library/README.md),
+[library reference](docs/SEO_LIBRARY_REFERENCE.md), [usage guide](docs/guides/USAGE_GUIDE.md),
+and [integration guide](docs/guides/INTEGRATION_GUIDE.md). Phase records, verification
+reports, completed work-unit blueprints, roadmaps, and proposals remain linked from
+the documentation index for context and evidence.
 
 ## Design Principles
 
