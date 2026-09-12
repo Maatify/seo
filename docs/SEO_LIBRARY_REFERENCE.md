@@ -68,9 +68,8 @@ URL/provider validation or network behavior, and `MetaTagsDTO`'s public shape is
 unchanged.
 
 The [Stack 0 inventory](verification/STACK_0_CONTRACT_CHARACTERIZATION_INVENTORY.md)
-preserves its earlier `unknown / needs decision` classification as historical
-evidence; Phase 24's successor contract resolves that decision without rewriting
-the inventory.
+preserves its earlier unresolved classification as historical evidence; Phase
+24's successor contract resolves that decision without rewriting the inventory.
 
 ### DTOs and Commands
 - **`GenerateMetaTagsCommand`**: Encapsulates all data required to generate meta tags:
