@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.0.0] - Unreleased
+## [1.0.0-rc.2] - Unreleased
 - **Added:** Advanced Product structured-data composition, including `ProductGroup`, `AggregateOffer`, and typed nested builder composition.
 - **Added:** scoped structural and property-range semantic validation for selected JSON-LD types: `Product`, `Offer`, `AggregateOffer`, and `ProductGroup`, while preserving the legacy validation/report/score contracts.
 - **Added:** Phase 20 standalone CLI-friendly examples for SEO validation, Product audits, redirects, overrides, page rendering, and robots output; no CLI package or runtime dependency was introduced.
