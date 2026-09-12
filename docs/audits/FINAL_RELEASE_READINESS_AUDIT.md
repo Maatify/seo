@@ -1,5 +1,7 @@
 # Final Release Readiness Audit
 
+> **Historical snapshot:** This audit records repository/release-readiness evidence from its original July 2026 review. It is historical evidence, not current release authority, and it must not be interpreted as authorizing a stable `v1.0.0` release. Current release-version decisions come from the current repository state, current release documentation, and an explicit maintainer release action.
+
 ## Repository Information
 - **Repository:** Maatify/maatify-seo-library
 - **Branch:** main (current HEAD)
