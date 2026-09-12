@@ -971,3 +971,22 @@ Draft, Ready, or merge lifecycle action remains.
 Phase 23 provides an optional, framework-neutral boundary for Google's Merchant Center Eligibility Diagnostics via the Merchant API v1 (`products.get` and `aggregateProductStatuses.list`). The host owns HTTP, OAuth, JSON decoding, credentials, quotas, retries, pagination, and scheduling. Provider results remain independent from core validation.
 
 The library introduces no SDK, concrete HTTP implementation, credentials, persistence, or auto-remediation logic. Missing provider data maps to empty collections or null timestamps, and unknown provider values remain raw.
+
+---
+
+# Phase 24: MetaGeneratorService Contract Finalization
+
+## Work and verification record
+
+- Blueprint: complete.
+- WU1 normative `MetaGeneratorService` output contract: adopted as the Phase 24 execution authority.
+- WU2 regression lock: covers 22 contract cases.
+- WU2 contract-boundary correction: removed unauthorized exact fallback host-call-count assertions; the explicit-canonical zero-call contract remains covered.
+- Verification rerun: `PASS` at the reviewed snapshot below.
+- Production `src/` changes: none.
+- Reviewed snapshot: `main` `a449eaca7467e6c26b77d12ddfba8e0c4248a0ce`; Integration `541473735d56216a88a42747a536c621e211b5cc` (5 ahead / 0 behind).
+
+The successor contract resolves the Stack 0 material decision through a normative
+contract while preserving Stack 0 and the architecture audit as historical evidence.
+The roadmap records the contract, test, and verification facts; Phase 24 is Complete
+only after Final Review against the latest `main` and the final Integration merge.
