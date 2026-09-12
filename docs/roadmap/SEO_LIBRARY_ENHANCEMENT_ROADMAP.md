@@ -302,10 +302,11 @@ renderer:
 Current support includes:
 
 * image URL
-* image title
-* image caption
-* image geo location
-* image license
+
+The public/output-compatible fields `title`, `caption`, `geoLocation`, and
+`license` remain available. They are Google-deprecated compatibility fields, not
+current recommended provider enhancements; this classification does not remove or
+narrow the public DTO/output contract.
 
 ## 10D: Video Sitemap Support (Complete)
 
@@ -327,8 +328,12 @@ Current support includes:
 * Google News sitemap tags
 * publication name, language
 * title, date
-* access, genres, keywords, stock tickers
+* optional `access`, `genres`, `keywords`, and `stockTickers`
 * non-empty `publicationDate` emitted as provided; it is not subject to the shared strict date parser
+
+The optional `access`, `genres`, `keywords`, and `stockTickers` fields remain
+legacy/public-output compatibility fields, not current recommended provider
+enhancements. Their public DTO/output behavior is preserved.
 
 ---
 
@@ -522,7 +527,11 @@ Each builder should return:
 
 ## Goal
 
-Fully reflect the structured-data gaps that previously existed in the library. This section addressed deferred requirements (ProductGroup, product variant structured-data support, richer schema / CI validation direction) and newly identified enhancements (first-class AggregateOffer support) while completing partially implemented features (Product typed-field completeness). Deep Schema.org semantic validation remains outstanding in Phase 13P.
+At the time this Phase 13O plan was written, deeper structured-data validation was
+identified as follow-up work for Phase 13P. Phase 13P has since completed; current
+validation is scoped structural and property-range semantic validation for
+`Product`, `Offer`, `AggregateOffer`, and `ProductGroup` only. This does not claim
+complete Schema.org validation.
 
 ## 13O-1 Product Builder Completeness (Complete)
 
@@ -899,8 +908,7 @@ Phase 21 includes structured-data verification using the existing contracts:
 
 * CI/CD structured-data validation
 * CI-friendly structured-data validation output
-* scoped structural and property-range semantic validation limited to `Product`, `Offer`,
-  `ProductGroup`
+* scoped structural and property-range semantic validation limited to `Product`, `Offer`, `AggregateOffer`, and `ProductGroup`
 * documentation of a boundary for separately approved future external verification
 
 Google Rich Results eligibility, Merchant eligibility, provider selection, SDKs,

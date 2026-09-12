@@ -82,6 +82,11 @@ stack8AssertNotContains('Phase 22 has no incomplete lifecycle wording', $phase22
 $changelog = stack8Read('CHANGELOG.md');
 stack8AssertContains('Unreleased changelog exists', $changelog, '## [1.0.0] - Unreleased');
 stack8AssertNotContains('changelog does not claim XML streaming', $changelog, 'to stream valid XML');
+$rcHeading = strpos($changelog, '## [1.0.0-rc.1]');
+if ($rcHeading === false) {
+    stack8Fail('RC1 changelog heading exists after Unreleased history');
+}
+$unreleased = substr($changelog, 0, $rcHeading);
 foreach ([
     'ProductGroup',
     'AggregateOffer',
@@ -100,6 +105,20 @@ foreach ([
     'Stack 8',
 ] as $needle) {
     stack8AssertContains("Unreleased history contains {$needle}", $changelog, $needle);
+}
+stack8AssertContains('post-RC Unreleased history records Phase 21', $unreleased, 'Phase 21 quality, CI, and release-readiness gates');
+$forbiddenAddedClaims = [
+    'Framework-neutral `robots.txt` output helpers',
+    'Sitemap index, hreflang alternate, image, video, and news support',
+    'SEO validation presets, scores, reports, batch reports',
+    'Developer usage and integration documentation',
+    'Added:** Usage Guide',
+];
+preg_match_all('/^- \*\*Added:\*\*.*$/mi', $unreleased, $addedLines);
+foreach ($addedLines[0] as $addedLine) {
+    foreach ($forbiddenAddedClaims as $claim) {
+        stack8AssertNotContains("RC1 capability is not claimed as a new addition: {$claim}", $addedLine, $claim);
+    }
 }
 
 $readme = stack8Read('README.md');
@@ -140,6 +159,41 @@ stack8AssertContains('current docs preserve the Twitter/X compatibility boundary
 $reference = $structuredDocContents['docs/SEO_LIBRARY_REFERENCE.md'];
 stack8AssertContains('MetaGeneratorService remains an unresolved Stack 0 contract', $reference, 'unknown / needs decision');
 stack8AssertContains('MetaGeneratorService points to Stack 0 evidence', $reference, 'STACK_0_CONTRACT_CHARACTERIZATION_INVENTORY.md');
+
+$enhancementRoadmap = stack8Read('docs/roadmap/SEO_LIBRARY_ENHANCEMENT_ROADMAP.md');
+$phase21Start = strpos($enhancementRoadmap, '## Structured-data CI and external-verification boundary');
+$phase21End = $phase21Start === false ? false : strpos($enhancementRoadmap, '## Constraints', $phase21Start);
+if ($phase21Start === false || $phase21End === false) {
+    stack8Fail('Phase 21 structured-data scope section has clear boundaries');
+}
+$phase21Scope = substr($enhancementRoadmap, $phase21Start, $phase21End - $phase21Start);
+stack8AssertContains(
+    'Phase 21 lists exactly the four scoped JSON-LD types',
+    $phase21Scope,
+    'scoped structural and property-range semantic validation limited to `Product`, `Offer`, `AggregateOffer`, and `ProductGroup`',
+);
+
+stack8AssertContains('Image fields remain public/output compatible', $enhancementRoadmap, 'public/output-compatible fields `title`, `caption`, `geoLocation`, and');
+stack8AssertContains('Image fields are classified as Google deprecated', $enhancementRoadmap, 'Google-deprecated compatibility fields');
+stack8AssertContains('Image fields are not current recommended enhancements', $enhancementRoadmap, 'current recommended provider enhancements');
+stack8AssertContains('News optional fields remain legacy/public-output compatible', $enhancementRoadmap, 'legacy/public-output compatibility fields');
+stack8AssertContains('News fields are not current recommended enhancements', $enhancementRoadmap, 'legacy/public-output compatibility fields, not current recommended provider');
+
+$phase13OStart = strpos($enhancementRoadmap, '# Phase 13O — Advanced Product & Variant Structured Data');
+$phase13PEnd = $phase13OStart === false ? false : strpos($enhancementRoadmap, '# Phase 13P — Structured Data Semantic Validation', $phase13OStart);
+if ($phase13OStart === false || $phase13PEnd === false) {
+    stack8Fail('Phase 13O historical section has clear boundaries');
+}
+$phase13O = substr($enhancementRoadmap, $phase13OStart, $phase13PEnd - $phase13OStart);
+stack8AssertNotContains('Phase 13O no longer says Phase 13P is outstanding', $phase13O, 'Deep Schema.org semantic validation remains outstanding in Phase 13P');
+stack8AssertNotContains('Phase 13O contains no outstanding Phase 13P claim', strtolower($phase13O), 'remains outstanding in phase 13p');
+stack8AssertContains('Phase 13O records that Phase 13P was historical follow-up', $phase13O, 'identified as follow-up work for Phase 13P');
+stack8AssertContains('Phase 13O records that Phase 13P is complete', $phase13O, 'Phase 13P has since completed');
+stack8AssertContains('Phase 13O states the current scoped validation contract', $phase13O, 'scoped structural and property-range semantic validation');
+stack8AssertTrue(
+    'Phase 13O avoids a complete Schema.org claim',
+    preg_match('/This does not claim\s+complete Schema\.org validation\./', $phase13O) === 1,
+);
 
 $sitemapExample = stack8Read('examples/sitemap-output.php');
 stack8AssertContains('sitemap example uses a valid publication date', $sitemapExample, "publicationDate: '2026-07-01'");

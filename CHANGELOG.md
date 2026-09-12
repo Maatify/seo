@@ -5,19 +5,18 @@ All notable changes to this project will be documented in this file.
 ## [1.0.0] - Unreleased
 - **Added:** Advanced Product structured-data composition, including `ProductGroup`, `AggregateOffer`, and typed nested builder composition.
 - **Added:** scoped structural and property-range semantic validation for selected JSON-LD types: `Product`, `Offer`, `AggregateOffer`, and `ProductGroup`, while preserving the legacy validation/report/score contracts.
-- **Added:** Developer usage and integration documentation, runnable CLI examples, and manual examples for metadata, structured data, robots, sitemaps, and provider boundaries.
-- **Added:** Framework-neutral `robots.txt` output helpers and layered RFC 9309 / Google robots validation profiles.
-- **Added:** Sitemap index, hreflang alternate, image, video, and news support, plus canonical in-memory XML serialization shared by the typed generator and Web renderer.
-- **Added:** SEO validation presets, scores, reports, batch reports, and array/JSON/summary/Markdown exporters.
+- **Added:** Phase 20 standalone CLI-friendly examples for SEO validation, Product audits, redirects, overrides, page rendering, and robots output; no CLI package or runtime dependency was introduced.
+- **Added:** Phase 21 quality, CI, and release-readiness gates, including the PHP 8.2/8.3/8.4 workflow and release checklist.
 - **Added:** Optional Search Console URL Inspection evidence boundary under `Maatify\Seo\Web\Indexing\SearchConsole`; provider transport and credentials remain host-owned and separate from core validation.
 - **Added:** Optional Merchant Center Eligibility Diagnostics boundary under `Maatify\Seo\Web\MerchantCenter`; provider results remain separate from core validation and scoring.
+- **Changed:** Expanded the pre-existing Usage Guide in Phase 8 with an end-to-end homepage example and the then-current validation boundary; later Stack 8 documentation records the completed scoped contract.
 - **Added:** Architecture remediation Stack 0 contract characterization and Stack 1 additive validation/diagnostic foundation.
-- **Added:** Architecture remediation Stack 2 for separate RFC 9309 and Google robots profile behavior.
-- **Changed:** Architecture remediation Stack 3 unified canonical sitemap serialization without removing the existing public entry points.
-- **Added:** Architecture remediation Stack 4 for separate Sitemap, Google Image, Video, and News validation profiles.
-- **Added:** Architecture remediation Stack 5 for companion Open Graph protocol validation while preserving legacy results and scores.
-- **Added:** Architecture remediation Stack 6 for canonical and hreflang profiles, normalization, and explicit deferred ISO-membership validation.
-- **Added:** Architecture remediation Stack 7 contract coverage for the boundary between generic Schema.org generation, scoped validation, and deferred provider eligibility.
+- **Added:** Architecture remediation Stack 2 RFC 9309 and Google robots validation profiles, separate from the pre-existing robots.txt output helpers.
+- **Changed:** Architecture remediation Stack 3 unified canonical in-memory sitemap serialization across existing public entry points.
+- **Added:** Architecture remediation Stack 4 companion Sitemaps.org, Google Sitemap, Image, Video, and News validation profiles; existing sitemap element support remains compatible.
+- **Added:** Architecture remediation Stack 5 Open Graph companion protocol diagnostics while preserving legacy results and scores.
+- **Added:** Architecture remediation Stack 6 canonical and hreflang companion profiles and normalization; ISO registry membership remains deferred.
+- **Added:** Architecture remediation Stack 7 contract characterization of generic Schema.org generation, scoped validation, and deferred provider eligibility.
 - **Changed:** Architecture remediation Stack 8 synchronized current documentation, lifecycle records, and the normative-versus-historical documentation hierarchy.
 - **Fixed:** Strict sitemap date validation now rejects malformed calendar ATOM dates. Valid YYYY-MM-DD and ATOM timestamps remain accepted.
 - **Fixed:** Raw top-level sitemap URL validation is now aligned with the typed DTO contract.
