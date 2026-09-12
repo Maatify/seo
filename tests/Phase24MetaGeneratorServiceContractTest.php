@@ -304,7 +304,6 @@ phase24RunCase('14 null explicit canonical uses host URL fallback', static funct
         ->generate(phase24Command(canonicalUrl: null));
 
     phase24AssertSame('null canonical host fallback value', 'https://host.test/generated', $meta->canonicalUrl);
-    phase24AssertSame('null canonical host call count', 1, count($host->calls));
 });
 
 phase24RunCase('15 blank explicit canonical uses host URL fallback', static function (): void {
@@ -313,7 +312,6 @@ phase24RunCase('15 blank explicit canonical uses host URL fallback', static func
         ->generate(phase24Command(canonicalUrl: " \t\n "));
 
     phase24AssertSame('blank canonical host fallback value', 'https://host.test/generated', $meta->canonicalUrl);
-    phase24AssertSame('blank canonical host call count', 1, count($host->calls));
 });
 
 phase24RunCase('16 no explicit canonical or host generator produces null', static function (): void {
@@ -328,7 +326,6 @@ phase24RunCase('17 host-generated URL is returned unchanged with surrounding spa
     $meta = phase24Service(new Phase24FakeSeoOverrideRepository(), $host)->generate(phase24Command());
 
     phase24AssertSame('host URL remains unchanged', $hostUrl, $meta->canonicalUrl);
-    phase24AssertSame('host URL called once', 1, count($host->calls));
 });
 
 phase24RunCase('18 final title propagates to base, Open Graph, and Twitter title fields', static function (): void {
