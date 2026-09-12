@@ -106,7 +106,22 @@ foreach ([
 ] as $needle) {
     stack8AssertContains("Unreleased history contains {$needle}", $changelog, $needle);
 }
-stack8AssertContains('post-RC Unreleased history records Phase 21', $unreleased, 'Phase 21 quality, CI, and release-readiness gates');
+stack8AssertContains('post-RC Unreleased history records Phase 21 syntax gate', $unreleased, 'Phase 21 explicit PHP syntax gate');
+stack8AssertContains('post-RC Unreleased history records Phase 21 structured-data CI gate', $unreleased, 'focused structured-data validation CI gate');
+stack8AssertContains('post-RC Unreleased history records Phase 21 release/package readiness', $unreleased, 'release/package-readiness checklist/procedures');
+stack8AssertContains('Phase 21 preserves the pre-existing PHP matrix', $unreleased, 'pre-existing PHP 8.2/8.3/8.4 matrix was preserved');
+$phase21ChangelogLine = '';
+foreach (explode("\n", $unreleased) as $line) {
+    if (str_contains($line, 'Phase 21')) {
+        $phase21ChangelogLine = $line;
+        break;
+    }
+}
+stack8AssertTrue('Phase 21 has one focused changelog line', $phase21ChangelogLine !== '');
+stack8AssertFalse(
+    'Phase 21 must not claim it added the PHP matrix',
+    preg_match('/(?:added|adds|introduced|introduces).{0,100}PHP 8\.2\/8\.3\/8\.4|PHP 8\.2\/8\.3\/8\.4.{0,100}(?:added|adds|introduced|introduces)/i', $phase21ChangelogLine) === 1,
+);
 $forbiddenAddedClaims = [
     'Framework-neutral `robots.txt` output helpers',
     'Sitemap index, hreflang alternate, image, video, and news support',

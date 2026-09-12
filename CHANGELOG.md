@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 - **Added:** Advanced Product structured-data composition, including `ProductGroup`, `AggregateOffer`, and typed nested builder composition.
 - **Added:** scoped structural and property-range semantic validation for selected JSON-LD types: `Product`, `Offer`, `AggregateOffer`, and `ProductGroup`, while preserving the legacy validation/report/score contracts.
 - **Added:** Phase 20 standalone CLI-friendly examples for SEO validation, Product audits, redirects, overrides, page rendering, and robots output; no CLI package or runtime dependency was introduced.
-- **Added:** Phase 21 quality, CI, and release-readiness gates, including the PHP 8.2/8.3/8.4 workflow and release checklist.
+- **Added:** Phase 21 explicit PHP syntax gate, focused structured-data validation CI gate, and release/package-readiness checklist/procedures; the pre-existing PHP 8.2/8.3/8.4 matrix was preserved.
 - **Added:** Optional Search Console URL Inspection evidence boundary under `Maatify\Seo\Web\Indexing\SearchConsole`; provider transport and credentials remain host-owned and separate from core validation.
 - **Added:** Optional Merchant Center Eligibility Diagnostics boundary under `Maatify\Seo\Web\MerchantCenter`; provider results remain separate from core validation and scoring.
 - **Changed:** Expanded the pre-existing Usage Guide in Phase 8 with an end-to-end homepage example and the then-current validation boundary; later Stack 8 documentation records the completed scoped contract.
