@@ -57,7 +57,9 @@ the material output contract as `unknown / needs decision` and disclaimed the
 normative status of trimming, override fallback, canonical precedence, and social
 copying. That current-facing description became stale after WU1. It now links to
 the successor normative contract and summarizes its decisions without duplicating
-the full contract. The historical Stack 0 classification itself was not changed.
+the full contract. A separate sentence links the earlier Stack 0 classification
+as historical evidence and states that the Phase 24 successor contract resolves
+it; the historical inventory itself was not changed.
 
 ## Lifecycle and boundaries
 
