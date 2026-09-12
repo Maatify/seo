@@ -172,8 +172,8 @@ stack8AssertContains('current docs separate Merchant eligibility', $currentStruc
 stack8AssertContains('current docs preserve the Twitter/X compatibility boundary', $readme, 'Twitter/X provider conformance was not source-verified');
 
 $reference = $structuredDocContents['docs/SEO_LIBRARY_REFERENCE.md'];
-stack8AssertContains('MetaGeneratorService remains an unresolved Stack 0 contract', $reference, 'unknown / needs decision');
-stack8AssertContains('MetaGeneratorService points to Stack 0 evidence', $reference, 'STACK_0_CONTRACT_CHARACTERIZATION_INVENTORY.md');
+stack8AssertContains('Phase 24 MetaGeneratorService contract is the current resolved authority', $reference, 'META_GENERATOR_SERVICE_CONTRACT.md');
+stack8AssertNotContains('Phase 24 resolved contract replaces unresolved wording in the current reference', $reference, 'unknown / needs decision');
 
 $enhancementRoadmap = stack8Read('docs/roadmap/SEO_LIBRARY_ENHANCEMENT_ROADMAP.md');
 $phase21Start = strpos($enhancementRoadmap, '## Structured-data CI and external-verification boundary');
