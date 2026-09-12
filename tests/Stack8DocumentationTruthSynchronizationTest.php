@@ -80,7 +80,7 @@ stack8AssertNotContains('Phase 22 has no pending Final Review', $phase22, 'Final
 stack8AssertNotContains('Phase 22 has no incomplete lifecycle wording', $phase22, 'not marked complete');
 
 $changelog = stack8Read('CHANGELOG.md');
-stack8AssertContains('Unreleased changelog exists', $changelog, '## [1.0.0] - Unreleased');
+stack8AssertContains('Unreleased changelog exists', $changelog, '## [1.0.0-rc.2] - Unreleased');
 stack8AssertNotContains('changelog does not claim XML streaming', $changelog, 'to stream valid XML');
 $rcHeading = strpos($changelog, '## [1.0.0-rc.1]');
 if ($rcHeading === false) {

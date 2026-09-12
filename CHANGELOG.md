@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.0.0] - Unreleased
+## [1.0.0-rc.2] - Unreleased
 - **Added:** Phase 24 adopted a normative `MetaGeneratorService` output contract that resolves the Stack 0 material decision through a successor contract while preserving runtime behavior.
 - **Added:** The Phase 24 standalone regression lock covers 22 normative contract cases.
 - **Fixed:** A Phase 24 test-only correction removed unauthorized exact fallback `HostUrlGeneratorInterface` call-count assertions; no production `src/` behavior changed.
