@@ -8,6 +8,7 @@ require_once __DIR__ . '/../src/Exception/SeoInvalidArgumentException.php';
 require_once __DIR__ . '/../src/Web/Hreflang/HreflangLinkBuilder.php';
 require_once __DIR__ . '/../src/Web/Hreflang/HreflangLinkDTO.php';
 require_once __DIR__ . '/../src/Web/Hreflang/HreflangLinkRenderer.php';
+require_once __DIR__ . '/../src/Shared/Service/Internal/HreflangTagNormalizer.php';
 
 use Maatify\Seo\Exception\SeoInvalidArgumentException;
 use Maatify\Seo\Web\Hreflang\HreflangLinkBuilder;

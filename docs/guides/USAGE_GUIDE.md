@@ -86,6 +86,11 @@ echo $dto->fullHtml;         // Output the concatenated complete head HTML
 
 This is particularly useful when integrating with template engines where blocks or sections are used for specific meta components.
 
+> **Twitter/X compatibility boundary:** Twitter Card builders and rendering remain
+> available for compatibility. The architecture audit source-verified Open Graph
+> behavior but did not source-verify Twitter/X provider conformance; this guide does
+> not make a stronger provider claim.
+
 ---
 
 ## 4. FluentSeoBuilder Example
@@ -349,7 +354,7 @@ $childVariant2 = (new ProductJsonLdBuilder())
     ->setInProductGroupWithID('TSHIRT-BASE'); // Writes the string ID directly
 ```
 
-*Note: The builders ensure that nested `@context` tags are automatically stripped from typed builders during output, while the root builder retains its context. Raw array contexts are not touched. The library builds Schema.org-oriented JSON-LD structures but does not enforce semantic validation or guarantee Google Rich Results eligibility.*
+*Note: The builders ensure that nested `@context` tags are automatically stripped from typed builders during output, while the root builder retains its context. Raw array contexts are not touched. Builders and `SchemaGeneratorService` provide generic Schema.org generation; they are independent of Google Rich Results and Merchant eligibility. The current validation boundary is scoped structural and property-range semantic validation for selected types, not complete provider eligibility proof.*
 
 ---
 
@@ -415,10 +420,6 @@ $urlDto = new SitemapUrlDTO(
     images: [
         new SitemapImageDTO(
             loc: 'https://example.com/image.jpg',
-            title: 'Sample Image',
-            caption: 'A view of the ocean',
-            geoLocation: 'Limerick, Ireland',
-            license: 'https://example.com/license'
         )
     ],
     videos: [
@@ -452,10 +453,6 @@ echo $renderer->renderUrlEntry($urlDto);
 //   <xhtml:link rel="alternate" hreflang="es" href="https://example.com/es/page-1"/>
 //   <image:image>
 //     <image:loc>https://example.com/image.jpg</image:loc>
-//     <image:title>Sample Image</image:title>
-//     <image:caption>A view of the ocean</image:caption>
-//     <image:geo_location>Limerick, Ireland</image:geo_location>
-//     <image:license>https://example.com/license</image:license>
 //   </image:image>
 //   <video:video>
 //     <video:thumbnail_loc>https://example.com/thumbnail.jpg</video:thumbnail_loc>
@@ -487,7 +484,7 @@ $arrayEntry = [
         ['hreflang' => 'de', 'url' => 'https://example.com/de/page-2'],
     ],
     'images' => [
-        ['loc' => 'https://example.com/image2.jpg', 'title' => 'Image 2']
+        ['loc' => 'https://example.com/image2.jpg']
     ],
     'videos' => [
         [
@@ -517,7 +514,9 @@ $xmlOutput = $renderer->renderUrlSet([$urlDto, $arrayEntry]);
 >
 > **News Fields Handling:** When using `SitemapNewsDTO`, the `publicationDate` is accepted as-is and rendered exactly as provided. Required fields are trimmed, and providing empty required values throws a `SeoInvalidArgumentException`. Optional empty strings are normalized to `null` and are entirely omitted from the XML output. All XML values are safely escaped by `XMLWriter`.
 
-> **URL validation:** `SitemapUrlDTO::isValidLastmod()` accepts valid `YYYY-MM-DD` and valid ATOM timestamps, while rejecting invalid calendar dates and ATOM parser warnings/errors. The Web renderer applies the same contract to raw-array `lastmod` values and also validates raw top-level `loc`, the allowed `changefreq` values, and the inclusive `0.0..1.0` priority range. This strict date behavior applies to URL/index/video contracts; News `publicationDate` intentionally remains an emitted-as-provided, non-empty string.
+> **Google Image compatibility:** `SitemapImageDTO` still accepts and renders `title`, `caption`, `geoLocation`, and `license` for public/output compatibility. Google-deprecates these fields; they are not presented here as current indexing/search enhancements and have no Stack 4 runtime diagnostic. Current examples therefore use `loc` only.
+
+> **URL validation:** `SitemapUrlDTO::isValidLastmod()` and the Web URL/Index rendering contracts accept `YYYY-MM-DD`, full-seconds date-times, and fractional-seconds date-times with a required `Z` or numeric offset, while rejecting invalid calendar/time values and zone-less or partial date-times. Strict `SitemapVideoDTO` and raw-video `publicationDate` remain limited to `YYYY-MM-DD` and full-seconds date-times; fractional seconds are rejected there. News `publicationDate` intentionally remains an emitted-as-provided, non-empty string. Stack 4 candidate validators separately apply the fixed provider lexical forms and caller-supplied evidence to Sitemap/Google extension inputs; they do not alter rendering output or infer remote facts.
 
 ---
 
@@ -565,7 +564,7 @@ $txt = new RobotsTxtDTO(
             userAgent: '*',
             allow: ['/'],
             disallow: ['/admin/', '/private/'],
-            crawlDelay: 10,
+            crawlDelay: 10, // Non-standard crawler extension; not RFC core or Google-supported.
             comments: ['Global rule for all bots']
         ),
         new RobotsRuleDTO(
@@ -589,6 +588,22 @@ $txt = new RobotsTxtDTO(
 echo $renderer->render($txt);
 ```
 
+### Robots validation profiles
+
+Robots validation uses raw candidate input, so malformed or provider-specific values can be diagnosed without weakening the strict generation DTOs:
+
+```php
+use Maatify\Seo\Web\Validation\Input\RobotsTxtValidationInputDTO;
+use Maatify\Seo\Web\Validation\Profile\GoogleRobotsTxtValidator;
+use Maatify\Seo\Web\Validation\Profile\Rfc9309RobotsValidator;
+
+$candidate = new RobotsTxtValidationInputDTO($robotsTxtContent);
+$rfc = (new Rfc9309RobotsValidator())->validate($candidate);
+$google = (new GoogleRobotsTxtValidator())->validate($candidate);
+```
+
+Both validators return `SeoCompanionValidationResultDTO`. RFC 9309 protocol outcomes and Google provider outcomes remain separate, and companion diagnostics do not enter the legacy validation result or score. The existing strict `RobotsTxtDTO` `FILTER_VALIDATE_URL` behavior for Sitemap URLs is preserved, as are its generation/render compatibility behaviors; Stack 2 intentionally adds hard structured-input rejection for control-character injection. The Google profile accepts valid raw Unicode absolute `Sitemap:` URLs and rejects relative, malformed, fragmented, or `data:` values. `crawl-delay` remains a non-standard compatibility extension rather than RFC or Google behavior.
+
 ---
 
 ## 11. SEO Metadata Validation Example
@@ -605,13 +620,18 @@ The validator natively covers:
 * **JSON-LD structural validation:** Checks JSON-LD nodes and numeric node lists,
   including `@graph` wrappers and recursive graph nodes, while preserving
   deterministic issue fields.
-* **JSON-LD semantic validation:** Performs the current deep checks only for
-  `Product`, `Offer`, `AggregateOffer`, and `ProductGroup`. JSON-LD can be supplied
-  through the existing `jsonLd`, `json_ld`, `schema`, or `schemas` aliases.
+* **JSON-LD scoped validation:** Performs scoped structural and property-range semantic
+  validation only for `Product`, `Offer`, `AggregateOffer`, and `ProductGroup`.
+  JSON-LD can be supplied through the existing `jsonLd`, `json_ld`, `schema`, or
+  `schemas` aliases.
 
-The validator does not provide complete Schema.org coverage, Google Rich Results
-eligibility, or Merchant eligibility validation. Those concerns remain outside the
-library's current validation contract.
+The validator does not provide complete Schema.org semantic or lexical proof. In the
+current property-range boundaries, non-empty strings shaped as `URL`, `Date`,
+`DateTime`, `ItemAvailability`, or `OfferItemCondition` remain accepted
+representations; URL/date grammar, enumeration membership, provider-vocabulary
+lookup, reachability, and DNS/network checks are not performed. Google
+required/recommended properties are not implemented as an eligibility profile, and
+Merchant eligibility remains a separate provider boundary.
 
 > **Note:** The validator expects data in an array or object format, typically generated before final HTML string rendering. Invalid `$options` configuration (such as passing a string where an integer is expected) will throw a `SeoInvalidArgumentException`. Normal SEO warnings and errors *do not* throw exceptions.
 
@@ -784,6 +804,8 @@ $customScoreDto = SeoValidationScoreCalculator::score($result, $scoreOptions);
 The core `SitemapGeneratorService` remains available. It is responsible for orchestrating sitemap generation logic and returning structured DTOs (`SitemapGenerationResultDTO`), which represents a structural abstraction over the XML data.
 
 The core service outputs objects intended for further processing or structured output handling, while the `SitemapXmlStringRenderer` (demonstrated above) is specifically a presentation-layer helper designed to quickly output standard XML strings for web consumption.
+
+`generateUrlSitemap()` accepts strict `SitemapUrlDTO` entries and preserves their alternates, images, videos, and news children. For the same DTO URL entries, its `result->xml` uses the same canonical serialization and matches `SitemapXmlStringRenderer` output; the generator remains typed-DTO-only while the Web renderer also supports raw associative URL entries. `generateSitemapIndex()` likewise remains limited to shared sitemap-index DTOs.
 
 ```php
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapUrlDTO;
@@ -1088,7 +1110,7 @@ $batch->averageScore;
 $batch->reports[0]->summary['message'];
 ```
 
-> **Note:** The `SeoValidationBatchReportBuilder` uses `SeoValidationReportBuilder::build(...)` internally for each item. It does not mutate the input data. It is completely framework-neutral and emits no HTTP headers, routes, controllers, or responses. Furthermore, existing validation, score, report builder, exporter, preset, sitemap, and robots behaviors remain unchanged.
+> **Note:** The `SeoValidationBatchReportBuilder` uses `SeoValidationReportBuilder::build(...)` internally for each item. It does not mutate the input data. It is completely framework-neutral and emits no HTTP headers, routes, controllers, or responses. Existing validation, score, report builder, exporter, preset, and robots behaviors remain unchanged; sitemap DTO URL generation now preserves the supported extended child collections through the canonical XML path.
 
 You can easily export the report into various formats using the `SeoValidationReportExporter`:
 

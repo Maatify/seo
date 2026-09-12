@@ -8,7 +8,7 @@ use Maatify\Seo\Exception\SeoInvalidArgumentException;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapGenerationResultDTO;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapIndexEntryDTO;
 use Maatify\Seo\Shared\DTO\Sitemap\SitemapUrlDTO;
-use XMLWriter;
+use Maatify\Seo\Shared\Service\Internal\SitemapCanonicalXmlWriter;
 
 final readonly class SitemapGeneratorService
 {
@@ -19,22 +19,9 @@ final readonly class SitemapGeneratorService
     {
         $validUrls = $this->validateUrls($urls);
 
-        $writer = $this->createWriter();
-        $writer->startElement('urlset');
-        $writer->writeAttribute('xmlns', 'http://www.sitemaps.org/schemas/sitemap/0.9');
+        $xml = (new SitemapCanonicalXmlWriter())->renderUrlSet($validUrls);
 
-        if ($this->containsAlternates($validUrls)) {
-            $writer->writeAttribute('xmlns:xhtml', 'http://www.w3.org/1999/xhtml');
-        }
-
-        foreach ($validUrls as $url) {
-            $this->writeUrl($writer, $url);
-        }
-
-        $writer->endElement();
-        $writer->endDocument();
-
-        return new SitemapGenerationResultDTO($this->flushWriter($writer), count($validUrls), 'urlset');
+        return new SitemapGenerationResultDTO($xml, count($validUrls), 'urlset');
     }
 
     /**
@@ -44,18 +31,9 @@ final readonly class SitemapGeneratorService
     {
         $validEntries = $this->validateEntries($entries);
 
-        $writer = $this->createWriter();
-        $writer->startElement('sitemapindex');
-        $writer->writeAttribute('xmlns', 'http://www.sitemaps.org/schemas/sitemap/0.9');
+        $xml = (new SitemapCanonicalXmlWriter())->renderSharedIndex($validEntries);
 
-        foreach ($validEntries as $entry) {
-            $this->writeIndexEntry($writer, $entry);
-        }
-
-        $writer->endElement();
-        $writer->endDocument();
-
-        return new SitemapGenerationResultDTO($this->flushWriter($writer), count($validEntries), 'sitemapindex');
+        return new SitemapGenerationResultDTO($xml, count($validEntries), 'sitemapindex');
     }
 
 
@@ -103,74 +81,4 @@ final readonly class SitemapGeneratorService
         return $validEntries;
     }
 
-    /**
-     * @param list<SitemapUrlDTO> $urls
-     */
-    private function containsAlternates(array $urls): bool
-    {
-        foreach ($urls as $url) {
-            if ($url->alternates !== []) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function writeUrl(XMLWriter $writer, SitemapUrlDTO $url): void
-    {
-        $writer->startElement('url');
-        $writer->writeElement('loc', trim($url->loc));
-
-        if ($url->lastmod !== null) {
-            $writer->writeElement('lastmod', trim($url->lastmod));
-        }
-        if ($url->changefreq !== null) {
-            $writer->writeElement('changefreq', $url->changefreq);
-        }
-        if ($url->priority !== null) {
-            $writer->writeElement('priority', number_format($url->priority, 1, '.', ''));
-        }
-
-        foreach ($url->alternates as $alternate) {
-            $writer->startElement('xhtml:link');
-            $writer->writeAttribute('rel', 'alternate');
-            $writer->writeAttribute('hreflang', strtolower(trim($alternate->hreflang)));
-            $writer->writeAttribute('href', trim($alternate->url));
-            $writer->endElement();
-        }
-
-        $writer->endElement();
-    }
-
-    private function writeIndexEntry(XMLWriter $writer, SitemapIndexEntryDTO $entry): void
-    {
-        $writer->startElement('sitemap');
-        $writer->writeElement('loc', trim($entry->loc));
-
-        if ($entry->lastmod !== null) {
-            $writer->writeElement('lastmod', trim($entry->lastmod));
-        }
-
-        $writer->endElement();
-    }
-
-    private function createWriter(): XMLWriter
-    {
-        $writer = new XMLWriter();
-        $writer->openMemory();
-        $writer->startDocument('1.0', 'UTF-8');
-
-        return $writer;
-    }
-
-    private function flushWriter(XMLWriter $writer): string
-    {
-        $xml = $writer->outputMemory();
-        if ($xml === '') {
-            throw SeoInvalidArgumentException::emptyField('xml');
-        }
-
-        return $xml;
-    }
 }

@@ -10,7 +10,7 @@ The `MetaRobotsBuilder` component provides a fluent interface for building the c
 - **Exclusivity Management:** Automatically handles mutually exclusive directives (e.g., calling `noIndex()` will remove an existing `index` directive).
 - **Prefix Replacement:** Directives like `max-snippet:*`, `max-image-preview:*`, `max-video-preview:*`, and `unavailable_after:*` are updated instead of appended, maintaining unique prefix constraints.
 - **Deduplication:** Ensures no duplicate directives are added to the list.
-- **Validation:** Throws `SeoInvalidArgumentException` for invalid values (like negative maximum lengths or unrecognised `max-image-preview` types).
+- **Validation:** Throws `SeoInvalidArgumentException` for invalid values (like maximum lengths below `-1` or unrecognised `max-image-preview` types).
 - **HTML Escaping:** Provides a safe `toHtml()` method for rendering the full meta tag properly escaped.
 
 ## Class Definition
@@ -79,7 +79,7 @@ use Maatify\Seo\Exception\SeoInvalidArgumentException;
 try {
     $builder->maxSnippet(-10);
 } catch (SeoInvalidArgumentException $e) {
-    // "Field [max-snippet] is invalid: Value must be greater than or equal to 0."
+    // "Field [max-snippet] is invalid: Value must be greater than or equal to -1."
 }
 ```
 
@@ -89,14 +89,15 @@ try {
 *   `noIndex()`: Prevent indexing. Exclusive with `index()`.
 *   `follow()`: Allow following links. Exclusive with `noFollow()`.
 *   `noFollow()`: Prevent following links. Exclusive with `follow()`.
-*   `noArchive()`: Prevent cached copies.
+*   `noArchive()`: Preserve the generic compatibility directive; Google’s former cached-link feature is no longer current.
+*   `indexifembedded()`: Allow indexing embedded content when the page itself is `noindex`.
 *   `noSnippet()`: Prevent snippets and video previews.
 *   `noImageIndex()`: Prevent image indexing.
 *   `noTranslate()`: Prevent translated versions.
-*   `maxSnippet(int $value)`: Set maximum snippet length.
+*   `maxSnippet(int $value)`: Set maximum snippet length; `-1` is valid and values below `-1` are rejected.
 *   `maxImagePreview(string $value)`: Set max image preview size (`none`, `standard`, `large`).
-*   `maxVideoPreview(int $value)`: Set maximum video preview length.
-*   `unavailableAfter(string $value)`: Set expiration date/time.
+*   `maxVideoPreview(int $value)`: Set maximum video preview length; `-1` is valid and values below `-1` are rejected.
+*   `unavailableAfter(string $value)`: Add or replace the raw `unavailable_after` value; provider recognizability is validated separately with explicit evidence.
 *   `add(string $directive)`: Add a custom directive.
 *   `remove(string $directive)`: Remove a specific directive.
 *   `clear()`: Clear all directives.

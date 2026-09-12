@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Maatify\Seo\Web\Hreflang;
 
 use Maatify\Seo\Exception\SeoInvalidArgumentException;
+use Maatify\Seo\Shared\Service\Internal\HreflangTagNormalizer;
 
 final readonly class HreflangLinkDTO implements \JsonSerializable
 {
@@ -34,26 +35,7 @@ final readonly class HreflangLinkDTO implements \JsonSerializable
 
     public static function normalizeHreflang(string $hreflang): string
     {
-        $hreflang = trim($hreflang);
-        if ($hreflang === '') {
-            return '';
-        }
-
-        if (strtolower($hreflang) === 'x-default') {
-            return 'x-default';
-        }
-
-        $parts = preg_split('/[-_]+/', $hreflang) ?: [];
-        $normalized = [];
-        foreach ($parts as $index => $part) {
-            if ($part === '') {
-                continue;
-            }
-
-            $normalized[] = $index === 0 ? strtolower($part) : strtoupper($part);
-        }
-
-        return implode('-', $normalized);
+        return HreflangTagNormalizer::normalize($hreflang);
     }
 
     /**

@@ -114,17 +114,19 @@ assertSameValue('unavailable_after:date2', $builder->build(), 'unavailable_after
 $builder->add('unavailable_after:date3');
 assertSameValue('unavailable_after:date3', $builder->build(), 'add(unavailable_after:*) should replace previous value');
 
-// Test: negative max values throw SeoInvalidArgumentException
+// Test: values below Google's -1 lower bound throw SeoInvalidArgumentException
 assertThrowsException(
-    fn() => (new MetaRobotsBuilder())->maxSnippet(-1),
+    fn() => (new MetaRobotsBuilder())->maxSnippet(-2),
     SeoInvalidArgumentException::class,
-    'Negative max-snippet should throw'
+    'max-snippet values below -1 should throw'
 );
 assertThrowsException(
-    fn() => (new MetaRobotsBuilder())->maxVideoPreview(-1),
+    fn() => (new MetaRobotsBuilder())->maxVideoPreview(-2),
     SeoInvalidArgumentException::class,
-    'Negative max-video-preview should throw'
+    'max-video-preview values below -1 should throw'
 );
+assertSameValue('max-snippet:-1', (new MetaRobotsBuilder())->maxSnippet(-1)->build(), 'max-snippet -1 should be valid');
+assertSameValue('max-video-preview:-1', (new MetaRobotsBuilder())->maxVideoPreview(-1)->build(), 'max-video-preview -1 should be valid');
 
 // Test: invalid max-image-preview throws SeoInvalidArgumentException
 assertThrowsException(

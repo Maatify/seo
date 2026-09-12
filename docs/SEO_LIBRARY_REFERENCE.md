@@ -53,10 +53,16 @@ The `SchemaGeneratorService` handles the generation of structured data for SEO b
   - `@graph: [...]` (the serialized schema array)
 
 ### Meta Generator Service
-The `MetaGeneratorService` orchestrates the assembly of `<title>`, `<meta>` description, canonical, robots, OpenGraph, and Twitter tags per the current language and provided entity data.
-- **Responsibility**: It builds host-agnostic meta tags from host-provided defaults by accepting a `GenerateMetaTagsCommand` and returning a `MetaTagsDTO`.
-- **Override Fallback Behavior**: The service checks if a manual SEO override exists in `maa_seo_overrides` via the `SeoOverrideQueryService`. If an override exists for the specific entity and language, it replaces the default title and/or description. If the query service throws a `SeoNotFoundException`, it treats this as "no override" and falls back to the host-provided defaults.
-- **Canonical URL Resolution**: It determines the canonical URL first by checking the `canonicalUrl` property in the `GenerateMetaTagsCommand`. If that is not provided, it falls back to generating the URL via the `HostUrlGeneratorInterface` using the entity details.
+`MetaGeneratorService` is present and its current observable behavior is covered by
+the Stack 0 characterization test, but the material output contract remains
+`unknown / needs decision` in the [Stack 0 inventory](verification/STACK_0_CONTRACT_CHARACTERIZATION_INVENTORY.md).
+That classification is a gate, not permission to choose or promise a policy; this
+reference therefore does not promote trimming, override fallback/precedence,
+canonical precedence, or social-field copying into a resolved normative guarantee.
+
+`GenerateMetaTagsCommand`, `MetaTagsDTO`, the host URL generator, and the override
+query service remain callable public surfaces. Any production reinterpretation or
+refactor of their characterized output requires an approved contract amendment.
 
 ### DTOs and Commands
 - **`GenerateMetaTagsCommand`**: Encapsulates all data required to generate meta tags:
@@ -80,16 +86,16 @@ The `MetaGeneratorService` orchestrates the assembly of `<title>`, `<meta>` desc
   - `twitterDescription` (?string)
 
 ### Sitemap Generator Service
-The `SitemapGeneratorService` generates valid XML strings for sitemap indexes and URL sets using `XMLWriter`.
+The `SitemapGeneratorService` generates valid XML strings for sitemap indexes and URL sets through the canonical sitemap XML serialization path.
 - **Responsibility**: It is fully host-agnostic and framework-agnostic. It accepts arrays of strict DTOs and returns a generated XML string in memory. The service contains **no SQL, no repository access, no host data fetching, no file writing, and no HTTP response generation**.
-- **`generateUrlSitemap()` Behavior**: Accepts a list of `SitemapUrlDTO` instances and returns a `SitemapGenerationResultDTO` containing the URL sitemap XML (`urlset`). It automatically adds the XHTML namespace if any `SitemapUrlDTO` contains alternate hreflang links.
+- **`generateUrlSitemap()` Behavior**: Accepts a list of `SitemapUrlDTO` instances and returns a `SitemapGenerationResultDTO` containing the URL sitemap XML (`urlset`). It preserves the DTO's alternates, images, videos, and news children, adding each conditional namespace when needed. Its DTO XML matches `SitemapXmlStringRenderer` output for the same URL entries; unlike the Web renderer, it remains typed-DTO-only.
 - **`generateSitemapIndex()` Behavior**: Accepts a list of shared `Maatify\Seo\Shared\DTO\Sitemap\SitemapIndexEntryDTO` instances and returns a `SitemapGenerationResultDTO` containing the sitemap index XML (`sitemapindex`).
 
 ### Sitemap DTOs
 All inputs to the sitemap generator are strictly validated `final readonly` DTOs.
-- **`SitemapUrlDTO`**: Represents a single `<url>` entry. Contains `loc`, optional `lastmod`, `changefreq`, `priority`, a list of `SitemapAlternateUrlDTO` instances for hreflang links, a list of `SitemapImageDTO` instances for images, and a list of `SitemapVideoDTO` instances for videos.
+- **`SitemapUrlDTO`**: Represents a single `<url>` entry. Contains `loc`, optional `lastmod`, `changefreq`, `priority`, a list of `SitemapAlternateUrlDTO` instances for hreflang links, a list of `SitemapImageDTO` instances for images, a list of `SitemapVideoDTO` instances for videos, and a list of `SitemapNewsDTO` instances for news entries.
 - **`SitemapAlternateUrlDTO`**: Represents a single `<xhtml:link>` hreflang alternate. Contains `hreflang` and `url`.
-- **`SitemapImageDTO`**: Represents a single `<image:image>` entry. Contains `loc`, optional `title`, `caption`, `geoLocation`, and `license`.
+- **`SitemapImageDTO`**: Represents a single `<image:image>` entry. Contains `loc`, plus the public/output-compatible fields `title`, `caption`, `geoLocation`, and `license`. Those four fields are Google-deprecated compatibility fields with no current Google indexing or search effect; they are not recommended Stack 4 enhancements and do not produce runtime diagnostics.
 - **`SitemapVideoDTO`**: Represents a single `<video:video>` entry. Contains `thumbnailLoc`, `title`, `description`, optional `contentLoc`, `playerLoc`, `duration`, and `publicationDate`.
 - **`Shared\DTO\Sitemap\SitemapIndexEntryDTO`**: Core generator DTO for a single `<sitemap>` entry. It is a separate public contract from the Web renderer's index DTO.
 - **`SitemapGenerationResultDTO`**: Represents the result of a generation operation. Contains the full `xml` string, the `entryCount` (exposed as `entry_count` in JSON serialization), and the `type` (either `urlset` or `sitemapindex`).
@@ -145,6 +151,16 @@ The Web layer provides framework-neutral host-facing SEO consumption capabilitie
 - **`Web/SeoRender/DTO/SeoPagePayloadDTO`**: A final readonly DTO (implementing `\JsonSerializable`) that wraps the computed meta tags, schemas, redirect decisions, and optional sitemap XML. It enforces that all inputs are valid.
 - **`Web/SeoRender/Service/SeoPageRenderService`**: Orchestrates the generation of the SEO page payload using Shared services (`MetaGeneratorService`, `SchemaGeneratorService`, etc.). It supports computing redirect decisions via `RedirectManagerService` and generating sitemap strings via `SitemapGeneratorService` if injected.
 
+### Canonical and Hreflang Validation Profiles
+Stack 6 provides `GoogleCanonicalValidator` and `GoogleHreflangClusterValidator` as standalone Google-oriented companion profiles. A relative canonical URL produces the `canonical_relative_provider_best_practice` provider best-practice warning; it is not a generic invalidity and does not change `CanonicalUrlBuilder` output. Hreflang syntax validation uses `hreflang_tag_invalid_syntax` for the fixed lexical shape, while ISO 639, ISO 3166, and ISO 15924 membership remains deferred until a separately versioned standards-data contract exists. Hreflang syntax/normalization therefore does not prove membership in those external registries.
+
+Twitter/X Card builders, renderers, and current compatibility behavior remain
+available. The architecture audit independently source-verified Open Graph
+behavior but did not source-verify Twitter/X provider conformance; no stronger
+Twitter/X provider claim is made here until a dedicated official-source review.
+
+Hreflang normalization uses conventional casing: language subtags are lowercase, script subtags use Title Case, alphabetic regions are uppercase, numeric regions are unchanged, and `x-default` is preserved exactly. Google alternate URLs are required to be fully-qualified under the shared lexical URL profile; a failure emits the single `hreflang_url_not_fully_qualified` diagnostic. `GoogleHreflangClusterValidator` evaluates only the caller-supplied deterministic cluster for self-reference, reciprocal links, and alternate-set consistency; it performs no crawling, DNS, network, or ISO membership lookup.
+
 ### HTML Rendering Helpers
 The Web layer includes optional HTML Rendering Helpers under `src/Web/Render/`. These renderers are framework-neutral, return pure PHP strings (HTML) or strictly-typed read-only DTOs, and do not emit HTTP responses. They can be manually consumed by any host application or template engine to safely render SEO data.
 - **`Web/Render/MetaTagsHtmlRenderer.php`**: Renders `<title>`, `<meta name="description">`, canonical URLs, and robots tags with safely escaped text and attributes.
@@ -163,23 +179,28 @@ The Web layer provides a dedicated adapter for optionally converting Spatie sche
 
 ### Sitemap String Output
 The Web layer includes optional helpers for rendering XML sitemap strings directly.
-- **`Web/Sitemap/SitemapXmlStringRenderer.php`**: A framework-neutral helper that returns XML strings only and does not emit HTTP responses. It supports `SitemapUrlDTO` objects and raw array URL entries, correctly handling and validating `loc`, `lastmod`, `changefreq`, `priority`, hreflang `alternates`, `images`, `videos`, and `news` fields. When `alternates` are present, it dynamically adds the `xmlns:xhtml` namespace and renders `<xhtml:link>` elements. When `images` are present, it dynamically adds the `xmlns:image` namespace and renders `<image:image>` elements. When `videos` are present, it dynamically adds the `xmlns:video` namespace and renders `<video:video>` elements. When `news` data is present, it dynamically adds the `xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"` namespace and renders `<news:news>` elements. It safely escapes XML values natively. The existing `SitemapGeneratorService` remains fully available and unchanged.
-- **Raw URL validation parity**: For raw associative URL entries, top-level `loc`, optional `lastmod`, `changefreq`, and `priority` follow the typed URL contract. `lastmod` accepts valid `YYYY-MM-DD` and valid ATOM values while rejecting invalid calendar dates and parser warnings/errors; `changefreq` is limited to the seven sitemap values, and `priority` is numeric, finite, and within the inclusive range `0.0..1.0` (non-finite values like `NAN`, positive infinity, and negative infinity are rejected).
+- **`Web/Sitemap/SitemapXmlStringRenderer.php`**: A framework-neutral helper that returns XML strings only and does not emit HTTP responses. It supports `SitemapUrlDTO` objects and raw array URL entries, correctly handling and validating `loc`, `lastmod`, `changefreq`, `priority`, hreflang `alternates`, `images`, `videos`, and `news` fields. When `alternates` are present, it dynamically adds the `xmlns:xhtml` namespace and renders `<xhtml:link>` elements. When `images` are present, it dynamically adds the `xmlns:image` namespace and renders `<image:image>` elements. When `videos` are present, it dynamically adds the `xmlns:video` namespace and renders `<video:video>` elements. When `news` data is present, it dynamically adds the `xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"` namespace and renders `<news:news>` elements. It safely escapes XML values natively. The `SitemapGeneratorService` remains fully available with the same typed-DTO boundary and now preserves all supported `SitemapUrlDTO` child collections through the canonical path.
+- **Raw URL validation parity**: For raw associative URL entries, top-level `loc`, optional `lastmod`, `changefreq`, and `priority` follow the typed URL contract. `lastmod` accepts valid `YYYY-MM-DD` and the fixed full-seconds or fractional-seconds ATOM-like forms with `Z`/numeric offset timezones, while rejecting invalid calendar/time values and parser warnings/errors; `changefreq` is limited to the seven sitemap values, and `priority` is numeric, finite, and within the inclusive range `0.0..1.0` (non-finite values like `NAN`, positive infinity, and negative infinity are rejected).
 - **`Web/Sitemap/SitemapIndexXmlStringRenderer.php`**: A framework-neutral helper that returns XML strings only for Sitemap Indexes. It supports `Maatify\Seo\Web\Sitemap\DTO\SitemapIndexEntryDTO` objects and raw associative entries, safely escaping values and applying the shared strict `lastmod` validation contract.
+- **Google Image compatibility fields**: `SitemapImageDTO` continues to accept and render `title`, `caption`, `geoLocation`, and `license` for public/output compatibility. Google-deprecates these fields, so current integrations should prefer `loc` only; Stack 4 does not assign them indexing/search meaning or emit diagnostics for them.
 - **Separate index DTO roles**: `Maatify\Seo\Shared\DTO\Sitemap\SitemapIndexEntryDTO` belongs to `SitemapGeneratorService`; `Maatify\Seo\Web\Sitemap\DTO\SitemapIndexEntryDTO` belongs to `SitemapIndexXmlStringRenderer`. They are deliberate separate public contracts and are not interchangeable by implication.
-- **News date contract**: `SitemapNewsDTO::$publicationDate` remains non-empty and is emitted exactly as provided. It intentionally does not use the strict shared `lastmod` date parser.
-- **`Shared/DTO/Sitemap/SitemapNewsDTO.php`**: A final readonly DTO that encapsulates Google News sitemap tags. It requires `publicationName`, `publicationLanguage`, `publicationDate`, and `title`. It optionally supports `access`, `genres`, `keywords`, and `stockTickers`. The `publicationDate` is accepted as-is and rendered exactly as provided. Required fields are trimmed, and providing empty required values throws a `SeoInvalidArgumentException`. Optional empty strings are normalized to `null` and are entirely omitted from the XML output. All values are safely escaped by `XMLWriter` when rendered.
+- **News date contract**: `SitemapNewsDTO::$publicationDate` remains non-empty and is emitted exactly as provided. It intentionally does not use the strict shared `lastmod` date parser; the Stack 4 Google News candidate validator separately accepts only its four fixed publication-date forms.
+- **Sitemap validation profiles**: Stack 4 exposes standalone protocol, Google Sitemap, Google Image, Google Video, and Google News validators over the validation candidate DTOs. They emit companion diagnostics only, use caller-supplied context evidence where required, perform no network or clock inference, and do not change the legacy validation result or score.
+- **`Shared/DTO/Sitemap/SitemapNewsDTO.php`**: A final readonly DTO that encapsulates Google News sitemap tags. It requires `publicationName`, `publicationLanguage`, `publicationDate`, and `title`. It optionally supports `access`, `genres`, `keywords`, and `stockTickers` for public/output compatibility; these optional legacy fields are not presented as current recommended provider enhancements. The `publicationDate` is accepted as-is and rendered exactly as provided. Required fields are trimmed, and providing empty required values throws a `SeoInvalidArgumentException`. Optional empty strings are normalized to `null` and are entirely omitted from the XML output. All values are safely escaped by `XMLWriter` when rendered.
 
 ### Robots.txt String Output
 The Web layer includes framework-neutral helpers for generating `robots.txt` string output.
 - **`Web/Robots/RobotsTxtRenderer.php`**: Renders a full `robots.txt` plain string from a provided `RobotsTxtDTO`.
 - **`Web/Robots/DTO/RobotsTxtDTO.php`**: A DTO representing the complete file, containing global comments, a list of sitemaps, and user-agent rule blocks.
 - **`Web/Robots/DTO/RobotsRuleDTO.php`**: A DTO representing a single user-agent block, with fields for `userAgent`, `allow`, `disallow`, `crawlDelay`, and comments.
+- **Robots validation profiles**: `Web/Validation/Profile/Rfc9309RobotsValidator` and `Web/Validation/Profile/GoogleRobotsTxtValidator` consume the raw `Web/Validation/Input/RobotsTxtValidationInputDTO` and return the unified `SeoCompanionValidationResultDTO`. RFC protocol diagnostics and Google provider diagnostics are separate companion-only outcomes; neither changes the legacy result or score. `Sitemap:` values in the Google profile use the wider raw Unicode absolute-URL lexical contract, while strict `RobotsTxtDTO` keeps its existing ASCII-only `FILTER_VALIDATE_URL` behavior.
+- **Robots meta validation**: `Web/Validation/Profile/GoogleRobotsMetaValidator` consumes `RobotsMetaValidationInputDTO` and reports only the fixed Google companion diagnostics. `MetaRobotsBuilder` remains the generation lane: `-1` is valid for `maxSnippet()` and `maxVideoPreview()`, `indexifembedded()` is available, and `unavailableAfter()` remains raw-compatible. `crawlDelay` is preserved as a non-standard crawler extension and is not RFC-core or Google-supported behavior.
 
 ### Validation Helpers
 The Web layer includes framework-neutral helpers for auditing and validating generated SEO metadata arrays or objects.
 - **`Web/Validation/SeoValidationPreset.php`**: Provides ready-made options for validation and scoring. Includes presets like `minimal`, `standard`, and `strict`. The helper dynamically loads options using `SeoValidationPreset::for(string $preset)` and returns an array structured with `validationOptions` and `scoreOptions`.
-- **`Web/Validation/SeoMetaValidator.php`**: Validates SEO metadata arrays or objects against configurable options. It checks for missing fields, incorrect lengths, robots tag conflicts, schema problems, and missing OpenGraph/Twitter context fields, safely returning an aggregated DTO rather than throwing exceptions.
+- **`Web/Validation/SeoMetaValidator.php`**: Validates SEO metadata arrays or objects against configurable options. It checks for missing fields, incorrect lengths, robots tag conflicts, schema problems, and missing OpenGraph/Twitter context fields, safely returning an aggregated DTO rather than throwing exceptions. Its additive `validateWithCompanion()` method embeds the unchanged legacy result and adds only the seven fixed legacy classification records plus the OGP companion diagnostics `missing_og_type` and `missing_og_url` when an existing Open Graph presence signal is supplied; it does not orchestrate Robots, Sitemap, Canonical, or Hreflang profiles, and companion diagnostics do not affect legacy validity or scoring.
+- **`Web/Validation/Profile/OpenGraphProtocolValidator.php`**: Provides the standalone OGP companion profile over the same `array|object` metadata input. It shares the single OGP companion rule source with `SeoMetaValidator::validateWithCompanion()`, always embeds the exact legacy validation result, treats `og:description` as optional at protocol level, and activates only from the established Open Graph presence signals (not `og:type` or `og:url` alone).
 - **`Web/Validation/SeoValidationScoreCalculator.php`**: A framework-neutral calculator that accepts a `SeoValidationResultDTO` and computes a score from 0 to 100 based on standard SEO issue deductions. It optionally takes configuration to adjust the default deductions. It does not modify the original result or change validator logic.
 - **`Web/Validation/SeoValidationReportBuilder.php`**: A framework-neutral builder that combines validation and scoring into a comprehensive report. It preserves optional context (e.g. url, entityType, language) as-is. It does not mutate the original input metadata, validation options, score options, or change the behavior of the underlying validator or calculator. It emits no HTTP output.
 - **`Web/Validation/DTO/SeoValidationReportDTO.php`**: An aggregate DTO that stores the final results, including `isValid`, `isHealthy`, `score`, `grade`, arrays of `issues`, `errors`, `warnings`, `info`, `deductions`, `context`, and a `summary` object containing status and message based on validation state (fail, warning, pass).
@@ -204,7 +225,7 @@ Phase 13P keeps four validation layers separate:
 1. The existing validation foundation for non-empty JSON-LD arrays and schema entries.
 2. Generic structural validation for node/list placement, `@graph`, and well-formed
    `@type` values.
-3. Deep Schema.org-oriented semantic validation for `Product`, `Offer`,
+3. Scoped structural and property-range semantic validation for `Product`, `Offer`,
    `AggregateOffer`, and `ProductGroup` only.
 4. Google Rich Results and Merchant eligibility, which are outside this Phase and
    remain Future Work.
@@ -232,8 +253,18 @@ out-of-scope relationship targets are allowed without deep validation of their
 internals. Unknown extension properties are not rejected solely for being outside the
 fixed catalog.
 
+This semantic layer is not complete Schema.org semantic or lexical proof. In the
+current `URL`, `Date`, `DateTime`, `ItemAvailability`, and `OfferItemCondition`
+property-range boundaries, a non-empty string remains an accepted representation;
+URL/date grammar, enumeration membership, provider-vocabulary lookup, reachability,
+and DNS/network checks are not performed. Well-formed out-of-scope types, unknown
+extension properties, and valid out-of-scope relationship targets remain allowed
+according to the current structural traversal contract.
+
 Phase 13P does not claim complete Schema.org coverage, required-property completeness,
-Google Rich Results eligibility, or Merchant eligibility.
+Google Rich Results eligibility, or Merchant eligibility. Google required/recommended
+properties are not an eligibility profile in this layer, and a complete provider
+capability matrix is deferred to a separately approved, date-stamped contract.
 
 #### Phase 21 Quality / CI / Release Readiness
 
@@ -246,7 +277,7 @@ PHPStan, the conditional PHPUnit step, and the standalone PHP test suite.
 
 The focused structured-data CI gate runs through the existing
 `SeoMetaValidator::validate()` entry point and existing report/exporter contracts.
-It covers the current structural JSON-LD rules and the deep semantic scope of
+It covers the current structural JSON-LD rules and the scoped structural and property-range semantic validation scope of
 `Product`, `Offer`, `AggregateOffer`, and `ProductGroup`, including the supported
 metadata aliases `jsonLd`, `json_ld`, `schema`, and `schemas`. It does not add
 Google Rich Results eligibility, Merchant eligibility, provider SDKs, network
@@ -301,7 +332,7 @@ Provider results remain completely separated from core SEO validation. Unknown p
 Product/feed mutation, automatic remediation, Search Console integration, and core SEO validation changes are explicitly out of scope.
 
 ### JSON-LD Builders
-The Web layer includes builders for constructing Schema.org-oriented JSON-LD structures. These builders encapsulate the logic for creating complex schemas and provide a fluent interface for setting properties and composing nodes; they do not perform semantic Schema.org validation or establish Google Rich Results eligibility.
+The Web layer includes generic builders for constructing Schema.org-oriented JSON-LD structures. These builders encapsulate the logic for creating complex schemas and provide a fluent interface for setting properties and composing nodes; they do not perform semantic Schema.org validation or establish Google Rich Results/provider eligibility. `SchemaGeneratorService` likewise generates generic Schema.org JSON-LD and does not infer provider status.
 - **`Web/JsonLd/Builder/AbstractJsonLdBuilder.php`**: Base class implementing `JsonLdBuilderInterface` and using `JsonLdBuilderTrait`.
 - **`Web/JsonLd/Builder/JsonLdBuilderInterface.php`**: Defines the fluent mutation and output contract shared by JSON-LD builders: `set`, `remove`, `has`, `get`, `toArray`, and `toJson`.
 - **`Web/JsonLd/Builder/JsonLdBuilderTrait.php`**: Stores values without normalization during `set()`. During `toArray()`, it recursively resolves nested `JsonLdBuilderInterface` nodes, removes `@context` from nested builder nodes, preserves the root builder `@context`, and preserves raw-array content including raw-array `@context` values. Builders inside lists and nested raw arrays are resolved at the same time. `toJson()` encodes the resolved `toArray()` output.
@@ -313,6 +344,8 @@ The Web layer includes builders for constructing Schema.org-oriented JSON-LD str
 - **`Web/JsonLd/Builder/ProductGroupJsonLdBuilder.php`**: A `ProductGroup` builder initialized with `@context: https://schema.org` and `@type: ProductGroup`. It supports name, description, URL, `productGroupID`, `variesBy`, and `brand`. `setBrand()` accepts a string, raw array, or typed builder. `setHasVariant()` and `addVariant()` support raw arrays and typed builders with one-node object, multi-node numeric-list, flattening, no-op empty-input, and append lifecycle semantics.
 - **`Web/JsonLd/Builder/AggregateOfferJsonLdBuilder.php`**: An `AggregateOffer` builder initialized with `@context: https://schema.org` and `@type: AggregateOffer`. It supports `lowPrice`, `highPrice`, `priceCurrency`, `offerCount`, `availability`, and nested `offers`. `setOffers()` and `addOffer()` use the same typed/raw collection semantics as `ProductGroupJsonLdBuilder`.
 - **`Web/JsonLd/Builder/ArticleJsonLdBuilder.php`**: A builder for the `Article`, `NewsArticle`, or `BlogPosting` JSON-LD schemas, supporting configuration of headlines, images, authors, publishers, and publication dates.
+- **`Web/JsonLd/Builder/CourseJsonLdBuilder.php`**: A generic `Course` Schema.org builder. Course Info search-appearance history and current Course List provider documentation do not turn this builder into a Google eligibility profile; its public API and output remain provider-neutral.
+- **`Web/JsonLd/Builder/BookJsonLdBuilder.php`**: A generic `Book` Schema.org builder. Book / Book Actions provider documentation is not a generic rich-result contract for every Book page, so this builder remains callable without Book eligibility rules.
 - **`Web/JsonLd/Builder/BreadcrumbJsonLdBuilder.php`**: A builder for the `BreadcrumbList` JSON-LD schema, providing methods to add breadcrumb items (`addItem`, `addBreadcrumb`, `addItems`) and correctly sequencing them with `ListItem` and `position` properties.
 
 Typed composition is intentionally output-time behavior: builder objects remain stored as supplied until `toArray()` or `toJson()` is called. Root `@context` values remain on the root schema, while `@context` values initialized by nested typed builders are omitted from the nested node. Resolution is recursive: nested `JsonLdBuilderInterface` instances inside raw arrays are resolved and have their `@context` stripped. Raw associative arrays preserve their keys and explicit `@context` values (unless they are nested typed builders).

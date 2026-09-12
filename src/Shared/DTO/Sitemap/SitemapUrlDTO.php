@@ -110,7 +110,24 @@ final readonly class SitemapUrlDTO implements \JsonSerializable
             return checkdate((int) $parts[1], (int) $parts[2], (int) $parts[0]);
         }
 
-        $parsed = \DateTimeImmutable::createFromFormat(\DateTimeInterface::ATOM, $value);
+        if (preg_match('/\A(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|[+-]\d{2}:\d{2})\z/', $value, $matches) !== 1) {
+            return false;
+        }
+
+        $dateParts = explode('-', $matches[1]);
+        if (!checkdate((int) $dateParts[1], (int) $dateParts[2], (int) $dateParts[0])) {
+            return false;
+        }
+
+        $timezoneToken = (string) $matches[6];
+        if (!self::isValidTimezone($timezoneToken)) {
+            return false;
+        }
+        $timezone = $timezoneToken === 'Z' ? '+00:00' : $timezoneToken;
+        $parsed = \DateTimeImmutable::createFromFormat(
+            '!Y-m-d\\TH:i:sP',
+            $matches[1] . 'T' . $matches[2] . ':' . $matches[3] . ':' . $matches[4] . $timezone,
+        );
         $errors = \DateTimeImmutable::getLastErrors();
 
         return $parsed instanceof \DateTimeImmutable
@@ -123,6 +140,19 @@ final readonly class SitemapUrlDTO implements \JsonSerializable
     public static function allowedChangefreqValues(): array
     {
         return ['always', 'hourly', 'daily', 'weekly', 'monthly', 'yearly', 'never'];
+    }
+
+    private static function isValidTimezone(string $timezone): bool
+    {
+        if ($timezone === 'Z') {
+            return true;
+        }
+
+        if (preg_match('/\A[+-](\d{2}):(\d{2})\z/', $timezone, $matches) !== 1) {
+            return false;
+        }
+
+        return (int) $matches[1] <= 23 && (int) $matches[2] <= 59;
     }
 
     /**

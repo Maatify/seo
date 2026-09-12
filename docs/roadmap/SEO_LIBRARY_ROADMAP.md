@@ -89,7 +89,7 @@ Following `MODULE_BUILDING_STANDARD.md`:
 ## 5. Proposed Public Services
 
 - **`MetaGeneratorService`**: Orchestrates the assembly of `<title>`, `<meta>`, canonical, and hreflang tags per the current language and provided entity data. Merges host data with any database SEO overrides.
-- **`SchemaGeneratorService`**: Accepts `JsonSerializable` inputs and outputs Schema.org-oriented JSON-LD structured DTOs. It rejects non-array or empty results, and `generateGraph()` rejects empty schema lists, but it does not perform deep semantic validation, check for empty individual properties, or guarantee Google Rich Results eligibility.
+- **`SchemaGeneratorService`**: Accepts `JsonSerializable` inputs and outputs Schema.org-oriented JSON-LD structured DTOs. It rejects non-array or empty results, and `generateGraph()` rejects empty schema lists, but it does not perform the validator's scoped structural and property-range semantic validation or guarantee Google Rich Results eligibility.
 - **`SitemapGeneratorService`**: Orchestrates valid XML output (index and language-specific sitemaps), fetching URL node arrays from the host.
 - **`RedirectManagerService`**: Checks a requested slug against `maa_seo_redirects` to see if a 301/410 response is required.
 - **`SlugHistoryService`**: Called by the host when an entity's slug changes to record the old slug and establish an automatic 301 redirect.
@@ -146,13 +146,13 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   Needed. Allows marketers/admins to manually override generated Meta Title/Description per entity without polluting the host's primary product table.
   Columns: `id`, `entity_type`, `entity_id`, `language_id`, `meta_title`, `meta_description`, `created_at`, `updated_at`.
 - **Sitemap Cache/Index**:
-  *Not strictly needed as persistence.* Sitemaps should ideally be generated dynamically (or cached at a filesystem/Redis layer by the host). The library will provide the generation stream, but will not store full XML structures or URLs in PDO tables to prevent stale caches and parameter leaks.
+  *Not strictly needed as persistence.* Sitemaps should ideally be generated dynamically (or cached at a filesystem/Redis layer by the host). The library provides in-memory generation/serialization, but will not store full XML structures or URLs in PDO tables to prevent stale caches and parameter leaks.
 
 ## 9. Suggested Dependencies
 
 - `ext-pdo`: For direct database interaction adhering to standard.
 - `ext-json`: For JSON-LD encoding (`json_encode`).
-- `ext-dom` or `ext-xmlwriter`: Standard PHP extensions for robust, large-scale XML sitemap streaming without memory exhaustion.
+- `ext-dom` or `ext-xmlwriter`: Standard PHP extensions for XML sitemap serialization; the current public output contract returns in-memory strings.
 - No heavy frameworks (no Symfony/Laravel/Slim).
 - `php-di/php-di`: (Optional/Suggested) for resolving `SeoBindings.php` during setup.
 
@@ -192,7 +192,8 @@ A PDO-based schema is required for specific sub-systems where persistence provid
 - **Phase 10: Sitemap Enhancements**
   Implementation, post-correction Verification passed, and post-correction Documentation Synchronization is complete. Fresh Final Review: `PASS`.
   The verified runtime has zero gaps and zero implementation Work Units
-  remaining. PR #191 is the Phase 10 Integration PR and remains Draft. Ready and squash-merge are separate maintainer integration actions.
+  remaining. Phase 10 implementation and documentation are present in the current
+  `main` history; this roadmap entry records no pending Draft, Ready, or merge state.
   - **Phase 10A: Sitemap Index String Renderer (Complete):** Framework-neutral XML string rendering for sitemap indexes, including strict `lastmod` validation.
   - **Phase 10B: Hreflang / Alternate URL Support (Complete):** Web string rendering for `xhtml:link`, alternate URLs, and `x-default`, with typed/raw top-level URL validation parity.
   - **Phase 10C: Image Sitemap Support (Already fully present):** Web string rendering for image child elements, including image metadata and XML escaping.
@@ -224,7 +225,7 @@ A PDO-based schema is required for specific sub-systems where persistence provid
   - **Phase 13M: Extra Specialized JSON-LD Builders Batch (Complete):** Builder for generating Book/Movie/MusicAlbum/Dataset schemas.
   - **Phase 13N: Final JSON-LD Builders Audit (Complete):** Final verification and compliance audit of the Phase 13 Builder System.
   - **Phase 13O: Advanced Product Structured Data (Complete):** Builders for generating ProductGroup and AggregateOffer schemas, and typed structured-data composition.
-  - **Phase 13P: Structured Data Semantic Validation (Complete):** Deep semantic validation for the in-scope Schema.org types, including its Verification, Documentation Sweep, and Final Review gates.
+  - **Phase 13P: Structured Data Semantic Validation (Complete):** Scoped structural and property-range semantic validation for the in-scope Schema.org types, including its Verification, Documentation Sweep, and Final Review gates.
 
 - **Phase 14: Social Meta Builders**
   - **Phase 14A: Social Meta Foundation (Complete):** Core interfaces, generic tags, collections, and render output DTOs.

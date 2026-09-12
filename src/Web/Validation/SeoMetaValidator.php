@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace Maatify\Seo\Web\Validation;
 
 use Maatify\Seo\Exception\SeoInvalidArgumentException;
+use Maatify\Seo\Web\Validation\DTO\SeoCompanionValidationResultDTO;
+use Maatify\Seo\Web\Validation\DTO\SeoValidationContextDTO;
 use Maatify\Seo\Web\Validation\DTO\SeoValidationIssueDTO;
 use Maatify\Seo\Web\Validation\DTO\SeoValidationResultDTO;
 use Maatify\Seo\Web\Validation\JsonLd\JsonLdSemanticValidator;
+use Maatify\Seo\Web\Validation\Profile\Internal\OpenGraphValidationSupport;
 
 final class SeoMetaValidator
 {
@@ -61,6 +64,20 @@ final class SeoMetaValidator
         self::validateJsonLd($issues, self::value($meta, ['jsonLd', 'json_ld', 'schema', 'schemas']));
 
         return new SeoValidationResultDTO($issues);
+    }
+
+    /**
+     * @param array<string, mixed>|object $meta
+     * @param array<string, mixed> $options
+     */
+    public static function validateWithCompanion(
+        array|object $meta,
+        array $options = [],
+        ?SeoValidationContextDTO $context = null,
+    ): SeoCompanionValidationResultDTO {
+        $legacy = self::validate($meta, $options);
+
+        return OpenGraphValidationSupport::build($meta, $legacy, $context);
     }
 
     /** @param array<string, mixed> $options */

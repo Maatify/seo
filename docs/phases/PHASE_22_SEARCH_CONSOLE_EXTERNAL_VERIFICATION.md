@@ -19,9 +19,10 @@ The design and scope are recorded in
 - Verification Gate: `PASS`
 - Verified Draft SHA: `4e0fc5c93d746290e8b0b83ad60bdda761959232`
 - Documentation Sweep: complete
-- Final Review: pending
-
-The Phase is not marked complete until Final Review has passed.
+- Final Review: `PASS`
+- Final Review evidence: `PR #218` and `docs/verification/PHASE_22_SEARCH_CONSOLE_EXTERNAL_VERIFICATION_FINAL_REVIEW_REPORT.md`
+- Phase 22: `Complete`
+- Integration PR: `#214` merged into `main`
 
 ## Architecture boundary
 
@@ -51,5 +52,6 @@ scheduled job is introduced by the library.
 
 ## Lifecycle
 
-Documentation Sweep is recorded separately from implementation and Verification.
-Final Review remains pending, and Ready or merge are separate maintainer actions.
+Documentation Sweep and Final Review are recorded separately from implementation
+and Verification. All Phase 22 lifecycle gates are complete, and the integrated
+result is present in `main` through PR #214.
