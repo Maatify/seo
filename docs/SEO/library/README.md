@@ -13,3 +13,4 @@ tests, or the maintained contracts here.
 ## Contents
 
 * [Structured Data Architecture](STRUCTURED_DATA_ARCHITECTURE.md)
+* [MetaGeneratorService Contract](META_GENERATOR_SERVICE_CONTRACT.md)
