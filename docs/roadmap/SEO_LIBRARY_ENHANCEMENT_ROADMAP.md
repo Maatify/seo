@@ -21,22 +21,23 @@ Completed:
 
 The next work should be treated as optional enhancement phases, not required core completion.
 
-## Phase Execution Standard (Mandatory for Future Phases)
+## Roadmap Planning and Phase Completion
 
-Every future Phase starts from the latest `main` by creating its Integration branch and
-Draft Integration PR first. The Blueprint child is then created from the exact latest
-Draft HEAD before any Work Unit implementation begins. A Phase must not move directly
-from an idea to implementation, and an existing Phase status is not changed by this
-standard unless that Phase is explicitly reviewed and updated.
+### Workflow Authority and Execution Topology
 
-`Draft Integration PR → Blueprint → Work Units → Verification → Documentation Sweep → Final Review vs latest main → Ready → Merge`
+Branch, PR, integration-boundary, and merge lifecycle for this roadmap is governed by
+the locally adopted [GitHub Phase Stack Workflow](../php-engineering-standards/standards/GITHUB_PHASE_STACK_WORKFLOW_AR.md)
+version `2.2.0`. This roadmap records SEO scope and acceptance requirements; it does
+not establish an alternate repository workflow authority.
 
-### Blueprint / Draft Gate
+A Roadmap Phase or Work Unit is a planning and acceptance unit and does not by itself
+require a dedicated branch or PR. Dependency-aware batching and context reuse may be
+used as defined by the adopted workflow.
 
-At the beginning of a Phase, first create the Integration branch and its Draft PR from
-the latest `main`. Then create the Blueprint child from the exact latest Draft HEAD and
-target the Phase Integration branch. Before any implementation begins, that Blueprint
-must record:
+### Phase Blueprint
+
+Before implementation of a future enhancement Phase begins, create its project
+Blueprint under `docs/blueprints/**`. The Blueprint must record:
 
 * Current State
 * Gaps
@@ -47,21 +48,8 @@ must record:
 * Documentation Impact
 * Definition of Done
 
-The Blueprint for each Phase must be stored under `docs/blueprints/**`.
-
-### Integration Workflow
-
-At the beginning of the Phase, create the Integration branch and Integration PR as a
-Draft from the latest `main`. Create the Blueprint child from the exact latest Draft
-HEAD and target the Integration branch. Each Work Unit PR and each subsequent gate PR
-must target that Phase's Integration branch, never `main`. After a Work Unit is
-accepted, merge it into the Integration branch. A Work Unit must not be merged directly
-into `main`.
-
-The Integration PR is the only final path for merging the complete Phase into `main`.
-It must remain Draft until Verification, the Documentation Sweep, and the Final Review
-against the latest `main` are complete. Only then may it be converted to Ready and
-merged into `main`.
+The Blueprint is a project planning record. It does not prescribe a branch, PR, or
+merge topology.
 
 ### Work Unit Contract
 
@@ -96,18 +84,13 @@ update, reviewed with no update required, or deferred with a documented reason:
 Not every path must change for every Phase, but every applicable path must be reviewed
 and recorded as `updated`, `reviewed-no-change`, or `deferred-with-reason`.
 
-### Verification and Readiness Gates
+### Verification and Final Review
 
-After implementation is complete, the Phase must proceed through these gates in order:
-
-1. Verification
-2. Documentation Sweep
-3. Final Review of the complete result against the latest `main`
-4. Convert the Integration PR from Draft to Ready
-5. Merge only after the Ready review is complete
-
-The Integration PR must not be marked Ready before Verification, the Documentation
-Sweep, and the final review against the latest `main` are complete.
+Complete the required verification, Documentation Impact Review, and final review of
+the complete result at the applicable integration boundary under the adopted workflow.
+When multiple Phases share an Execution Batch, the batch-level review may cover their
+combined result while each Phase retains its own acceptance evidence. PR state changes
+and merge decisions remain governed by the adopted workflow.
 
 ### Phase Completion Criteria
 
@@ -121,7 +104,8 @@ true:
 * Required examples are added or updated.
 * The roadmap status is updated.
 * Limitations and deferred work are documented.
-* The complete result has passed final review against the latest `main`.
+* The complete result has passed final review at the applicable integration boundary
+  under the adopted workflow.
 
 ---
 
